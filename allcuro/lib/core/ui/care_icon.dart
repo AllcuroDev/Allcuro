@@ -213,29 +213,26 @@ class CareIconTile extends StatelessWidget {
   }
 }
 
-/// 3D-style category illustrations (see `assets/illustrations/`), shared 1:1
-/// with the website. Each sits on a transparent background with its own soft
-/// ground shadow, so it blends into whatever tile colour it is placed on.
+/// Realistic category photography and illustrations (see `assets/images/categories/`).
 class CareIllustrations {
   CareIllustrations._();
 
-  static const _dir = 'assets/illustrations';
+  static const _dir = 'assets/images/categories';
 
-  static const nursing = '$_dir/nursing.svg';
-  static const motherBaby = '$_dir/mother_baby.svg';
-  static const elderCare = '$_dir/elder_care.svg';
-  static const physio = '$_dir/physio.svg';
-  static const doctor = '$_dir/doctor.svg';
-  static const careCentre = '$_dir/care_centre.svg';
-  static const caregiver = '$_dir/caregiver.svg';
-  static const diagnostics = '$_dir/diagnostics.svg';
-  static const wellness = '$_dir/wellness.svg';
-  static const seeAll = '$_dir/see_all.svg';
+  static const nursing = '$_dir/nursing.jpg';
+  static const motherBaby = '$_dir/mother_baby.jpg';
+  static const elderCare = '$_dir/elder_care.jpg';
+  static const physio = '$_dir/physio.jpg';
+  static const doctor = '$_dir/doctor.jpg';
+  static const careCentre = '$_dir/care_centre.jpg';
+  static const caregiver = '$_dir/caregiver.jpg';
+  static const diagnostics = '$_dir/diagnostics.jpg';
+  static const wellness = '$_dir/wellness.jpg';
+  static const equipment = '$_dir/equipment.jpg';
+  static const seeAll = '$_dir/see_all.jpg';
 }
 
-/// Neutral tile holding a category illustration — used by the home category
-/// grid. Every tile shares [AppColors.secondary] so the artwork, not the tile,
-/// carries the colour.
+/// Neutral tile holding a realistic category image or illustration — used by the home category grid.
 class CareIllustrationTile extends StatelessWidget {
   final String asset;
   final double width;
@@ -254,15 +251,35 @@ class CareIllustrationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSvg = asset.endsWith('.svg');
     return Container(
       width: width,
       height: height,
-      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: AppColors.secondary,
         borderRadius: BorderRadius.circular(radius),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0E000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
-      child: SvgPicture.asset(asset, width: artSize, height: artSize),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: isSvg
+            ? Center(child: SvgPicture.asset(asset, width: artSize, height: artSize))
+            : Image.asset(
+                asset,
+                width: width,
+                height: height,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const Center(
+                  child: Icon(Icons.medical_services_outlined, color: AppColors.primary),
+                ),
+              ),
+      ),
     );
   }
 }

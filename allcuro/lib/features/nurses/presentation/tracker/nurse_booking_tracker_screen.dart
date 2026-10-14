@@ -8,6 +8,7 @@ import '../../../../core/ui/surface.dart';
 import '../../../../core/ui/tappable.dart';
 import '../../../bookings/data/models/booking.dart';
 import '../../../bookings/presentation/bookings_view_model.dart';
+import 'nurse_live_map.dart';
 
 class NurseBookingTrackerScreen extends ConsumerStatefulWidget {
   final String bookingId;
@@ -23,15 +24,28 @@ class NurseBookingTrackerScreen extends ConsumerStatefulWidget {
 }
 
 class _NurseBookingTrackerScreenState
-    extends ConsumerState<NurseBookingTrackerScreen> {
+    extends ConsumerState<NurseBookingTrackerScreen> with SingleTickerProviderStateMixin {
   double _userRating = 5.0;
   final _reviewController = TextEditingController();
   bool _reviewSubmitted = false;
 
+  // Simulated trip progress until real GPS pings come from the partner app.
+  late final AnimationController _trip = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 90),
+  )..forward(from: 0.08);
+
   @override
   void dispose() {
+    _trip.dispose();
     _reviewController.dispose();
     super.dispose();
+  }
+
+  void _openFullMap(Booking booking) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => NurseLiveMapPage(progress: _trip, nurseName: booking.providerName),
+    ));
   }
 
   void _showRatingModal(BuildContext context, Booking booking) {
@@ -196,6 +210,10 @@ class _NurseBookingTrackerScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (booking.type == BookingType.nurse && booking.liveStatus != BookingLiveStatus.completed) ...[
+                      _buildLiveMapCard(booking),
+                      const SizedBox(height: 14),
+                    ],
                     _buildPatientOtpCard(booking),
                     const SizedBox(height: 14),
                     _buildLiveStepper(booking),
@@ -289,6 +307,27 @@ class _NurseBookingTrackerScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLiveMapCard(Booking booking) {
+    return Container(
+      height: 260,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.xxl),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.xxl),
+        child: NurseLiveMap(
+          progress: _trip,
+          nurseName: booking.providerName,
+          onExpand: () => _openFullMap(booking),
+        ),
       ),
     );
   }

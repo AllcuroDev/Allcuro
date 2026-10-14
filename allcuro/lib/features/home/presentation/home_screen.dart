@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -1066,7 +1068,8 @@ class _HomeGridItem extends StatelessWidget {
 
 
 // ---------------------------------------------------------------------------
-// EXPRESS 45-MIN NURSE BANNER (light rose card, pulsing bolt, press feedback)
+// EXPRESS 45-MIN NURSE BANNER (saffron gradient, shimmer sweep, pulsing bolt,
+// rotating live ticker, press feedback)
 // ---------------------------------------------------------------------------
 class _ExpressNurseBanner extends StatefulWidget {
   final VoidCallback onTap;
@@ -1077,20 +1080,42 @@ class _ExpressNurseBanner extends StatefulWidget {
   State<_ExpressNurseBanner> createState() => _ExpressNurseBannerState();
 }
 
-class _ExpressNurseBannerState extends State<_ExpressNurseBanner> with SingleTickerProviderStateMixin {
-  static const _rose = Color(0xFFE11D48);
-  static const _roseWash = Color(0xFFFFF1F3);
-  static const _roseBorder = Color(0xFFFFE0E6);
+class _ExpressNurseBannerState extends State<_ExpressNurseBanner> with TickerProviderStateMixin {
+  static const _saffron = Color(0xFFEE6D01);
+  static const _saffronLight = Color(0xFFFF9A3C);
+  static const _saffronDeep = Color(0xFFC85A00);
+
+  static const _tickerLines = [
+    '12 nurses available near you',
+    'Avg. arrival today · 32 mins',
+    'GNM / ANM verified · HPR registered',
+  ];
 
   late final AnimationController _pulse = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1600),
   )..repeat();
+  late final AnimationController _shimmer = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2800),
+  )..repeat();
+  Timer? _tickerTimer;
+  int _tickerIndex = 0;
   bool _pressed = false;
 
   @override
+  void initState() {
+    super.initState();
+    _tickerTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) setState(() => _tickerIndex = (_tickerIndex + 1) % _tickerLines.length);
+    });
+  }
+
+  @override
   void dispose() {
+    _tickerTimer?.cancel();
     _pulse.dispose();
+    _shimmer.dispose();
     super.dispose();
   }
 
@@ -1107,109 +1132,239 @@ class _ExpressNurseBannerState extends State<_ExpressNurseBanner> with SingleTic
         scale: _pressed ? 0.97 : 1,
         duration: const Duration(milliseconds: 120),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+          duration: const Duration(milliseconds: 160),
           decoration: BoxDecoration(
-            color: _pressed ? const Color(0xFFFFE8EC) : _roseWash,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(color: _roseBorder),
-          ),
-          child: Row(
-            children: [
-              // Bolt with a soft radar pulse
-              SizedBox(
-                width: 46,
-                height: 46,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    AnimatedBuilder(
-                      animation: _pulse,
-                      builder: (_, _) => Transform.scale(
-                        scale: 0.8 + 0.4 * _pulse.value,
-                        child: Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _rose.withValues(alpha: 0.22 * (1 - _pulse.value)),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      width: 36,
-                      height: 36,
-                      alignment: Alignment.center,
-                      decoration: const BoxDecoration(color: _rose, shape: BoxShape.circle),
-                      child: const CareIcon(CareIcons.quick, color: Colors.white, size: 20),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Need a nurse in 45 mins?',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
-                        ),
-                        const SizedBox(width: 5),
-                        const Flexible(
-                          child: Text(
-                            'Nurses available near you',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.mutedForeground,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _rose,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Book',
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Colors.white),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_rounded, size: 14, color: Colors.white),
-                  ],
-                ),
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_saffronLight, _saffron, _saffronDeep],
+              stops: [0.0, 0.55, 1.0],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _saffron.withValues(alpha: _pressed ? 0.18 : 0.32),
+                blurRadius: _pressed ? 8 : 18,
+                offset: Offset(0, _pressed ? 3 : 8),
               ),
             ],
           ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            child: Stack(
+              children: [
+                // Decorative rings
+                Positioned(
+                  right: -30,
+                  top: -40,
+                  child: _ring(130, 0.10),
+                ),
+                Positioned(
+                  right: 40,
+                  bottom: -50,
+                  child: _ring(100, 0.08),
+                ),
+                // Shimmer sweep
+                Positioned.fill(
+                  child: AnimatedBuilder(
+                    animation: _shimmer,
+                    builder: (_, _) {
+                      final t = _shimmer.value * 2.4 - 0.7;
+                      return IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment(t - 0.4, -1),
+                              end: Alignment(t + 0.4, 1),
+                              colors: [
+                                Colors.white.withValues(alpha: 0),
+                                Colors.white.withValues(alpha: 0.16),
+                                Colors.white.withValues(alpha: 0),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                  child: Row(
+                    children: [
+                      _buildBolt(),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildCopy()),
+                      const SizedBox(width: 8),
+                      _buildCta(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _ring(double size, double alpha) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: alpha), width: 14),
+        ),
+      );
+
+  Widget _buildBolt() {
+    return SizedBox(
+      width: 52,
+      height: 52,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _pulse,
+            builder: (_, _) => Transform.scale(
+              scale: 0.75 + 0.45 * _pulse.value,
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.35 * (1 - _pulse.value)),
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: _saffronDeep.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3)),
+              ],
+            ),
+            child: const CareIcon(CareIcons.quick, color: _saffron, size: 22),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCopy() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.22),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: const Text(
+            'EXPRESS CARE',
+            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.1),
+          ),
+        ),
+        const SizedBox(height: 5),
+        const Text(
+          'Need a nurse in 45 mins?',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: -0.2,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Row(
+          children: [
+            AnimatedBuilder(
+              animation: _pulse,
+              builder: (_, _) => Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFB9F6CA),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFB9F6CA).withValues(alpha: 0.8 * (1 - _pulse.value)),
+                      blurRadius: 6,
+                      spreadRadius: 2 * _pulse.value,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 380),
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween(begin: const Offset(0, 0.6), end: Offset.zero).animate(anim),
+                    child: child,
+                  ),
+                ),
+                layoutBuilder: (current, previous) => Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [...previous, ?current],
+                ),
+                child: Text(
+                  _tickerLines[_tickerIndex],
+                  key: ValueKey(_tickerIndex),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white.withValues(alpha: 0.92),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCta() {
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (_, child) => Transform.translate(
+        offset: Offset(2 * (1 - (2 * _pulse.value - 1).abs()), 0),
+        child: child,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: [
+            BoxShadow(color: _saffronDeep.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3)),
+          ],
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Book',
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: _saffronDeep),
+            ),
+            SizedBox(width: 3),
+            Icon(Icons.arrow_forward_rounded, size: 15, color: _saffronDeep),
+          ],
         ),
       ),
     );

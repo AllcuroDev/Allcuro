@@ -213,26 +213,26 @@ class CareIconTile extends StatelessWidget {
   }
 }
 
-/// Realistic category photography and illustrations (see `assets/images/categories/`).
+/// 3D claymorphic category illustrations (see `assets/images/categories/`).
 class CareIllustrations {
   CareIllustrations._();
 
   static const _dir = 'assets/images/categories';
 
-  static const nursing = '$_dir/nursing.jpg';
-  static const motherBaby = '$_dir/mother_baby.jpg';
-  static const elderCare = '$_dir/elder_care.jpg';
-  static const physio = '$_dir/physio.jpg';
-  static const doctor = '$_dir/doctor.jpg';
-  static const careCentre = '$_dir/care_centre.jpg';
-  static const caregiver = '$_dir/caregiver.jpg';
-  static const diagnostics = '$_dir/diagnostics.jpg';
-  static const wellness = '$_dir/wellness.jpg';
-  static const equipment = '$_dir/equipment.jpg';
-  static const seeAll = '$_dir/see_all.jpg';
+  static const nursing = '$_dir/nursing.png';
+  static const motherBaby = '$_dir/mother_baby.png';
+  static const elderCare = '$_dir/elder_care.png';
+  static const physio = '$_dir/physio.png';
+  static const doctor = '$_dir/doctor.png';
+  static const careCentre = '$_dir/care_centre.png';
+  static const caregiver = '$_dir/caregiver.png';
+  static const diagnostics = '$_dir/diagnostics.png';
+  static const wellness = '$_dir/wellness.png';
+  static const equipment = '$_dir/equipment.png';
+  static const seeAll = '$_dir/see_all.png';
 }
 
-/// Neutral tile holding a realistic category image or illustration — used by the home category grid.
+/// Seamless 3D category illustration tile — used by the home category grid.
 class CareIllustrationTile extends StatelessWidget {
   final String asset;
   final double width;
@@ -252,34 +252,20 @@ class CareIllustrationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSvg = asset.endsWith('.svg');
-    return Container(
+    return SizedBox(
       width: width,
       height: height,
-      decoration: BoxDecoration(
-        color: AppColors.secondary,
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0E000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: isSvg
-            ? Center(child: SvgPicture.asset(asset, width: artSize, height: artSize))
-            : Image.asset(
-                asset,
-                width: width,
-                height: height,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const Center(
-                  child: Icon(Icons.medical_services_outlined, color: AppColors.primary),
-                ),
+      child: isSvg
+          ? Center(child: SvgPicture.asset(asset, width: artSize, height: artSize))
+          : Image.asset(
+              asset,
+              width: width,
+              height: height,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => const Center(
+                child: Icon(Icons.medical_services_outlined, color: AppColors.primary),
               ),
-      ),
+            ),
     );
   }
 }

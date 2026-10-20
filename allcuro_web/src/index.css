@@ -1028,41 +1028,44 @@ button {
   display: grid;
   place-items: center;
   border-radius: var(--r-md);
-  transition: transform 0.2s, box-shadow 0.2s;
-  background: var(--secondary);
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s;
+  background: transparent;
+  overflow: visible;
 }
 
 .tile:hover .tile-art {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px) scale(1.05);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.1));
 }
 
 .tile-art img {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
+  max-width: 68px;
+  max-height: 68px;
+  object-fit: contain;
 }
 
 .art-tile {
   display: inline-grid;
   place-items: center;
   flex-shrink: 0;
-  background: var(--secondary);
+  background: transparent;
   border-radius: var(--r-md);
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  overflow: visible;
+  transition: transform 0.2s;
+}
+
+.art-tile:hover {
+  transform: scale(1.05);
 }
 
 .art-tile img {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
+  object-fit: contain;
 }
 
 .side-link .art-tile {

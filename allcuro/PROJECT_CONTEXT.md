@@ -42,8 +42,8 @@
   - Plus Jakarta Sans via `GoogleFonts.plusJakartaSansTextTheme()`.
   - Headings run `FontWeight.w800` / `w900` with tight letter-spacing.
 - **Category Illustrations:**
-  - The home category grid uses 3D-style (Urban Company–like) SVG artworks from `assets/illustrations/` via `CareIllustrations` + `CareIllustrationTile` in `lib/core/ui/care_icon.dart`.
-  - Artworks have transparent backgrounds and a soft ground shadow; tiles are always `AppColors.secondary` (`#F0F5F1`) so they blend. The same files are used by the website (`allcuro_web/src/assets/illustrations/`) — edit them in the app and copy across.
+  - The home category grid uses 3D claymorphic squircle icons from `assets/images/categories/*.png` via `CareIllustrations` + `CareIllustrationTile` in `lib/core/ui/care_icon.dart`.
+  - Artworks have clean anti-aliased squircle edges with transparent background and soft natural 3D shadows so they blend seamlessly into any surface. The same assets are shared with the website (`allcuro_web/src/assets/images/categories/`).
   - Individual services keep the duotone line icons (`CareIcons` / `CareIconTile`).
 - **Surface & Ripple Feedback:**
   - Always use `Surface(onTap: ...)` for cards and `Tappable(onTap: ...)` for icon links to ensure ripple feedback paints above dark gradients and solid cards.

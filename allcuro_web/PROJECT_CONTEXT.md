@@ -66,7 +66,7 @@ Tokens in `src/index.css` mirror `AppColors` / `AppRadius` in `allcuro/lib/core/
   - Gradient: `#143621 → #26593B → #43845B` (trust band, call band, help card)
   - Category tones (`CareTone`): Nursing green, Elder amber, Mother & Baby pink, Physio blue, Doctor violet, Diagnostics cyan, Wellness teal.
 - **Typography:** Plus Jakarta Sans, kept calm and minimal: headings `600`, labels/buttons/nav `500`, body `400`. No `700+` weights except the logo wordmark. Hero title is `clamp(1.9rem, 3.4vw, 2.6rem)`; section titles top out around `1.9rem`.
-- **Category illustrations:** `src/assets/illustrations/*.svg` are 3D-style (Urban Company–like) artworks copied from `allcuro/assets/illustrations/`. They have transparent backgrounds plus a soft ground shadow and always sit on the neutral tile colour `--secondary` (`#F0F5F1`), the same as the app. Use them for category-level UI only (hero tiles, category header, sidebar); individual services keep the line-style care icons. Category → artwork mapping is the `art` field in `categories.ts`; URLs come from `components/art.ts`.
+- **Category illustrations:** `src/assets/images/categories/*.png` are 3D claymorphic squircle artworks (matching the customer app). They have clean anti-aliased squircle edges with transparent background and soft natural 3D shadows so they blend seamlessly into the hero card and category tiles without background-box glitches. Category → artwork mapping is the `art` field in `categories.ts`; URLs come from `components/art.ts`.
 - **Radius scale:** 12 / 14 / 16 / 20 / 24 / 32 px.
 - **Light theme only**, matching the app.
 

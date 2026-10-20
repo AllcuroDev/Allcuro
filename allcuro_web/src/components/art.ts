@@ -1,8 +1,7 @@
-// URLs for the realistic category photos and illustrations
+// URLs for the 3D claymorphic category icons
 const arts = import.meta.glob<string>([
-  '../assets/images/categories/*.jpg',
   '../assets/images/categories/*.png',
-  '../assets/illustrations/*.svg'
+  '../assets/images/categories/*.jpg',
 ], {
   query: '?url',
   import: 'default',

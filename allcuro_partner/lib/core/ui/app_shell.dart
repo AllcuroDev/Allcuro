@@ -64,7 +64,7 @@ class ProviderShell extends StatelessWidget {
   });
 
   List<_TabItem> get _tabs =>
-      role == ProviderRole.nurse ? _nurseTabs : _centreTabs;
+      role.usesNurseShell ? _nurseTabs : _centreTabs;
 
   @override
   Widget build(BuildContext context) {
@@ -259,9 +259,11 @@ class _CollapsiblePartnerHeaderDelegate extends SliverPersistentHeaderDelegate {
                 child: Opacity(
                   opacity: titleAndIconsOpacity,
                   child: Text(
-                    role == ProviderRole.nurse
-                        ? 'ALLCURO NURSE'
-                        : 'ALLCURO PARTNER',
+                    switch (role) {
+                      ProviderRole.nurse => 'ALLCURO NURSE',
+                      ProviderRole.clinician => 'ALLCURO CLINICIAN',
+                      ProviderRole.centre => 'ALLCURO PARTNER',
+                    },
                     style: const TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w800,

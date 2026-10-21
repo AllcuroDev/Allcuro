@@ -1,4 +1,5 @@
-/// Where a nurse's onboarding & activation has gotten to.
+/// Where a nurse's (or doctor's / physiotherapist's) onboarding &
+/// activation has gotten to.
 enum NurseVerificationStatus {
   incomplete, // Has not finished 3-step basic signup
   onboarding, // Basic signup done; completing Document Vault, Bank & Skills on Home setup hub

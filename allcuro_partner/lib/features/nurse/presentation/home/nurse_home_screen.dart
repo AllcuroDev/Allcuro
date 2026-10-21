@@ -53,10 +53,10 @@ class NurseHomeScreen extends ConsumerWidget {
     final summary = ref.watch(nurseHomeViewModelProvider);
     final session = ref.watch(authViewModelProvider).valueOrNull;
     final onboardingState = ref.watch(partnerOnboardingProvider);
-    final status = session?.nurseVerificationStatus ?? NurseVerificationStatus.incomplete;
+    final status = session?.practitionerVerificationStatus ?? NurseVerificationStatus.incomplete;
 
     return ProviderShell(
-      role: ProviderRole.nurse,
+      role: session?.role ?? ProviderRole.nurse,
       currentIndex: 0,
       onTabSelected: onTabSelected,
       onProfileTap: onProfileTap,
@@ -325,7 +325,7 @@ class _NurseHomeContent extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: _NurseUnderReviewCard(
               onAdvanceToVerified: () {
-                ref.read(authViewModelProvider.notifier).setNurseVerificationStatus(
+                ref.read(authViewModelProvider.notifier).setPractitionerVerificationStatus(
                       NurseVerificationStatus.verified,
                     );
               },

@@ -24,6 +24,8 @@ class AppRoutes {
   static const nurseReferral = '/nurse/referral';
   static const nurseSupport = '/nurse/support';
 
+  static const clinicianSignup = '/clinician/signup';
+
   static const centreSignup = '/centre/signup';
   static const centreHome = '/centre/home';
   static const centreRequests = '/centre/requests';

@@ -475,6 +475,6 @@ class PartnerOnboardingNotifier extends StateNotifier<PartnerOnboardingState> {
   Future<void> submitNurseForReview() async {
     await ref
         .read(authViewModelProvider.notifier)
-        .setNurseVerificationStatus(NurseVerificationStatus.underReview);
+        .setPractitionerVerificationStatus(NurseVerificationStatus.underReview);
   }
 }

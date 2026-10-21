@@ -14,25 +14,44 @@ class AuthSession {
   final bool isLoggedIn;
   final ProviderRole? role;
   final NurseVerificationStatus nurseVerificationStatus;
+
+  /// Doctor / physiotherapist onboarding — same lifecycle as a nurse's.
+  final NurseVerificationStatus clinicianVerificationStatus;
   final CentreVerificationStatus centreVerificationStatus;
 
   const AuthSession({
     required this.isLoggedIn,
     this.role,
     this.nurseVerificationStatus = NurseVerificationStatus.incomplete,
+    this.clinicianVerificationStatus = NurseVerificationStatus.incomplete,
     this.centreVerificationStatus = CentreVerificationStatus.incomplete,
   });
 
   static const initial = AuthSession(isLoggedIn: false);
 
+  /// Status for whichever visit-based role (nurse or clinician) is active —
+  /// what the shared nurse dashboard and profile screens should read.
+  NurseVerificationStatus get practitionerVerificationStatus =>
+      role == ProviderRole.clinician ? clinicianVerificationStatus : nurseVerificationStatus;
+
+  /// Whether the active role still has its basic sign-up wizard to finish.
+  bool get signupIncomplete => switch (role) {
+        ProviderRole.centre => centreVerificationStatus == CentreVerificationStatus.incomplete,
+        ProviderRole.nurse || ProviderRole.clinician =>
+          practitionerVerificationStatus == NurseVerificationStatus.incomplete,
+        null => false,
+      };
+
   AuthSession copyWith({
     NurseVerificationStatus? nurseVerificationStatus,
+    NurseVerificationStatus? clinicianVerificationStatus,
     CentreVerificationStatus? centreVerificationStatus,
   }) {
     return AuthSession(
       isLoggedIn: isLoggedIn,
       role: role,
       nurseVerificationStatus: nurseVerificationStatus ?? this.nurseVerificationStatus,
+      clinicianVerificationStatus: clinicianVerificationStatus ?? this.clinicianVerificationStatus,
       centreVerificationStatus: centreVerificationStatus ?? this.centreVerificationStatus,
     );
   }
@@ -52,6 +71,7 @@ class AuthRepository {
       isLoggedIn: true,
       role: await _service.getPersistedRole(),
       nurseVerificationStatus: await _service.getNurseVerificationStatus(),
+      clinicianVerificationStatus: await _service.getClinicianVerificationStatus(),
       centreVerificationStatus: await _service.getCentreVerificationStatus(),
     );
   }
@@ -73,6 +93,11 @@ class AuthRepository {
 
   Future<AuthSession> setNurseVerificationStatus(NurseVerificationStatus status) async {
     await _service.setNurseVerificationStatus(status);
+    return loadSession();
+  }
+
+  Future<AuthSession> setClinicianVerificationStatus(NurseVerificationStatus status) async {
+    await _service.setClinicianVerificationStatus(status);
     return loadSession();
   }
 

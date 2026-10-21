@@ -41,6 +41,20 @@ class AuthViewModel extends AsyncNotifier<AuthSession> {
     state = await AsyncValue.guard(() => _repository.setNurseVerificationStatus(status));
   }
 
+  /// Same as [setNurseVerificationStatus], for the doctor / physiotherapist
+  /// sign-up wizard.
+  Future<void> setClinicianVerificationStatus(NurseVerificationStatus status) async {
+    state = await AsyncValue.guard(() => _repository.setClinicianVerificationStatus(status));
+  }
+
+  /// Sets the status for whichever visit-based role (nurse or clinician) is
+  /// active — used by the shared nurse dashboard & profile screens.
+  Future<void> setPractitionerVerificationStatus(NurseVerificationStatus status) {
+    return state.valueOrNull?.role == ProviderRole.clinician
+        ? setClinicianVerificationStatus(status)
+        : setNurseVerificationStatus(status);
+  }
+
   /// Same as [setNurseVerificationStatus], for the centre sign-up wizard.
   Future<void> setCentreVerificationStatus(CentreVerificationStatus status) async {
     state = await AsyncValue.guard(() => _repository.setCentreVerificationStatus(status));

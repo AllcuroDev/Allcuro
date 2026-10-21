@@ -8,7 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 class AppColors {
   AppColors._();
 
-  static const background = Color(0xFFFEFDFC);
+  static const background = Color(0xFFFFFFFF);
   static const foreground = Color(0xFF1A1814);
   static const card = Color(0xFFFFFFFF);
 

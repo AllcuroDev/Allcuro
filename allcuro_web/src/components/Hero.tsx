@@ -12,7 +12,18 @@ const tiles = [
   { slug: ALL_SLUG, label: 'All Services', art: 'see_all' },
 ]
 
-export function Hero() {
+export function Hero({ onSelectCategory }: { onSelectCategory?: (slug: string) => void }) {
+  const handleTileClick = (e: React.MouseEvent, slug: string) => {
+    if (onSelectCategory) {
+      e.preventDefault()
+      onSelectCategory(slug)
+      const el = document.getElementById('services-explorer')
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+  }
+
   return (
     <section className="hero" id="top">
       <div className="container hero-grid">
@@ -28,7 +39,11 @@ export function Hero() {
             <ul className="tiles">
               {tiles.map((t) => (
                 <li key={t.slug}>
-                  <Link to={categoryPath(t.slug)} className="tile">
+                  <Link
+                    to={categoryPath(t.slug)}
+                    className="tile"
+                    onClick={(e) => handleTileClick(e, t.slug)}
+                  >
                     <span className="tile-art">
                       <img src={artUrl(t.art)} alt="" width={60} height={60} />
                     </span>

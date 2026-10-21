@@ -7,6 +7,7 @@ import '../../../../core/ui/app_shell.dart';
 import '../../../../core/ui/empty_state.dart';
 import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/surface.dart';
+import '../../../auth/presentation/auth_view_model.dart';
 import '../../data/models/job_request_summary.dart';
 import 'job_requests_view_model.dart';
 
@@ -30,7 +31,7 @@ class JobRequestsScreen extends ConsumerWidget {
     final notifier = ref.read(jobRequestsViewModelProvider.notifier);
 
     return ProviderShell(
-      role: ProviderRole.nurse,
+      role: ref.watch(authViewModelProvider).valueOrNull?.role ?? ProviderRole.nurse,
       currentIndex: 1,
       onTabSelected: onTabSelected,
       onProfileTap: onProfileTap,

@@ -7,6 +7,7 @@ import '../../../../core/ui/app_shell.dart';
 import '../../../../core/ui/empty_state.dart';
 import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/surface.dart';
+import '../../../auth/presentation/auth_view_model.dart';
 import '../../data/models/shift.dart';
 import 'nurse_schedule_view_model.dart';
 
@@ -35,7 +36,7 @@ class _NurseScheduleScreenState extends ConsumerState<NurseScheduleScreen> {
     final shiftsAsync = ref.watch(nurseScheduleViewModelProvider);
 
     return ProviderShell(
-      role: ProviderRole.nurse,
+      role: ref.watch(authViewModelProvider).valueOrNull?.role ?? ProviderRole.nurse,
       currentIndex: 2,
       onTabSelected: widget.onTabSelected,
       onProfileTap: widget.onProfileTap,

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/provider_role.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/verification_status.dart';
 import 'auth_view_model.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -51,22 +50,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       } else if (session.role == null) {
         context.go(AppRoutes.roleSelect);
       } else {
-        final signupIncomplete = session.role == ProviderRole.nurse
-            ? session.nurseVerificationStatus == NurseVerificationStatus.incomplete
-            : session.centreVerificationStatus == CentreVerificationStatus.incomplete;
-
-        if (signupIncomplete) {
-          context.go(
-            session.role == ProviderRole.nurse
-                ? AppRoutes.nurseSignup
-                : AppRoutes.centreSignup,
-          );
+        final role = session.role!;
+        if (session.signupIncomplete) {
+          context.go(switch (role) {
+            ProviderRole.nurse => AppRoutes.nurseSignup,
+            ProviderRole.clinician => AppRoutes.clinicianSignup,
+            ProviderRole.centre => AppRoutes.centreSignup,
+          });
         } else {
-          context.go(
-            session.role == ProviderRole.nurse
-                ? AppRoutes.nurseHome
-                : AppRoutes.centreHome,
-          );
+          context.go(role.usesNurseShell ? AppRoutes.nurseHome : AppRoutes.centreHome);
         }
       }
     });

@@ -19,6 +19,7 @@ import '../../features/centre/presentation/reviews/reviews_screen.dart';
 import '../../features/centre/presentation/rooms/room_inventory_screen.dart';
 import '../../features/centre/presentation/signup/centre_signup_screen.dart';
 import '../../features/centre/presentation/staff/staff_management_screen.dart';
+import '../../features/clinician/presentation/signup/clinician_signup_screen.dart';
 import '../../features/nurse/presentation/availability/availability_screen.dart';
 import '../../features/nurse/presentation/documents/document_vault_screen.dart';
 import '../../features/nurse/presentation/earnings/earnings_screen.dart';
@@ -34,7 +35,6 @@ import '../../features/nurse/presentation/support/support_screen.dart';
 import '../../features/nurse/presentation/training/training_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../provider_role.dart';
-import '../verification_status.dart';
 import 'app_routes.dart';
 import 'shell_navigation.dart';
 
@@ -79,16 +79,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return path == AppRoutes.roleSelect ? null : AppRoutes.roleSelect;
       }
 
-      final home = session.role == ProviderRole.nurse
-          ? AppRoutes.nurseHome
-          : AppRoutes.centreHome;
-      final ownShellPrefix = session.role == ProviderRole.nurse ? '/nurse' : '/centre';
+      final role = session.role!;
+      final home = role.usesNurseShell ? AppRoutes.nurseHome : AppRoutes.centreHome;
+      final ownShellPrefix = role.usesNurseShell ? '/nurse' : '/centre';
 
       // A brand-new account for this role hasn't completed the 3-step basic sign-up
-      final signupIncomplete = session.role == ProviderRole.nurse
-          ? session.nurseVerificationStatus == NurseVerificationStatus.incomplete
-          : session.centreVerificationStatus == CentreVerificationStatus.incomplete;
-      final signupRoute = session.role == ProviderRole.nurse ? AppRoutes.nurseSignup : AppRoutes.centreSignup;
+      final signupIncomplete = session.signupIncomplete;
+      final signupRoute = switch (role) {
+        ProviderRole.nurse => AppRoutes.nurseSignup,
+        ProviderRole.clinician => AppRoutes.clinicianSignup,
+        ProviderRole.centre => AppRoutes.centreSignup,
+      };
       if (signupIncomplete) {
         return path == signupRoute ? null : signupRoute;
       }
@@ -149,6 +150,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.nurseSignup,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const NurseSignupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.clinicianSignup,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ClinicianSignupScreen(),
       ),
       GoRoute(
         path: AppRoutes.centreSignup,

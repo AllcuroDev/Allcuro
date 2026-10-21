@@ -1,15 +1,7 @@
 import { useState } from 'react'
-import { ALL_SLUG, categoryPath } from '../data/categories'
 import { site } from '../data/site'
 import { Link } from './Link'
-import { CloseIcon, MenuIcon } from './Icons'
-
-const links = [
-  { href: categoryPath(ALL_SLUG), label: 'Services' },
-  { href: '/#how-it-works', label: 'How it works' },
-  { href: '/#why-allcuro', label: 'Why ALLCURO' },
-  { href: '/#faq', label: 'FAQ' },
-]
+import { CloseIcon, MenuIcon, PhoneIcon } from './Icons'
 
 export function Header() {
   const [open, setOpen] = useState(false)
@@ -17,28 +9,37 @@ export function Header() {
   return (
     <header className="header">
       <div className="container header-inner">
-        <Link to="/" className="wordmark">
-          ALLCURO
+        <Link to="/" className="header-brand">
+          <span className="brand-wordmark">ALLCURO</span>
+          <span className="brand-badge">
+            <span className="pulse-dot" />
+            24/7 Verified Care
+          </span>
         </Link>
 
-        <nav className={`nav ${open ? 'is-open' : ''}`} aria-label="Main">
-          {links.map((l) => (
-            <Link key={l.href} to={l.href} onClick={() => setOpen(false)}>
-              {l.label}
-            </Link>
-          ))}
-          <a className="nav-phone" href={site.phoneHref}>
-            Call {site.phoneDisplay}
+        <nav className={`header-nav ${open ? 'is-open' : ''}`} aria-label="Main">
+          <a href="/#services-explorer" onClick={() => setOpen(false)}>
+            Services
+          </a>
+          <a href="/#how-it-works" onClick={() => setOpen(false)}>
+            How It Works
+          </a>
+          <a href="/#why-allcuro" onClick={() => setOpen(false)}>
+            Why ALLCURO
+          </a>
+          <a href="/#faq" onClick={() => setOpen(false)}>
+            FAQ
           </a>
         </nav>
 
         <div className="header-actions">
-          <a className="header-phone" href={site.phoneHref}>
-            {site.phoneDisplay}
+          <a className="header-phone-pill" href={site.phoneHref} title="24/7 Clinical Support Desk">
+            <PhoneIcon size={14} />
+            <span>{site.phoneDisplay}</span>
           </a>
-          <Link className="btn btn-primary header-cta" to={categoryPath(ALL_SLUG)}>
-            Book a visit
-          </Link>
+          <a className="btn btn-primary header-cta" href="/#services-explorer">
+            Book Service
+          </a>
           <button
             type="button"
             className="menu-btn"
@@ -53,3 +54,4 @@ export function Header() {
     </header>
   )
 }
+

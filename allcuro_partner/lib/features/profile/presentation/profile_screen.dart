@@ -20,6 +20,7 @@ class ProfileScreen extends ConsumerWidget {
     final session = sessionAsync.valueOrNull;
     final notifier = ref.read(authViewModelProvider.notifier);
     final isCentre = session?.role == ProviderRole.centre;
+    final isClinician = session?.role == ProviderRole.clinician;
 
     return Scaffold(
       backgroundColor: AppColors.card,
@@ -35,7 +36,7 @@ class ProfileScreen extends ConsumerWidget {
               )
             : null,
         title: Text(
-          isCentre ? 'Centre Profile' : 'Nurse Profile',
+          isCentre ? 'Centre Profile' : (isClinician ? 'Clinician Profile' : 'Nurse Profile'),
           style: const TextStyle(
             color: AppColors.ink,
             fontWeight: FontWeight.w800,
@@ -63,7 +64,7 @@ class ProfileScreen extends ConsumerWidget {
                           shape: BoxShape.circle,
                         ),
                         child: Text(
-                          isCentre ? 'SC' : 'PS',
+                          isCentre ? 'SC' : (isClinician ? 'AR' : 'PS'),
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -77,7 +78,9 @@ class ProfileScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isCentre ? 'Sanjeevani Elder Care Sanctuary' : 'Priya Sharma',
+                              isCentre
+                                  ? 'Sanjeevani Elder Care Sanctuary'
+                                  : (isClinician ? 'Dr. Arjun Rao' : 'Priya Sharma'),
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
@@ -87,7 +90,9 @@ class ProfileScreen extends ConsumerWidget {
                             Text(
                               isCentre
                                   ? 'Homecare Centre Partner · Bengaluru'
-                                  : 'Registered Nurse (GNM) · Bengaluru',
+                                  : (isClinician
+                                      ? 'Doctor / Physiotherapist · Bengaluru'
+                                      : 'Registered Nurse (GNM) · Bengaluru'),
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.mutedForeground,
@@ -106,8 +111,8 @@ class ProfileScreen extends ConsumerWidget {
                             onAdvance: (next) => notifier.setCentreVerificationStatus(next),
                           )
                         : _NurseVerificationCard(
-                            status: session.nurseVerificationStatus,
-                            onAdvance: (next) => notifier.setNurseVerificationStatus(next),
+                            status: session.practitionerVerificationStatus,
+                            onAdvance: (next) => notifier.setPractitionerVerificationStatus(next),
                           ),
                   ],
                   const SizedBox(height: 32),

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Header } from './components/Header'
 import { Hero, TrustBand } from './components/Hero'
 import { CallBand, Faq, Footer, HowItWorks, MoreCare } from './components/Sections'
@@ -6,12 +6,20 @@ import { ALL_SLUG, categories } from './data/categories'
 import { CategoryPage, NotFound } from './pages/CategoryPage'
 import { usePath } from './router'
 
+import { ServiceGridExplorer } from './components/ServiceGridExplorer'
+
 const HOME_TITLE = 'ALLCURO — Home Nursing & Elder Care'
 
 function Home() {
+  const [selectedCat, setSelectedCat] = useState('nursing')
+
   return (
     <>
-      <Hero />
+      <Hero onSelectCategory={(slug) => setSelectedCat(slug)} />
+      <ServiceGridExplorer
+        initialSlug={selectedCat}
+        onCategoryChange={(slug) => setSelectedCat(slug)}
+      />
       <TrustBand />
       <HowItWorks />
       <MoreCare />

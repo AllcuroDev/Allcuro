@@ -20,7 +20,7 @@ class RoleSelectScreen extends StatelessWidget {
       body: DecoratedBox(
         decoration: const BoxDecoration(gradient: AppColors.gradientPrimary),
         child: SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,6 +78,14 @@ class RoleSelectScreen extends StatelessWidget {
                   description:
                       'Accept shift requests, manage your schedule, and see job details.',
                   onTap: () => onSelect(ProviderRole.nurse),
+                ),
+                const SizedBox(height: 16),
+                _RoleCard(
+                  icon: Icons.medical_information_outlined,
+                  title: "I'm a Doctor / Physiotherapist",
+                  description:
+                      'Take home-visit consultations and therapy sessions on your schedule.',
+                  onTap: () => onSelect(ProviderRole.clinician),
                 ),
                 const SizedBox(height: 16),
                 _RoleCard(

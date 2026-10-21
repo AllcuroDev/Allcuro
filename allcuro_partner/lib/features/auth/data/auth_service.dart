@@ -24,6 +24,7 @@ class AuthService {
   static const _loggedInKey = 'auth.logged_in';
   static const _roleKey = 'auth.role';
   static const _nurseStatusKey = 'auth.nurse_verification_status';
+  static const _clinicianStatusKey = 'auth.clinician_verification_status';
   static const _centreStatusKey = 'auth.centre_verification_status';
 
   /// The only code [verifyOtp] accepts, since there's no real SMS backend
@@ -79,6 +80,20 @@ class AuthService {
     await prefs.setString(_nurseStatusKey, status.name);
   }
 
+  Future<NurseVerificationStatus> getClinicianVerificationStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_clinicianStatusKey);
+    for (final status in NurseVerificationStatus.values) {
+      if (status.name == raw) return status;
+    }
+    return NurseVerificationStatus.incomplete;
+  }
+
+  Future<void> setClinicianVerificationStatus(NurseVerificationStatus status) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_clinicianStatusKey, status.name);
+  }
+
   Future<CentreVerificationStatus> getCentreVerificationStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_centreStatusKey);
@@ -98,6 +113,7 @@ class AuthService {
     await prefs.remove(_loggedInKey);
     await prefs.remove(_roleKey);
     await prefs.remove(_nurseStatusKey);
+    await prefs.remove(_clinicianStatusKey);
     await prefs.remove(_centreStatusKey);
   }
 

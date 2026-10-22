@@ -1,44 +1,46 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { ALL_SLUG, categoryPath } from '../data/categories'
 import { site } from '../data/site'
 import { Link } from './Link'
 import { CloseIcon, MenuIcon, PhoneIcon } from './Icons'
 
 export function Header() {
   const [open, setOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  // A soft shadow once the page moves, so the header separates from the content.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const close = () => setOpen(false)
 
   return (
-    <header className="header">
+    <header className={`header ${scrolled ? 'is-scrolled' : ''}`}>
       <div className="container header-inner">
         <Link to="/" className="header-brand">
           <span className="brand-wordmark">ALLCURO</span>
-          <span className="brand-badge">
-            <span className="pulse-dot" />
-            24/7 Verified Care
-          </span>
         </Link>
 
         <nav className={`header-nav ${open ? 'is-open' : ''}`} aria-label="Main">
-          <a href="/#services-explorer" onClick={() => setOpen(false)}>
+          <Link to={categoryPath(ALL_SLUG)} onClick={close}>
             Services
-          </a>
-          <a href="/#how-it-works" onClick={() => setOpen(false)}>
+          </Link>
+          <Link to="/#how-it-works" onClick={close}>
             How It Works
-          </a>
-          <a href="/#why-allcuro" onClick={() => setOpen(false)}>
-            Why ALLCURO
-          </a>
-          <a href="/#faq" onClick={() => setOpen(false)}>
+          </Link>
+          <Link to="/#faq" onClick={close}>
             FAQ
-          </a>
+          </Link>
         </nav>
 
         <div className="header-actions">
-          <a className="header-phone-pill" href={site.phoneHref} title="24/7 Clinical Support Desk">
-            <PhoneIcon size={14} />
+          <a className="btn btn-primary header-cta" href={site.phoneHref}>
+            <PhoneIcon size={16} />
             <span>{site.phoneDisplay}</span>
-          </a>
-          <a className="btn btn-primary header-cta" href="/#services-explorer">
-            Book Service
           </a>
           <button
             type="button"
@@ -54,4 +56,3 @@ export function Header() {
     </header>
   )
 }
-

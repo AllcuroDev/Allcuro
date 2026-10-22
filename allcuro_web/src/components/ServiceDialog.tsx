@@ -19,12 +19,11 @@ export function ServiceDialog({ service: s, onClose }: { service: Service; onClo
   useEffect(() => {
     const d = ref.current
     if (!d) return
-    d.showModal()
+    // Closing here would fire `close` → onClose and unmount the dialog the
+    // moment StrictMode re-runs this effect; unmounting removes it anyway.
+    if (!d.open) d.showModal()
     document.body.classList.add('no-scroll')
-    return () => {
-      document.body.classList.remove('no-scroll')
-      if (d.open) d.close()
-    }
+    return () => document.body.classList.remove('no-scroll')
   }, [])
 
   // Calculate pricing estimates based on selected frequency

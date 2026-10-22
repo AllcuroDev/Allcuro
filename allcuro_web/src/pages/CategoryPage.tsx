@@ -25,7 +25,6 @@ export function CategoryPage({ slug }: { slug: string }) {
         onCategoryChange={(newSlug) => {
           navigate(categoryPath(newSlug))
         }}
-        showTitle={false}
       />
 
       <CallBand />

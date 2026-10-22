@@ -1,29 +1,26 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { FlowBackground } from './components/FlowBackground'
 import { Header } from './components/Header'
 import { Hero, TrustBand } from './components/Hero'
 import { CallBand, Faq, Footer, HowItWorks, MoreCare } from './components/Sections'
 import { ALL_SLUG, categories } from './data/categories'
 import { CategoryPage, NotFound } from './pages/CategoryPage'
+import { useReveal, useSpotlight } from './motion'
 import { usePath } from './router'
-
-import { ServiceGridExplorer } from './components/ServiceGridExplorer'
 
 const HOME_TITLE = 'ALLCURO — Home Nursing & Elder Care'
 
 function Home() {
-  const [selectedCat, setSelectedCat] = useState('nursing')
-
   return (
     <>
-      <Hero onSelectCategory={(slug) => setSelectedCat(slug)} />
-      <ServiceGridExplorer
-        initialSlug={selectedCat}
-        onCategoryChange={(slug) => setSelectedCat(slug)}
-      />
+      <Hero />
       <TrustBand />
-      <HowItWorks />
-      <MoreCare />
-      <Faq />
+      <div className="flow-area">
+        <FlowBackground />
+        <HowItWorks />
+        <MoreCare />
+        <Faq />
+      </div>
       <CallBand />
     </>
   )
@@ -32,6 +29,8 @@ function Home() {
 export default function App() {
   const path = usePath()
   const slug = path.match(/^\/services\/([\w-]+)\/?$/)?.[1]
+  useReveal(path)
+  useSpotlight()
 
   // On every page change: jump to the #section if one was asked for, else to the top.
   useEffect(() => {

@@ -69,6 +69,7 @@ Tokens in `src/index.css` mirror `AppColors` / `AppRadius` in `allcuro/lib/core/
 - **Category illustrations:** `src/assets/images/categories/*.png` are 3D claymorphic squircle artworks (matching the customer app). They have clean anti-aliased squircle edges with transparent background and soft natural 3D shadows so they blend seamlessly into the hero card and category tiles without background-box glitches. Category → artwork mapping is the `art` field in `categories.ts`; URLs come from `components/art.ts`.
 - **Radius scale:** 12 / 14 / 16 / 20 / 24 / 32 px.
 - **Light theme only**, matching the app.
+- **Motion:** kept subtle. `main.tsx` adds `.motion` to `<html>` unless the visitor prefers reduced motion, and all self-running animation is scoped to it. `src/motion.ts` provides `useReveal` (fades in any `.reveal` element on scroll; `--d` staggers it) and `useSpotlight` (a soft cursor glow on `.spotlight` cards). Both are called once in `App.tsx`. On the home page, `FlowBackground` draws a DNA helix behind How it works → FAQ (inside `.flow-area`); it forms and twists as you scroll, and its shape and speed are set by the constants at the top of the file.
 
 ---
 

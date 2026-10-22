@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { ArtTile, IconTile } from './CareIcon'
-import { ArrowIcon, ClockIcon, SearchIcon, SparklesIcon, UserIcon } from './Icons'
+import { ArrowIcon, ClockIcon, SearchIcon } from './Icons'
 import { ServiceDialog } from './ServiceDialog'
 import { ALL_SLUG, categories, categoryById } from '../data/categories'
 import { services } from '../data/services'
@@ -9,28 +9,33 @@ import type { Service } from '../data/types'
 interface Props {
   initialSlug?: string
   onCategoryChange?: (slug: string) => void
-  showTitle?: boolean
   id?: string
 }
+
+// "All Services" leads the dock, then each care type.
+const dockItems = [
+  { slug: ALL_SLUG, label: 'All Services', art: 'see_all' },
+  ...categories.map((c) => ({ slug: c.slug, label: c.label, art: c.art })),
+]
 
 export function ServiceGridExplorer({
   initialSlug = 'nursing',
   onCategoryChange,
-  showTitle = true,
   id = 'services-explorer',
 }: Props) {
   const [activeSlug, setActiveSlug] = useState<string>(initialSlug)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeSubcat, setActiveSubcat] = useState<string>('all')
   const [selectedService, setSelectedService] = useState<Service | null>(null)
+  const dockRef = useRef<HTMLDivElement>(null)
 
-  // Keep in sync if parent changes initialSlug
+  // On narrow screens the dock scrolls sideways; centre the active tab in it.
   useEffect(() => {
-    if (initialSlug) {
-      setActiveSlug(initialSlug)
-      setActiveSubcat('all')
-    }
-  }, [initialSlug])
+    const dock = dockRef.current
+    const tab = dock?.querySelector<HTMLElement>('.dock-tab.is-active')
+    if (!dock || !tab) return
+    dock.scrollLeft = tab.offsetLeft - (dock.clientWidth - tab.offsetWidth) / 2
+  }, [activeSlug])
 
   const handleCategorySelect = (slug: string) => {
     setActiveSlug(slug)
@@ -74,27 +79,17 @@ export function ServiceGridExplorer({
     })
   }, [categoryServices, activeSubcat, searchQuery])
 
+  const title = isAll ? 'All Services' : currentCategory?.label
+  const blurb = isAll
+    ? 'Every nursing, elder care, therapy and doctor service we offer, with prices.'
+    : currentCategory?.blurb
+
   return (
     <section className="services-explorer-section" id={id}>
       <div className="container">
-        {showTitle && (
-          <div className="explorer-header">
-            <span className="eyebrow">
-              <SparklesIcon size={14} /> Comprehensive Home Medical Care
-            </span>
-            <h2 className="explorer-title">
-              Explore Services &amp; <span className="hl">Instant Pricing</span>
-            </h2>
-            <p className="explorer-subtitle">
-              Click any category or procedure below for verified clinical protocols, transparent rates, and instant doorstep booking.
-            </p>
-          </div>
-        )}
-
-        {/* 1. 3D Category Dock / Horizontal Tabs */}
-        <div className="category-dock-wrapper">
-          <nav className="category-dock" aria-label="Care Categories">
-            {categories.map((c) => {
+        <div className="category-dock-wrapper" ref={dockRef}>
+          <nav className="category-dock" aria-label="Care categories">
+            {dockItems.map((c) => {
               const isActive = c.slug === activeSlug
               return (
                 <button
@@ -105,97 +100,63 @@ export function ServiceGridExplorer({
                   aria-pressed={isActive}
                 >
                   <span className="dock-art">
-                    <ArtTile name={c.art} size={42} />
+                    <ArtTile name={c.art} size={34} />
                   </span>
                   <span className="dock-label">{c.label}</span>
                 </button>
               )
             })}
-            <button
-              type="button"
-              className={`dock-tab ${isAll ? 'is-active' : ''}`}
-              onClick={() => handleCategorySelect(ALL_SLUG)}
-              aria-pressed={isAll}
-            >
-              <span className="dock-art">
-                <ArtTile name="see_all" size={42} />
-              </span>
-              <span className="dock-label">All Services</span>
-            </button>
           </nav>
         </div>
 
-        {/* 2. Active Category Banner & Search / Filter Controls */}
-        <div className="explorer-controls">
-          <div className="category-active-info">
-            <div className="category-headline">
-              <span className="category-icon-box">
-                <ArtTile name={isAll ? 'see_all' : currentCategory?.art ?? 'nursing'} size={48} />
-              </span>
-              <div>
-                <h3 className="category-active-title">
-                  {isAll ? 'All Clinical & Home Services' : currentCategory?.label}
-                </h3>
-                <p className="category-active-blurb">
-                  {isAll ? 'Browse all medical, nursing, elder, and rehab services.' : currentCategory?.blurb}
-                </p>
-              </div>
-            </div>
-            <div className="results-badge">
-              <strong>{filteredServices.length}</strong> {filteredServices.length === 1 ? 'service' : 'services'} available
-            </div>
+        <div className="sx-head">
+          <div>
+            <h1 className="sx-title">{title}</h1>
+            <p className="sx-blurb">{blurb}</p>
           </div>
-
-          <div className="explorer-search-filter-row">
-            {/* Live Search Input */}
-            <div className="search-input-wrap">
-              <SearchIcon size={18} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search injection, wound dressing, catheter, physiotherapy..."
-                className="explorer-search-input"
-                aria-label="Search services"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  className="search-clear-btn"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-
-            {/* Subcategory Pills */}
-            {subcategories.length > 2 && (
-              <div className="subcat-pills" role="tablist" aria-label="Subcategories">
-                {subcategories.map((sub) => {
-                  const isActive = activeSubcat === sub
-                  return (
-                    <button
-                      key={sub}
-                      type="button"
-                      className={`subcat-pill ${isActive ? 'is-active' : ''}`}
-                      onClick={() => setActiveSubcat(sub)}
-                      role="tab"
-                      aria-selected={isActive}
-                    >
-                      {sub === 'all' ? 'All' : sub}
-                    </button>
-                  )
-                })}
-              </div>
+          <label className="search-input-wrap">
+            <SearchIcon size={18} />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search services"
+              className="explorer-search-input"
+              aria-label="Search services"
+            />
+            {searchQuery && (
+              <button type="button" className="search-clear-btn" onClick={() => setSearchQuery('')} aria-label="Clear search">
+                ×
+              </button>
             )}
-          </div>
+          </label>
         </div>
 
-        {/* 3. THE SERVICES GRID (Rendered in a modern responsive card grid instead of a list) */}
+        <div className="sx-bar">
+          {subcategories.length > 2 ? (
+            <div className="subcat-pills" role="group" aria-label="Filter by type">
+              {subcategories.map((sub) => (
+                <button
+                  key={sub}
+                  type="button"
+                  className={`subcat-pill ${activeSubcat === sub ? 'is-active' : ''}`}
+                  onClick={() => setActiveSubcat(sub)}
+                  aria-pressed={activeSubcat === sub}
+                >
+                  {sub === 'all' ? 'All' : sub}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span />
+          )}
+          <span className="sx-count">
+            {filteredServices.length} {filteredServices.length === 1 ? 'service' : 'services'}
+          </span>
+        </div>
+
         {filteredServices.length > 0 ? (
-          <div className="services-grid" role="region" aria-label="Services Grid">
+          <div className="services-grid">
             {filteredServices.map((service, index) => (
               <ServiceCard
                 key={service.id}
@@ -216,88 +177,43 @@ export function ServiceGridExplorer({
                 setActiveSubcat('all')
               }}
             >
-              Reset Filters
+              Reset filters
             </button>
           </div>
         )}
       </div>
 
-      {/* 4. Interactive Detail Sheet */}
-      {selectedService && (
-        <ServiceDialog
-          service={selectedService}
-          onClose={() => setSelectedService(null)}
-        />
-      )}
+      {selectedService && <ServiceDialog service={selectedService} onClose={() => setSelectedService(null)} />}
     </section>
   )
 }
 
-function ServiceCard({
-  service: s,
-  index,
-  onSelect,
-}: {
-  service: Service
-  index: number
-  onSelect: () => void
-}) {
+function ServiceCard({ service: s, index, onSelect }: { service: Service; index: number; onSelect: () => void }) {
   const cat = categoryById[s.category] ?? categories[0]
 
   return (
-    <div
-      className="service-card"
+    <button
+      type="button"
+      className="service-card spotlight"
       style={{ '--i': index % 12 } as React.CSSProperties}
       onClick={onSelect}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect()
-        }
-      }}
+      aria-label={`${s.name}, ${s.price}. View details`}
     >
-      <div className="card-top">
-        <IconTile name={s.icon} ink={cat.ink} wash={cat.wash} size={48} />
-        <div className="card-tags">
-          <span className="card-cat-badge" style={{ color: cat.ink, background: cat.wash }}>
-            {s.subcategory}
-          </span>
+      <IconTile name={s.icon} ink={cat.ink} wash={cat.wash} size={44} />
+      <span className="card-body">
+        <span className="card-title">{s.name}</span>
+        <span className="card-meta">
           {s.badge && <span className="card-badge">{s.badge}</span>}
-        </div>
-      </div>
-
-      <div className="card-content">
-        <h4 className="card-title">{s.name}</h4>
-        <p className="card-desc">{s.description}</p>
-      </div>
-
-      <div className="card-meta">
-        <span className="meta-pill">
-          <ClockIcon size={14} />
-          <span>{s.duration}</span>
+          <ClockIcon size={13} />
+          <span className="card-meta-text">
+            {s.duration} · {s.professional}
+          </span>
         </span>
-        <span className="meta-pill">
-          <UserIcon size={14} />
-          <span>{s.professional}</span>
-        </span>
-      </div>
-
-      <div className="card-footer">
-        <div className="card-price-block">
-          <span className="price-label">Starts at</span>
-          <strong className="card-price">{s.price}</strong>
-        </div>
-        <button
-          type="button"
-          className="card-cta-btn"
-          aria-label={`View details for ${s.name}`}
-        >
-          <span>View Details</span>
-          <ArrowIcon size={14} />
-        </button>
-      </div>
-    </div>
+      </span>
+      <span className="card-price">
+        {s.price}
+        <ArrowIcon size={14} />
+      </span>
+    </button>
   )
 }

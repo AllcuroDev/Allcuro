@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import centre from '../assets/images/centre-1.jpg'
 import wheelchair from '../assets/images/eq-wheelchair.jpg'
 import { categories, categoryPath } from '../data/categories'
@@ -6,6 +7,7 @@ import { site } from '../data/site'
 import { Link } from './Link'
 import { ArrowIcon, PhoneIcon, WhatsAppIcon } from './Icons'
 import { Logo } from './Logo'
+import { motionOn } from '../motion'
 
 const steps = [
   {
@@ -23,16 +25,56 @@ const steps = [
 ]
 
 export function HowItWorks() {
+  const [active, setActive] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const [inView, setInView] = useState(false)
+  const ref = useRef<HTMLOListElement>(null)
+
+  // Walk through the steps on their own while the section is on screen,
+  // unless the visitor is pointing at or focused on one.
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !motionOn()) return
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.4 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!inView || paused) return
+    const t = window.setInterval(() => setActive((a) => (a + 1) % steps.length), 3600)
+    return () => window.clearInterval(t)
+  }, [inView, paused])
+
   return (
     <section className="section" id="how-it-works" aria-labelledby="how-title">
       <div className="container">
-        <div className="section-head">
+        <div className="section-head reveal">
           <p className="eyebrow">How it works</p>
           <h2 id="how-title">Care at home in three simple steps</h2>
         </div>
-        <ol className="steps">
+        <ol
+          ref={ref}
+          className="steps reveal"
+          style={{ '--progress': (active + 1) / steps.length } as CSSProperties}
+          onPointerLeave={() => setPaused(false)}
+          onBlur={() => setPaused(false)}
+        >
           {steps.map((s, i) => (
-            <li key={s.title}>
+            <li
+              key={s.title}
+              className={`spotlight ${i === active ? 'is-active' : ''} ${i < active ? 'is-done' : ''}`}
+              style={{ '--d': i } as CSSProperties}
+              tabIndex={0}
+              onPointerEnter={() => {
+                setPaused(true)
+                setActive(i)
+              }}
+              onFocus={() => {
+                setPaused(true)
+                setActive(i)
+              }}
+            >
               <span className="step-num">{String(i + 1).padStart(2, '0')}</span>
               <h3>{s.title}</h3>
               <p>{s.text}</p>
@@ -62,14 +104,16 @@ export function MoreCare() {
   return (
     <section className="section section-tint" aria-labelledby="more-title">
       <div className="container">
-        <div className="section-head">
+        <div className="section-head reveal">
           <p className="eyebrow">Also on ALLCURO</p>
           <h2 id="more-title">Need a stay or equipment?</h2>
         </div>
         <div className="more-grid">
-          {cards.map((c) => (
-            <article className="more-card" key={c.title}>
-              <img src={c.img} alt={c.alt} loading="lazy" />
+          {cards.map((c, i) => (
+            <article className="more-card spotlight reveal" key={c.title} style={{ '--d': i } as CSSProperties}>
+              <div className="more-img">
+                <img src={c.img} alt={c.alt} loading="lazy" />
+              </div>
               <div>
                 <h3>{c.title}</h3>
                 <p>{c.text}</p>
@@ -86,20 +130,44 @@ export function MoreCare() {
 }
 
 export function Faq() {
+  const [open, setOpen] = useState<number | null>(0)
+
   return (
     <section className="section" id="faq" aria-labelledby="faq-title">
       <div className="container faq-wrap">
-        <div className="section-head">
+        <div className="section-head reveal">
           <p className="eyebrow">Questions</p>
           <h2 id="faq-title">Frequently asked questions</h2>
         </div>
         <div className="faq-list">
-          {faqs.map((f, i) => (
-            <details key={f.q} open={i === 0}>
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
-            </details>
-          ))}
+          {faqs.map((f, i) => {
+            const isOpen = open === i
+            return (
+              <div
+                key={f.q}
+                className={`faq-item reveal ${isOpen ? 'is-open' : ''}`}
+                style={{ '--d': i } as CSSProperties}
+              >
+                <h3>
+                  <button
+                    type="button"
+                    id={`faq-q-${i}`}
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-a-${i}`}
+                    onClick={() => setOpen(isOpen ? null : i)}
+                  >
+                    <span>{f.q}</span>
+                    <span className="faq-sign" aria-hidden="true" />
+                  </button>
+                </h3>
+                <div className="faq-panel" id={`faq-a-${i}`} role="region" aria-labelledby={`faq-q-${i}`} inert={!isOpen}>
+                  <div>
+                    <p>{f.a}</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     </section>
@@ -109,14 +177,19 @@ export function Faq() {
 export function CallBand() {
   return (
     <section className="call-band" aria-labelledby="call-title">
-      <div className="container call-inner">
+      <span className="call-orb call-orb-a" aria-hidden="true" />
+      <span className="call-orb call-orb-b" aria-hidden="true" />
+      <div className="container call-inner reveal">
         <div>
           <h2 id="call-title">Need help choosing? Just call us.</h2>
           <p>Our care desk is open 24 hours, every day. We will understand your needs and book the right person.</p>
         </div>
         <div className="call-actions">
-          <a className="btn btn-light btn-lg" href={site.phoneHref}>
-            <PhoneIcon /> {site.phoneDisplay}
+          <a className="btn btn-light btn-lg call-phone" href={site.phoneHref}>
+            <span className="ring-icon">
+              <PhoneIcon />
+            </span>
+            {site.phoneDisplay}
           </a>
           <a className="btn btn-ghost-light btn-lg" href={site.whatsappHref} target="_blank" rel="noreferrer">
             <WhatsAppIcon /> WhatsApp us

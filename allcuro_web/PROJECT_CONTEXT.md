@@ -2,13 +2,15 @@
 
 > **Directory:** `/allcuro_web`  
 > **Target Audience:** Patients, families, and elderly people in India looking for home healthcare — many of them older or less confident online.  
-> **Stack:** React 19, Vite 8, TypeScript, plain CSS (no UI library), Google Fonts (Plus Jakarta Sans).
+> **Stack:** React 19, Vite 8, TypeScript, plain CSS (no UI library), Leaflet (tracker map only, lazy-loaded), Google Fonts (Plus Jakarta Sans). Styles: `index.css` (site) + `app.css` (booking, tracking & account pages).
 
 ---
 
 ## 1. Purpose
 
-The public marketing website for ALLCURO. It has one job: **show every service clearly, with its price, so anyone (including older visitors) can understand what ALLCURO offers and call to book.** It is a single page with no login, no checkout and no backend. Booking happens by phone or WhatsApp, or in the customer app (`/allcuro`).
+The public marketing website for ALLCURO. It shows every service clearly, with its price, and lets visitors **sign in, book, pay and track** the same way as the customer app (`/allcuro`): phone + OTP login, nurse visits, care-centre admissions, equipment rental, payment, live nurse tracking, the centre admission pass, and My Bookings. Phone and WhatsApp stay available on every page.
+
+**Demo mode, like the app:** there is no backend yet. Login uses the fixed OTP `123456`; profile, addresses and bookings live in `localStorage` (per phone number); payment is a simulated checkout (no money is charged); the live tracker follows the app's simulated 90-second route. Everything goes through `src/state/*` and `PaymentDialog`'s `processPayment`, so wiring Supabase / Razorpay only touches those files.
 
 ---
 
@@ -21,7 +23,18 @@ Routing is a tiny history-API router (`src/router.ts` + `src/components/Link.tsx
 | `/` | `Home` in `App.tsx` | Landing page (sections below). |
 | `/services/:slug` | `CategoryPage` (`pages/CategoryPage.tsx`) | Lists one category's services, grouped by subcategory. Slugs: `nursing`, `elder-care`, `mother-baby`, `physiotherapy`, `doctor-care`, `diagnostics`, `wellness` (same as the app's `/category-services/:slug`). |
 | `/services/all` | `CategoryPage` | Every service, grouped by category. |
+| `/service/:id` | `ServicePage` | One service: included / not included, professionals who can do it (nurse cards → "Book Slot" sheet), Book Service. App: `/services/:serviceId`. |
+| `/book-nurse` | `NurseBookingPage` | Service, nurse, slot, patient, address, coupon, bill → payment. Query: `service`, `nurse`, `duration`, `slot`. App: `/nurse-quick-booking`. |
+| `/nurses`, `/nurses/:id` | `NursesPage`, `NursePage` | Nurse list with specialty filters; nurse profile. |
+| `/centres`, `/centres/:id`, `/centres/:id/book` | `CentresPages.tsx` | Centre list, detail, admission booking (room, stay, patient, deposit) → payment. |
+| `/equipment`, `/equipment/:id/rent` | `EquipmentPages.tsx` | Equipment list; rental checkout (plan, delivery slot, address, coupon) → payment. App: `/checkout?item=`. |
+| `/bookings` | `BookingsPage` | Active / past bookings with OTPs. |
+| `/bookings/:id` | `BookingDetailPage` | Nurse → live tracker (Leaflet map, OTP, steps, vitals, call, rate, SOS); centre → admission pass; equipment → delivery tracker. App: `/nurse-tracker/:id`, `/centre-pass/:id`. |
+| `/login?next=` | `LoginPage` | Phone → OTP → first-time profile setup (app: `/auth/phone` + `/onboarding`). |
+| `/profile` | `ProfilePage` | Profile, KYC tier, saved addresses, sign out. |
 | anything else | `NotFound` | Links to all services / home. |
+
+Booking actions call `requireLogin()` (`state/auth.ts`), which opens `LoginDialog` for guests — the app's `QuickLoginSheet` — and continues the booking after sign-in. Routes are matched in the `routes` table in `App.tsx`.
 
 **Home page sections (top to bottom):**
 
@@ -47,6 +60,10 @@ Routing is a tiny history-API router (`src/router.ts` + `src/components/Link.tsx
 | `src/data/services.ts` | `allcuro/lib/features/services/data/master_services_catalog.dart` + icon map in `allcuro/lib/core/ui/care_icon.dart` | **Generated** — do not hand-edit if the app catalog changes; regenerate it (see below). |
 | `src/data/categories.ts` | Home grid in `home_screen.dart` + `CareTone` in `care_icon.dart` | Category id = `mainCategory` string from the catalog. Each has `ink` (glyph) and `wash` (tile) colours. |
 | `src/data/faqs.ts` | `allcuro/lib/features/profile/presentation/faq_screen.dart` | Plus one pricing FAQ. |
+| `src/data/providers.ts` | `nurses_service.dart`, `centres_service.dart`, `equipment_service.dart` | Nurses, centres, equipment. |
+| `src/data/booking.ts` | `nurse_quick_booking_screen.dart`, `service_detail_screen.dart`, `centre_booking_screen.dart`, `checkout_repository.dart` | Booking options and price rules (fee ₹99 + 18% GST, centre deposit, coupons). |
+| `src/data/route.ts` | `nurse_live_map.dart` | Simulated nurse route for the tracker. |
+| `src/state/` | Auth / bookings / location view models | localStorage-backed stores (`lib/store.ts`). |
 | `src/data/site.ts` | — | Phone, WhatsApp, email, cities. **Currently placeholders from the app's demo data — replace before launch.** |
 | `src/assets/icons/care/*.svg` | `allcuro/assets/icons/care/` | Duotone 24×24 icons drawn in `currentColor`; rendered inline by `CareIcon` so they take the category tone. |
 | `src/assets/images/` | `allcuro/assets/images/` | Nurse, centre, and equipment photos. |

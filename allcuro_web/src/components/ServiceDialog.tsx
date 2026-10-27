@@ -3,7 +3,8 @@ import { categories, categoryById } from '../data/categories'
 import { site } from '../data/site'
 import type { Service } from '../data/types'
 import { IconTile } from './CareIcon'
-import { CheckIcon, ClockIcon, CloseIcon, MinusIcon, PhoneIcon, ShieldIcon, SparklesIcon, UserIcon, WhatsAppIcon } from './Icons'
+import { Link } from './Link'
+import { ArrowIcon, CheckIcon, ClockIcon, CloseIcon, MinusIcon, PhoneIcon, ShieldIcon, SparklesIcon, UserIcon, WhatsAppIcon } from './Icons'
 
 const split = (text: string) =>
   text
@@ -179,7 +180,10 @@ export function ServiceDialog({ service: s, onClose }: { service: Service; onClo
         {s.notes && <p className="dlg-note"><strong>Note:</strong> {s.notes}</p>}
 
         <div className="dlg-actions">
-          <a className="btn btn-primary btn-lg" href={whatsapp} target="_blank" rel="noreferrer">
+          <Link className="btn btn-primary btn-lg" to={`/service/${s.id}`} onClick={onClose}>
+            <ArrowIcon size={18} /> Book online
+          </Link>
+          <a className="btn btn-outline btn-lg" href={whatsapp} target="_blank" rel="noreferrer">
             <WhatsAppIcon size={18} /> Book via WhatsApp ({effectivePrice})
           </a>
           <a className="btn btn-outline btn-lg" href={site.phoneHref}>

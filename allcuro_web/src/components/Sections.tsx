@@ -93,12 +93,16 @@ export function MoreCare() {
       alt: 'A bright, clean room at a care centre',
       title: 'Verified care centres',
       text: 'Field-audited elder care homes, rehabilitation and recovery centres with clear bed availability.',
+      to: '/centres',
+      cta: 'See centres & book a bed',
     },
     {
       img: wheelchair,
       alt: 'A wheelchair available on rent',
       title: 'Medical equipment on rent',
       text: 'Wheelchairs, hospital beds and oxygen concentrators delivered home, with a refundable deposit.',
+      to: '/equipment',
+      cta: 'Rent equipment',
     },
   ]
   return (
@@ -117,9 +121,9 @@ export function MoreCare() {
               <div>
                 <h3>{c.title}</h3>
                 <p>{c.text}</p>
-                <a className="text-link" href={site.phoneHref}>
-                  Ask our team <ArrowIcon size={16} />
-                </a>
+                <Link className="text-link" to={c.to}>
+                  {c.cta} <ArrowIcon size={16} />
+                </Link>
               </div>
             </article>
           ))}

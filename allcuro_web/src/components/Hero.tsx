@@ -5,7 +5,7 @@ import { site } from '../data/site'
 import { Link } from './Link'
 import { artUrl } from './art'
 import { motionOn } from '../motion'
-import { CheckIcon, ClockIcon, HeadsetIcon, PhoneIcon, RupeeIcon, ShieldIcon } from './Icons'
+import { CheckIcon, ClockIcon, HeadsetIcon, PhoneIcon, RupeeIcon, ShieldIcon, BoltIcon } from './Icons'
 
 const tiles = [
   ...categories.map((c) => ({ slug: c.slug, label: c.label, art: c.art })),
@@ -38,6 +38,15 @@ export function Hero() {
               ))}
             </ul>
           </nav>
+
+          <div className="hero-quick">
+            <Link to="/book-nurse" className="btn btn-primary btn-lg">
+              <BoltIcon /> Book a nurse in 45 mins
+            </Link>
+            <Link to="/nurses" className="btn btn-outline btn-lg">
+              Browse verified nurses
+            </Link>
+          </div>
 
           <p className="hero-note">
             Not sure what you need?{' '}

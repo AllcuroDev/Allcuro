@@ -9,14 +9,14 @@ export function Link({ to, onClick, ...rest }: LinkProps) {
     onClick?.(e)
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
     const url = new URL(to, window.location.href)
-    if (url.pathname === window.location.pathname) {
+    if (url.pathname + url.search === window.location.pathname + window.location.search) {
       if (url.hash) return
       e.preventDefault()
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
     e.preventDefault()
-    navigate(url.pathname + url.hash)
+    navigate(url.pathname + url.search + url.hash)
   }
   return <a href={to} onClick={handleClick} {...rest} />
 }

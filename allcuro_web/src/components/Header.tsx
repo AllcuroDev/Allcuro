@@ -1,12 +1,26 @@
 import { useEffect, useState } from 'react'
 import { ALL_SLUG, categoryPath } from '../data/categories'
 import { site } from '../data/site'
+import { initials } from '../lib/format'
+import { usePath } from '../router'
+import { useAuth } from '../state/auth'
 import { Link } from './Link'
-import { CloseIcon, MenuIcon, PhoneIcon } from './Icons'
+import { CloseIcon, MenuIcon, PhoneIcon, UserIcon } from './Icons'
+
+// Main sections, matching the app's bottom tabs (Home, Care Centres, 45 Mins, Equipments, Bookings).
+const NAV = [
+  { to: categoryPath(ALL_SLUG), label: 'Services', match: '/service' },
+  { to: '/nurses', label: 'Nurses', match: '/nurses' },
+  { to: '/centres', label: 'Care Centres', match: '/centres' },
+  { to: '/equipment', label: 'Equipment', match: '/equipment' },
+  { to: '/bookings', label: 'My Bookings', match: '/bookings' },
+]
 
 export function Header() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const path = usePath()
+  const { isLoggedIn, profile } = useAuth()
 
   // A soft shadow once the page moves, so the header separates from the content.
   useEffect(() => {
@@ -26,22 +40,40 @@ export function Header() {
         </Link>
 
         <nav className={`header-nav ${open ? 'is-open' : ''}`} aria-label="Main">
-          <Link to={categoryPath(ALL_SLUG)} onClick={close}>
-            Services
-          </Link>
-          <Link to="/#how-it-works" onClick={close}>
-            How It Works
-          </Link>
-          <Link to="/#faq" onClick={close}>
-            FAQ
-          </Link>
+          {NAV.map((n) => (
+            <Link
+              key={n.to}
+              to={n.to}
+              onClick={close}
+              aria-current={path.startsWith(n.match) ? 'page' : undefined}
+            >
+              {n.label}
+            </Link>
+          ))}
+          <a className="header-nav-phone" href={site.phoneHref}>
+            <PhoneIcon size={16} /> {site.phoneDisplay}
+          </a>
         </nav>
 
         <div className="header-actions">
-          <a className="btn btn-primary header-cta" href={site.phoneHref}>
+          <a className="btn btn-outline header-cta" href={site.phoneHref} aria-label={`Call ${site.phoneDisplay}`}>
             <PhoneIcon size={16} />
             <span>{site.phoneDisplay}</span>
           </a>
+          {isLoggedIn && profile?.name ? (
+            <Link to="/profile" className="account-btn" aria-label={`My profile (${profile.name})`} onClick={close}>
+              {initials(profile.name)}
+            </Link>
+          ) : (
+            <Link
+              to={isLoggedIn ? '/profile' : '/login'}
+              className="btn btn-primary header-signin"
+              onClick={close}
+            >
+              <UserIcon size={16} />
+              <span>{isLoggedIn ? 'Finish setup' : 'Sign in'}</span>
+            </Link>
+          )}
           <button
             type="button"
             className="menu-btn"

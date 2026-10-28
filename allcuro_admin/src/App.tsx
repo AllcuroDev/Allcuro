@@ -8,11 +8,15 @@ import { BedOccupancyView } from './components/BedOccupancyView';
 import { PayoutsLedgerView } from './components/PayoutsLedgerView';
 import { ComplianceView } from './components/ComplianceView';
 import { AnalyticsView } from './components/AnalyticsView';
+import { ServicesCatalogView } from './components/ServicesCatalogView';
+import { AdminLogin } from './components/AdminLogin';
+import { useAdminSession } from './lib/adminAuth';
 import type { NavSection } from './types/admin';
 import { mockStats } from './data/mockData';
 import './App.css';
 
 export function App() {
+  const { status, session, signOut } = useAdminSession();
   const [currentSection, setCurrentSection] = useState<NavSection>('overview');
   const [timeframe, setTimeframe] = useState<string>('Sep 1 – Nov 30, 2026');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
@@ -33,12 +37,18 @@ export function App() {
         return <ComplianceView />;
       case 'analytics':
         return <AnalyticsView />;
+      case 'services':
+        return <ServicesCatalogView />;
       case 'support':
         return <LiveOperationsView />;
       default:
         return <OverviewView />;
     }
   };
+
+  if (status !== 'admin') {
+    return <AdminLogin status={status} email={session?.user.email} onSignOut={signOut} />;
+  }
 
   return (
     <div className="allcuro-admin-app-root">
@@ -58,6 +68,8 @@ export function App() {
           timeframe={timeframe}
           setTimeframe={setTimeframe}
           onNewAction={() => setCurrentSection('verification')}
+          adminEmail={session?.user.email ?? ''}
+          onSignOut={signOut}
         />
 
         <div className="allcuro-view-viewport">

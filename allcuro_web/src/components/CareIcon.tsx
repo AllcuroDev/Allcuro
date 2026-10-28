@@ -1,4 +1,4 @@
-import { artUrl } from './art'
+import { artUrl, serviceArtUrl } from './art'
 
 // Renders the app's duotone care icons inline so `currentColor` picks up the tone.
 const svgs = import.meta.glob<string>('../assets/icons/care/*.svg', {
@@ -36,12 +36,29 @@ interface TileProps {
 }
 
 export function IconTile({ name, ink, wash, size = 56 }: TileProps) {
+  const art = serviceArtUrl(name)
+  if (art) {
+    const imgSize = Math.round(size * 0.88)
+    return (
+      <span className="icon-tile" style={{ width: size, height: size, background: wash }}>
+        <img
+          src={art}
+          alt=""
+          width={imgSize}
+          height={imgSize}
+          style={{ width: imgSize, height: imgSize, objectFit: 'contain', display: 'block' }}
+          loading="lazy"
+        />
+      </span>
+    )
+  }
   return (
     <span className="icon-tile" style={{ width: size, height: size, background: wash }}>
       <CareIcon name={name} size={Math.round(size * 0.52)} color={ink} />
     </span>
   )
 }
+
 
 /** Neutral tile holding a 3D-style category illustration (same artwork as the app's home grid). */
 export function ArtTile({ name, size = 56 }: { name: string; size?: number }) {

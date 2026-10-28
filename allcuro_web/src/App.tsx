@@ -8,7 +8,7 @@ import { CallBand, Faq, Footer, HowItWorks, MoreCare } from './components/Sectio
 import { Toaster } from './components/ui'
 import { ALL_SLUG, categories } from './data/categories'
 import { centreById, equipmentById, nurseById } from './data/providers'
-import { services } from './data/services'
+import { getServices } from './state/catalog'
 import { LoginPage, ProfilePage } from './pages/AccountPages'
 import { BookingDetailPage, BookingsPage } from './pages/BookingsPages'
 import { CategoryPage, NotFound } from './pages/CategoryPage'
@@ -52,7 +52,7 @@ const routes: { pattern: RegExp; page: (id: string) => ReactNode; title: (id: st
   {
     pattern: /^\/service\/([\w-]+)$/,
     page: (id) => <ServicePage key={id} id={id} />,
-    title: (id) => services.find((s) => s.id === id)?.name,
+    title: (id) => getServices().find((s) => s.id === id)?.name,
   },
   { pattern: /^\/book-nurse$/, page: () => <NurseBookingPage />, title: () => 'Book a Nurse' },
   { pattern: /^\/nurses$/, page: () => <NursesPage />, title: () => 'Verified Nurses' },

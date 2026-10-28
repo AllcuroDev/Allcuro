@@ -38,6 +38,7 @@ dependencies:
   go_router:
   flutter_riverpod:
   shared_preferences:
+  supabase_flutter: ^2.18.3
 
 dev_dependencies:
   flutter_test:

@@ -6,18 +6,23 @@ import {
   Share2,
   Plus,
   Calendar,
+  LogOut,
 } from 'lucide-react';
 
 interface HeaderProps {
   timeframe: string;
   setTimeframe: (val: string) => void;
   onNewAction: () => void;
+  adminEmail: string;
+  onSignOut: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   timeframe,
   setTimeframe,
   onNewAction,
+  adminEmail,
+  onSignOut,
 }) => {
   return (
     <header className="allcuro-header">
@@ -88,6 +93,14 @@ export const Header: React.FC<HeaderProps> = ({
             title="Create Verification or SOS Dispatch"
           >
             <Plus size={16} />
+          </button>
+          <button
+            className="icon-action-btn"
+            onClick={onSignOut}
+            title={`Sign out ${adminEmail}`}
+            aria-label="Sign out"
+          >
+            <LogOut size={16} />
           </button>
         </div>
       </div>

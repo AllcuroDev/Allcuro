@@ -46,3 +46,6 @@ app.*.map.json
 .vercel
 # Widget Preview related
 .widget_preview/
+
+# Supabase keys (see supabase.example.json)
+supabase.json

@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/app_shell.dart';
 import '../../../core/ui/care_icon.dart';
 import '../data/master_services_catalog.dart';
+import '../data/services_repository.dart';
 
 /// Major service category item representation
 class MajorServiceItem {
@@ -511,6 +512,7 @@ class _CategoryServicesScreenState extends ConsumerState<CategoryServicesScreen>
   /// displays the sub-services inside that category.
   Widget _buildSingleCategorySubservicesView(BuildContext context) {
     final meta = _getCategoryMeta(widget.category);
+    ref.watch(servicesCatalogProvider); // rebuild once live services load
     final allCategoryServices = MasterServicesCatalog.getByCategory(widget.category);
 
     // Extract unique subcategories

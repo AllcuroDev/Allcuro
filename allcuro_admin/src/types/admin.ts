@@ -6,6 +6,7 @@ export type NavSection =
   | 'payouts'
   | 'compliance'
   | 'analytics'
+  | 'services'
   | 'support';
 
 export interface VerificationItem {

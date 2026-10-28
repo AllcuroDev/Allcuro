@@ -13,6 +13,13 @@ class MasterServiceItem {
   final String price;
   final String notes;
   final IconData icon;
+
+  /// Care-icon key shared with the web and Supabase (`services.icon`), e.g.
+  /// 'bath'. Empty for bundled entries, which resolve icons by [id].
+  final String iconKey;
+
+  /// Supabase Storage artwork uploaded from the admin; overrides the icon when set.
+  final String? imageUrl;
   final String badge;
 
   const MasterServiceItem({
@@ -28,6 +35,8 @@ class MasterServiceItem {
     required this.price,
     required this.notes,
     required this.icon,
+    this.iconKey = '',
+    this.imageUrl,
     this.badge = '',
   });
 }
@@ -35,7 +44,15 @@ class MasterServiceItem {
 class MasterServicesCatalog {
   MasterServicesCatalog._();
 
-  static const List<MasterServiceItem> allServices = [
+  /// The catalog currently shown: the live rows from Supabase once
+  /// [servicesCatalogProvider] has loaded them, otherwise [bundledServices].
+  static List<MasterServiceItem> get allServices => _live ?? bundledServices;
+  static List<MasterServiceItem>? _live;
+
+  static void replaceAll(List<MasterServiceItem> services) => _live = services;
+
+  /// Shipped with the app — shown before (or without) a Supabase connection.
+  static const List<MasterServiceItem> bundledServices = [
     MasterServiceItem(
       id: 'assisted-bathing',
       name: 'Assisted Bathing',

@@ -180,6 +180,7 @@ class CareIcon extends StatelessWidget {
 }
 
 /// Soft-washed rounded tile holding a care glyph — used by every service grid.
+/// Seamlessly renders the 3D claymorphic service artwork when available with SVG fallback.
 class CareIconTile extends StatelessWidget {
   final String asset;
   final CareTone tone;
@@ -198,8 +199,20 @@ class CareIconTile extends StatelessWidget {
     this.radius = 18,
   });
 
+  String? get _service3dAsset {
+    if (asset.endsWith('.png')) return asset;
+    if (asset.contains('/')) {
+      final base = asset.split('/').last.replaceAll('.svg', '');
+      return 'assets/images/services/$base.png';
+    }
+    return 'assets/images/services/$asset.png';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final srv3d = _service3dAsset;
+    final isPng = asset.endsWith('.png');
+
     return Container(
       width: width,
       height: height,
@@ -208,16 +221,26 @@ class CareIconTile extends StatelessWidget {
         color: tone.wash,
         borderRadius: BorderRadius.circular(radius),
       ),
-      child: CareIcon(asset, color: tone.ink, size: iconSize),
+      child: srv3d != null
+          ? Image.asset(
+              srv3d,
+              width: width * 0.88,
+              height: height * 0.88,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) =>
+                  isPng ? const SizedBox.shrink() : CareIcon(asset, color: tone.ink, size: iconSize),
+            )
+          : CareIcon(asset, color: tone.ink, size: iconSize),
     );
   }
 }
 
-/// 3D claymorphic category illustrations (see `assets/images/categories/`).
+/// 3D claymorphic category and service illustrations (see `assets/images/categories/` and `assets/images/services/`).
 class CareIllustrations {
   CareIllustrations._();
 
   static const _dir = 'assets/images/categories';
+  static const _srvDir = 'assets/images/services';
 
   static const nursing = '$_dir/nursing.png';
   static const motherBaby = '$_dir/mother_baby.png';
@@ -230,6 +253,12 @@ class CareIllustrations {
   static const wellness = '$_dir/wellness.png';
   static const equipment = '$_dir/equipment.png';
   static const seeAll = '$_dir/see_all.png';
+
+  /// 3D service illustration asset path for any service ID
+  static String forService(String serviceId) {
+    final iconName = CareIcons.forService(serviceId).split('/').last.replaceAll('.svg', '');
+    return '$_srvDir/$iconName.png';
+  }
 }
 
 /// Seamless 3D category illustration tile — used by the home category grid.

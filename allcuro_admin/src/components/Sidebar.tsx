@@ -7,6 +7,7 @@ import {
   DollarSign,
   AlertTriangle,
   BarChart3,
+  ClipboardList,
   LifeBuoy,
   FileSpreadsheet,
   FolderKanban,
@@ -123,6 +124,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <BarChart3 size={18} className="item-icon" />
             {!isCollapsed && <span className="item-label">Demand Heatmap</span>}
+          </button>
+
+          <button
+            className={`nav-menu-item ${currentSection === 'services' ? 'active' : ''}`}
+            onClick={() => onSelectSection('services')}
+            title={isCollapsed ? 'Services Catalog' : undefined}
+          >
+            <ClipboardList size={18} className="item-icon" />
+            {!isCollapsed && <span className="item-label">Services Catalog</span>}
           </button>
         </nav>
 

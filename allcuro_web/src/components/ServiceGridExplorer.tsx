@@ -3,7 +3,7 @@ import { ArtTile, IconTile } from './CareIcon'
 import { ArrowIcon, ClockIcon, SearchIcon } from './Icons'
 import { ServiceDialog } from './ServiceDialog'
 import { ALL_SLUG, categories, categoryById } from '../data/categories'
-import { services } from '../data/services'
+import { useServices } from '../state/catalog'
 import type { Service } from '../data/types'
 
 interface Props {
@@ -28,6 +28,7 @@ export function ServiceGridExplorer({
   const [activeSubcat, setActiveSubcat] = useState<string>('all')
   const [selectedService, setSelectedService] = useState<Service | null>(null)
   const dockRef = useRef<HTMLDivElement>(null)
+  const services = useServices()
 
   // On narrow screens the dock scrolls sideways; centre the active tab in it.
   useEffect(() => {
@@ -52,7 +53,7 @@ export function ServiceGridExplorer({
     if (isAll) return services
     if (!currentCategory) return services
     return services.filter((s) => s.category === currentCategory.id)
-  }, [isAll, currentCategory])
+  }, [services, isAll, currentCategory])
 
   // Extract unique subcategories for filter pills
   const subcategories = useMemo(() => {

@@ -21,6 +21,8 @@ export interface Service {
   notes: string
   badge: string
   icon: string
+  /** Supabase Storage artwork uploaded from the admin; overrides `icon` when set. */
+  imageUrl?: string
 }
 
 export interface Category {

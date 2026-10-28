@@ -5,7 +5,7 @@ import { bookingPath } from '../data/booking'
 import { ActionBar, PageHead } from '../components/ui'
 import { categories, categoryById, categoryPath } from '../data/categories'
 import { nurses, type Nurse } from '../data/providers'
-import { services } from '../data/services'
+import { useServices } from '../state/catalog'
 import { navigate } from '../router'
 import { requireLogin } from '../state/auth'
 import { NotFound } from './CategoryPage'
@@ -26,7 +26,7 @@ const canServe: Record<string, (n: Nurse) => boolean> = {
 
 /** One service: what's included, who can come, and the way into booking (the app's ServiceDetailScreen). */
 export function ServicePage({ id }: { id: string }) {
-  const s = services.find((x) => x.id === id)
+  const s = useServices().find((x) => x.id === id)
   if (!s) return <NotFound />
   const cat = categoryById[s.category] ?? categories[0]
   const pros = nurses.filter(canServe[s.category] ?? (() => false))

@@ -11,6 +11,7 @@ import '../../auth/presentation/auth_view_model.dart';
 import '../../auth/presentation/quick_login_sheet.dart';
 
 import '../../services/data/master_services_catalog.dart';
+import '../../services/data/services_repository.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -244,6 +245,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authViewModelProvider);
+    ref.watch(servicesCatalogProvider); // rebuild once live services load
 
     final isGuest = authState.status == AuthStatus.unauthenticated || authState.status == AuthStatus.unknown;
     final userName = authState.userProfile['name'] ?? (isGuest ? 'Guest' : 'Customer');

@@ -156,13 +156,19 @@ create table public.compliance_alerts (
     id uuid default uuid_generate_v4() primary key,
     profile_id uuid references public.profiles(id) on delete cascade not null,
     item_title text not null,
-    expiry_date date not null,
-    days_remaining integer generated always as (expiry_date - current_date) stored,
+    expiry_date date not null, -- days left: see compliance_alerts_with_days below
     severity alert_severity default 'warning' not null,
     auto_action text,
     is_resolved boolean default false,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Days left until expiry, computed at read time (a stored generated column
+-- can't use current_date). security_invoker keeps the table's RLS in force.
+create view public.compliance_alerts_with_days
+with (security_invoker = true) as
+  select *, (expiry_date - current_date) as days_remaining
+  from public.compliance_alerts;
 
 -- ------------------------------------------------------------------------------
 -- 9. RAZORPAY ROUTE SPLIT-PAYOUTS LEDGER
@@ -191,7 +197,7 @@ begin
     new.id,
     coalesce((new.raw_user_meta_data->>'role')::user_role, 'customer'),
     coalesce(new.raw_user_meta_data->>'full_name', 'Member'),
-    new.phone,
+    nullif(new.phone, ''),
     new.email,
     new.raw_user_meta_data->>'avatar_url'
   );
@@ -202,6 +208,18 @@ $$ language plpgsql security definer;
 create or replace trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- Backfill profiles for users who signed up before this trigger existed.
+insert into public.profiles (id, role, full_name, phone, email, avatar_url)
+select
+  u.id,
+  coalesce((u.raw_user_meta_data->>'role')::user_role, 'customer'),
+  coalesce(u.raw_user_meta_data->>'full_name', 'Member'),
+  nullif(u.phone, ''),
+  u.email,
+  u.raw_user_meta_data->>'avatar_url'
+from auth.users u
+on conflict (id) do nothing;
 
 -- ------------------------------------------------------------------------------
 -- 11. ROW-LEVEL SECURITY (RLS) POLICIES

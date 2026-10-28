@@ -12,6 +12,7 @@ import '../../nurses/data/models/nurse.dart';
 import '../../nurses/data/nurses_repository.dart';
 import '../data/master_services_catalog.dart';
 import '../data/services_catalog.dart';
+import '../data/services_repository.dart';
 
 class ServiceDetailScreen extends ConsumerStatefulWidget {
   final String serviceId;
@@ -51,6 +52,7 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(servicesCatalogProvider); // rebuild once live services load
     final masterService = MasterServicesCatalog.getById(widget.serviceId);
     final fallbackCat =
         ServicesCatalog.getById(widget.serviceId) ?? ServicesCatalog.allServices.first;

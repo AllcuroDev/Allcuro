@@ -18,7 +18,7 @@ import {
   type QuickService,
 } from '../data/booking'
 import { nurseById, nurses } from '../data/providers'
-import { services } from '../data/services'
+import { useServices } from '../state/catalog'
 import { inr, priceFrom } from '../lib/format'
 import { navigate, useQuery } from '../router'
 import { requireLogin, useAuth } from '../state/auth'
@@ -45,6 +45,7 @@ export function NurseBookingPage() {
   const slotParam = useQuery('slot')
   const { profile } = useAuth()
   const { current } = useLocation()
+  const services = useServices()
 
   // The service picked on the site goes first; the app's four quick options follow.
   const options = useMemo<QuickService[]>(() => {
@@ -60,7 +61,7 @@ export function NurseBookingPage() {
       description: s.description,
     }
     return [picked, ...quickServices]
-  }, [serviceId, durationKey])
+  }, [services, serviceId, durationKey])
 
   const slots = useMemo(() => {
     if (!slotParam || slotParam.startsWith('⚡')) return timeSlots

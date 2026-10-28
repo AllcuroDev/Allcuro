@@ -16,7 +16,7 @@ final servicesCatalogProvider = FutureProvider<List<MasterServiceItem>>((ref) as
         .from('services')
         .select(
           'id, name, category_id, subcategory, description, includes, not_included, '
-          'duration, professional, price, notes, badge, icon, image_url',
+          'duration, professional, price, notes, badge, icon, image_url, extra_category_ids',
         )
         .order('sort_order');
     if (rows.isEmpty) return MasterServicesCatalog.bundledServices;
@@ -39,6 +39,7 @@ MasterServiceItem _fromRow(Map<String, dynamic> r) {
     id: id,
     name: text('name'),
     mainCategory: text('category_id'),
+    alsoIn: List<String>.from(r['extra_category_ids'] as List? ?? const []),
     subcategory: text('subcategory'),
     description: text('description'),
     includes: text('includes'),

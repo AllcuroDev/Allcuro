@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link } from '../components/Link'
 import { CallBand } from '../components/Sections'
 import { ServiceGridExplorer } from '../components/ServiceGridExplorer'
@@ -8,7 +9,14 @@ export function CategoryPage({ slug }: { slug: string }) {
   const isAll = slug === ALL_SLUG
   const category = categories.find((c) => c.slug === slug)
 
+  // /services/care-centres has no service list; send old links to its page.
+  const redirect = category?.href
+  useEffect(() => {
+    if (redirect) navigate(redirect, { replace: true })
+  }, [redirect])
+
   if (!isAll && !category) return <NotFound />
+  if (redirect) return null
 
   return (
     <>

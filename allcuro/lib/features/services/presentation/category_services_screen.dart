@@ -104,28 +104,12 @@ class _CategoryServicesScreenState extends ConsumerState<CategoryServicesScreen>
       serviceCount: 10,
     ),
     MajorServiceItem(
-      title: 'Diagnostics & Labs',
-      image: CareIllustrations.diagnostics,
-      route: '/category-services/diagnostics',
-      subtitle: 'Doorstep blood sample collection & home ECG tests',
-      badge: 'Doorstep',
-      serviceCount: 4,
-    ),
-    MajorServiceItem(
       title: 'Medical Equipment',
       image: CareIllustrations.equipment,
       route: '/equipment',
       subtitle: 'Rent or buy hospital beds, oxygen & wheelchairs',
       badge: 'Rent/Buy',
       serviceCount: 9,
-    ),
-    MajorServiceItem(
-      title: 'Diet & Wellness',
-      image: CareIllustrations.wellness,
-      route: '/category-services/wellness',
-      subtitle: 'Clinical dietitian meal planning & wellness consultations',
-      badge: 'Nutrition',
-      serviceCount: 4,
     ),
   ];
 
@@ -178,22 +162,6 @@ class _CategoryServicesScreenState extends ConsumerState<CategoryServicesScreen>
         subtitle: 'Doctor and geriatric physician consultations at home',
         imageAsset: CareIllustrations.doctor,
         accentColor: Color(0xFF7C3AED),
-      );
-    } else if (k.contains('diag')) {
-      return const _CategoryMeta(
-        title: 'Diagnostics & Labs',
-        badge: 'Lab at Doorstep',
-        subtitle: 'ECG recording and professional blood sample collection',
-        imageAsset: CareIllustrations.diagnostics,
-        accentColor: Color(0xFF0891B2),
-      );
-    } else if (k.contains('well')) {
-      return const _CategoryMeta(
-        title: 'Wellness & Nutrition',
-        badge: 'Diet & Lactation',
-        subtitle: 'Personalised clinical dietitian and lactation guidance',
-        imageAsset: CareIllustrations.wellness,
-        accentColor: Color(0xFF059669),
       );
     } else {
       return const _CategoryMeta(

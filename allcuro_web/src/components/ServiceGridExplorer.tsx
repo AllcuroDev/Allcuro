@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { ArtTile, IconTile } from './CareIcon'
 import { ArrowIcon, ClockIcon, SearchIcon } from './Icons'
 import { ServiceDialog } from './ServiceDialog'
-import { ALL_SLUG, categories, categoryById } from '../data/categories'
+import { ALL_SLUG, categories, categoryById, inCategory } from '../data/categories'
+import { navigate } from '../router'
 import { useServices } from '../state/catalog'
 import type { Service } from '../data/types'
 
@@ -14,8 +15,8 @@ interface Props {
 
 // "All Services" leads the dock, then each care type.
 const dockItems = [
-  { slug: ALL_SLUG, label: 'All Services', art: 'see_all' },
-  ...categories.map((c) => ({ slug: c.slug, label: c.label, art: c.art })),
+  { slug: ALL_SLUG, label: 'All Services', art: 'see_all' } as { slug: string; label: string; art: string; href?: string },
+  ...categories.map((c) => ({ slug: c.slug, label: c.label, art: c.art, href: c.href })),
 ]
 
 export function ServiceGridExplorer({
@@ -39,6 +40,9 @@ export function ServiceGridExplorer({
   }, [activeSlug])
 
   const handleCategorySelect = (slug: string) => {
+    // Care Centres has no service list of its own — it opens the centres page.
+    const href = dockItems.find((c) => c.slug === slug)?.href
+    if (href) return navigate(href)
     setActiveSlug(slug)
     setActiveSubcat('all')
     setSearchQuery('')
@@ -52,7 +56,7 @@ export function ServiceGridExplorer({
   const categoryServices = useMemo(() => {
     if (isAll) return services
     if (!currentCategory) return services
-    return services.filter((s) => s.category === currentCategory.id)
+    return services.filter((s) => inCategory(s, currentCategory.id))
   }, [services, isAll, currentCategory])
 
   // Extract unique subcategories for filter pills

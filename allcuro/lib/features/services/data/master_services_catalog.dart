@@ -4,6 +4,9 @@ class MasterServiceItem {
   final String id;
   final String name;
   final String mainCategory;
+
+  /// Other categories this service is also listed under, e.g. ['Caregivers'].
+  final List<String> alsoIn;
   final String subcategory;
   final String description;
   final String includes;
@@ -26,6 +29,7 @@ class MasterServiceItem {
     required this.id,
     required this.name,
     required this.mainCategory,
+    this.alsoIn = const [],
     required this.subcategory,
     required this.description,
     required this.includes,
@@ -57,6 +61,7 @@ class MasterServicesCatalog {
       id: 'assisted-bathing',
       name: 'Assisted Bathing',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Personal Care',
       description: 'Safe, respectful help with bathing and getting ready.',
       includes: 'Bath/shower help; drying; dressing; basic grooming.',
@@ -72,6 +77,7 @@ class MasterServicesCatalog {
       id: 'sponge-bath',
       name: 'Sponge Bath',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Personal Care',
       description: 'Gentle bed bath for an elder who cannot safely use the bathroom.',
       includes: 'Body cleansing; drying; clothing change; skin observation.',
@@ -87,6 +93,7 @@ class MasterServicesCatalog {
       id: 'toileting-assistance',
       name: 'Toileting Assistance',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Personal Care',
       description: 'Support with safe toilet or commode use while maintaining dignity.',
       includes: 'Transfer; toileting; cleaning; hygiene.',
@@ -102,6 +109,7 @@ class MasterServicesCatalog {
       id: 'diaper-change-hygiene',
       name: 'Diaper Change & Hygiene',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Personal Care',
       description: 'Hygienic and dignified diaper changing support.',
       includes: 'Change; hygiene; skin observation; disposal.',
@@ -117,6 +125,7 @@ class MasterServicesCatalog {
       id: 'hair-wash-grooming',
       name: 'Hair Wash & Grooming',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Personal Care',
       description: 'Keeps your loved one clean, fresh and comfortable.',
       includes: 'Hair wash; combing; basic grooming.',
@@ -132,6 +141,7 @@ class MasterServicesCatalog {
       id: 'feeding-assistance',
       name: 'Feeding Assistance',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Personal Care',
       description: 'Support for elders who need help eating or drinking.',
       includes: 'Positioning; feeding; hydration; post-meal comfort.',
@@ -147,6 +157,7 @@ class MasterServicesCatalog {
       id: 'mobility-assistance',
       name: 'Mobility Assistance',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Mobility',
       description: 'Safe support for moving around the home.',
       includes: 'Bed-to-chair; walking; wheelchair support.',
@@ -162,6 +173,7 @@ class MasterServicesCatalog {
       id: 'companionship-visit',
       name: 'Companionship Visit',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Daily Support',
       description: 'A caring visit for conversation, engagement and routine support.',
       includes: 'Conversation; reading; simple activity; safe indoor walk.',
@@ -177,6 +189,7 @@ class MasterServicesCatalog {
       id: 'medication-reminder',
       name: 'Medication Reminder',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Daily Support',
       description: 'Reminder support for the prescribed medication schedule.',
       includes: 'Reminder; checklist; family update.',
@@ -192,6 +205,7 @@ class MasterServicesCatalog {
       id: 'vital-signs-check',
       name: 'Vital Signs Check',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Monitoring',
       description: 'A nurse checks and records key vital signs at home.',
       includes: 'BP; pulse; temperature; SpO₂; documentation.',
@@ -207,6 +221,7 @@ class MasterServicesCatalog {
       id: 'bp-blood-sugar-check',
       name: 'BP + Blood Sugar Check',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Monitoring',
       description: 'Quick monitoring of blood pressure and capillary glucose.',
       includes: 'BP; glucose; recording; escalation advice.',
@@ -222,6 +237,7 @@ class MasterServicesCatalog {
       id: 'dementia-support-visit',
       name: 'Dementia Support Visit',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Specialised',
       description: 'Structured support for an elder living with memory or cognitive difficulties.',
       includes: 'Routine support; orientation; safety observation; caregiver guidance.',
@@ -237,6 +253,7 @@ class MasterServicesCatalog {
       id: 'bedridden-care-visit',
       name: 'Bedridden Care Visit',
       mainCategory: 'Elder Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Specialised',
       description: 'Support for elders who spend most of their time in bed.',
       includes: 'Positioning; hygiene; feeding; skin observation; comfort.',
@@ -429,36 +446,6 @@ class MasterServicesCatalog {
       badge: '',
     ),
     MasterServiceItem(
-      id: 'ecg-at-home',
-      name: 'ECG at Home',
-      mainCategory: 'Diagnostics',
-      subcategory: 'Diagnostics',
-      description: 'Convenient ECG recording at home.',
-      includes: 'ECG recording; documentation; report pathway.',
-      notIncluded: 'Interpretation unless included.',
-      duration: '30–45 min',
-      professional: 'Nurse/Technician',
-      price: '₹699',
-      notes: '—',
-      icon: Icons.biotech_rounded,
-      badge: '',
-    ),
-    MasterServiceItem(
-      id: 'blood-sample-collection',
-      name: 'Blood Sample Collection',
-      mainCategory: 'Diagnostics',
-      subcategory: 'Diagnostics',
-      description: 'Professional home blood sample collection.',
-      includes: 'Identification; collection; labeling; lab handover.',
-      notIncluded: 'Lab test charges.',
-      duration: '15–30 min',
-      professional: 'Phlebotomist/Nurse',
-      price: '₹299',
-      notes: 'Lab charges extra',
-      icon: Icons.biotech_rounded,
-      badge: 'Value',
-    ),
-    MasterServiceItem(
       id: 'tracheostomy-care',
       name: 'Tracheostomy Care',
       mainCategory: 'Nursing Care',
@@ -594,36 +581,6 @@ class MasterServicesCatalog {
       badge: 'Advanced',
     ),
     MasterServiceItem(
-      id: 'dietitian-consultation',
-      name: 'Dietitian Consultation',
-      mainCategory: 'Wellness',
-      subcategory: 'Wellness',
-      description: 'Personalised nutrition guidance for health and recovery.',
-      includes: 'Diet assessment; practical meal plan; follow-up advice.',
-      notIncluded: 'Medical diagnosis.',
-      duration: '30–45 min',
-      professional: 'Dietitian',
-      price: '₹699',
-      notes: '—',
-      icon: Icons.restaurant_rounded,
-      badge: '',
-    ),
-    MasterServiceItem(
-      id: 'lactation-consultation',
-      name: 'Lactation Consultation',
-      mainCategory: 'Wellness',
-      subcategory: 'Wellness',
-      description: 'Professional breastfeeding support at home.',
-      includes: 'Feeding assessment; positioning; latch guidance; education.',
-      notIncluded: 'Treatment of severe complications.',
-      duration: '45–60 min',
-      professional: 'Lactation-trained Nurse',
-      price: '₹799–999',
-      notes: '—',
-      icon: Icons.restaurant_rounded,
-      badge: '',
-    ),
-    MasterServiceItem(
       id: 'antenatal-home-visit',
       name: 'Antenatal Home Visit',
       mainCategory: 'Mother & Baby Care',
@@ -717,6 +674,7 @@ class MasterServicesCatalog {
       id: 'postnatal-hygiene-support',
       name: 'Postnatal Hygiene Support',
       mainCategory: 'Mother & Baby Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Postnatal',
       description: 'Gentle personal-care assistance while mother recovers.',
       includes: 'Bath/hygiene; dressing support; comfort.',
@@ -747,6 +705,7 @@ class MasterServicesCatalog {
       id: 'baby-bath',
       name: 'Baby Bath',
       mainCategory: 'Mother & Baby Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Newborn',
       description: 'Gentle newborn bathing support at home.',
       includes: 'Bath; drying; dressing; basic skin observation.',
@@ -762,6 +721,7 @@ class MasterServicesCatalog {
       id: 'newborn-hygiene-care',
       name: 'Newborn Hygiene Care',
       mainCategory: 'Mother & Baby Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Newborn',
       description: 'Routine hygiene support to keep baby clean and comfortable.',
       includes: 'Diaper change; cleaning; clothing change.',
@@ -792,6 +752,7 @@ class MasterServicesCatalog {
       id: 'baby-feeding-support',
       name: 'Baby Feeding Support',
       mainCategory: 'Mother & Baby Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Newborn',
       description: 'Support with routine feeding, positioning and burping.',
       includes: 'Feeding support; positioning; burping.',
@@ -807,6 +768,7 @@ class MasterServicesCatalog {
       id: 'baby-grooming',
       name: 'Baby Grooming',
       mainCategory: 'Mother & Baby Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Newborn',
       description: 'Gentle grooming for a clean and comfortable baby.',
       includes: 'Face cleaning; hair care; diaper/clothing change.',
@@ -822,6 +784,7 @@ class MasterServicesCatalog {
       id: 'mother-baby-2-hour-support',
       name: 'Mother & Baby 2-Hour Support',
       mainCategory: 'Mother & Baby Care',
+      alsoIn: ['Caregivers'],
       subcategory: 'Mother + Baby',
       description: 'Combined practical support for mother and baby.',
       includes: 'Mother hygiene; baby hygiene; feeding assistance; routine support.',
@@ -844,44 +807,28 @@ class MasterServicesCatalog {
     }
   }
 
-  /// Get services by main category
+  /// Services in a category — its own plus those also listed there. [category]
+  /// is a route key ('nursing', 'mother-baby', 'caregiver') or a category name.
   static List<MasterServiceItem> getByCategory(String category) {
-    final catLower = category.toLowerCase().trim();
-    if (catLower == 'all' || catLower == 'all-services') {
+    final key = category.toLowerCase().trim();
+    if (key == 'all' || key == 'all-services') {
       return allServices;
     }
-    return allServices.where((s) {
-      final m = s.mainCategory.toLowerCase();
-      if (catLower.contains('nurs') && m.contains('nurs')) {
-        return true;
-      }
-      if ((catLower.contains('baby') || catLower.contains('matern') || catLower.contains('mother')) &&
-          (m.contains('baby') || m.contains('matern') || m.contains('child') || m.contains('mother'))) {
-        return true;
-      }
-      if (catLower.contains('elder') && m.contains('elder')) {
-        return true;
-      }
-      if (catLower.contains('caregiv')) {
-        if (s.professional.toLowerCase().contains('caregiver') ||
-            m.contains('elder') ||
-            s.subcategory.toLowerCase().contains('personal care')) {
-          return true;
-        }
-      }
-      if (catLower.contains('physio') && m.contains('physio')) {
-        return true;
-      }
-      if (catLower.contains('doc') && m.contains('doc')) {
-        return true;
-      }
-      if (catLower.contains('diag') && m.contains('diag')) {
-        return true;
-      }
-      if (catLower.contains('well') && m.contains('well')) {
-        return true;
-      }
-      return m == catLower || s.subcategory.toLowerCase() == catLower;
-    }).toList();
+    return allServices
+        .where((s) => _matches(key, s.mainCategory) || s.alsoIn.any((c) => _matches(key, c)))
+        .toList();
+  }
+
+  static bool _matches(String key, String categoryName) {
+    final m = categoryName.toLowerCase();
+    if (key.contains('nurs')) return m.contains('nurs');
+    if (key.contains('baby') || key.contains('matern') || key.contains('mother')) {
+      return m.contains('baby') || m.contains('mother');
+    }
+    if (key.contains('elder')) return m.contains('elder');
+    if (key.contains('caregiv')) return m.contains('caregiv');
+    if (key.contains('physio')) return m.contains('physio');
+    if (key.contains('doc')) return m.contains('doc');
+    return m == key;
   }
 }

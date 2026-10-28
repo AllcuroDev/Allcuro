@@ -16,7 +16,10 @@ export const services: Service[] = [
     "price": "₹499",
     "notes": "Products extra",
     "badge": "",
-    "icon": "bath"
+    "icon": "bath",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "sponge-bath",
@@ -31,7 +34,10 @@ export const services: Service[] = [
     "price": "₹449",
     "notes": "",
     "badge": "",
-    "icon": "sponge_bath"
+    "icon": "sponge_bath",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "toileting-assistance",
@@ -46,7 +52,10 @@ export const services: Service[] = [
     "price": "₹299",
     "notes": "",
     "badge": "Value",
-    "icon": "toilet"
+    "icon": "toilet",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "diaper-change-hygiene",
@@ -61,7 +70,10 @@ export const services: Service[] = [
     "price": "₹249",
     "notes": "Diaper extra",
     "badge": "Value",
-    "icon": "diaper"
+    "icon": "diaper",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "hair-wash-grooming",
@@ -76,7 +88,10 @@ export const services: Service[] = [
     "price": "₹299",
     "notes": "Products extra",
     "badge": "Value",
-    "icon": "grooming"
+    "icon": "grooming",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "feeding-assistance",
@@ -91,7 +106,10 @@ export const services: Service[] = [
     "price": "₹349",
     "notes": "",
     "badge": "",
-    "icon": "feeding"
+    "icon": "feeding",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "mobility-assistance",
@@ -106,7 +124,10 @@ export const services: Service[] = [
     "price": "₹299",
     "notes": "",
     "badge": "Value",
-    "icon": "wheelchair"
+    "icon": "wheelchair",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "companionship-visit",
@@ -121,7 +142,10 @@ export const services: Service[] = [
     "price": "₹399",
     "notes": "",
     "badge": "",
-    "icon": "companionship"
+    "icon": "companionship",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "medication-reminder",
@@ -136,7 +160,10 @@ export const services: Service[] = [
     "price": "₹299",
     "notes": "",
     "badge": "Value",
-    "icon": "med_reminder"
+    "icon": "med_reminder",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "vital-signs-check",
@@ -151,7 +178,10 @@ export const services: Service[] = [
     "price": "₹399",
     "notes": "",
     "badge": "",
-    "icon": "vitals"
+    "icon": "vitals",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "bp-blood-sugar-check",
@@ -166,7 +196,10 @@ export const services: Service[] = [
     "price": "₹399",
     "notes": "Strip/lancet extra",
     "badge": "",
-    "icon": "bp_sugar"
+    "icon": "bp_sugar",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "dementia-support-visit",
@@ -181,7 +214,10 @@ export const services: Service[] = [
     "price": "₹699",
     "notes": "",
     "badge": "",
-    "icon": "memory"
+    "icon": "memory",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "bedridden-care-visit",
@@ -196,7 +232,10 @@ export const services: Service[] = [
     "price": "₹699+",
     "notes": "Case dependent",
     "badge": "",
-    "icon": "bed"
+    "icon": "bed",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "nurse-home-visit",
@@ -379,36 +418,6 @@ export const services: Service[] = [
     "icon": "nebulizer"
   },
   {
-    "id": "ecg-at-home",
-    "name": "ECG at Home",
-    "category": "Diagnostics",
-    "subcategory": "Diagnostics",
-    "description": "Convenient ECG recording at home.",
-    "includes": "ECG recording; documentation; report pathway.",
-    "notIncluded": "Interpretation unless included.",
-    "duration": "30–45 min",
-    "professional": "Nurse/Technician",
-    "price": "₹699",
-    "notes": "",
-    "badge": "",
-    "icon": "ecg"
-  },
-  {
-    "id": "blood-sample-collection",
-    "name": "Blood Sample Collection",
-    "category": "Diagnostics",
-    "subcategory": "Diagnostics",
-    "description": "Professional home blood sample collection.",
-    "includes": "Identification; collection; labeling; lab handover.",
-    "notIncluded": "Lab test charges.",
-    "duration": "15–30 min",
-    "professional": "Phlebotomist/Nurse",
-    "price": "₹299",
-    "notes": "Lab charges extra",
-    "badge": "Value",
-    "icon": "blood_drop"
-  },
-  {
     "id": "tracheostomy-care",
     "name": "Tracheostomy Care",
     "category": "Nursing Care",
@@ -544,36 +553,6 @@ export const services: Service[] = [
     "icon": "med_kit"
   },
   {
-    "id": "dietitian-consultation",
-    "name": "Dietitian Consultation",
-    "category": "Wellness",
-    "subcategory": "Wellness",
-    "description": "Personalised nutrition guidance for health and recovery.",
-    "includes": "Diet assessment; practical meal plan; follow-up advice.",
-    "notIncluded": "Medical diagnosis.",
-    "duration": "30–45 min",
-    "professional": "Dietitian",
-    "price": "₹699",
-    "notes": "",
-    "badge": "",
-    "icon": "nutrition"
-  },
-  {
-    "id": "lactation-consultation",
-    "name": "Lactation Consultation",
-    "category": "Wellness",
-    "subcategory": "Wellness",
-    "description": "Professional breastfeeding support at home.",
-    "includes": "Feeding assessment; positioning; latch guidance; education.",
-    "notIncluded": "Treatment of severe complications.",
-    "duration": "45–60 min",
-    "professional": "Lactation-trained Nurse",
-    "price": "₹799–999",
-    "notes": "",
-    "badge": "",
-    "icon": "mother"
-  },
-  {
     "id": "antenatal-home-visit",
     "name": "Antenatal Home Visit",
     "category": "Mother & Baby Care",
@@ -676,7 +655,10 @@ export const services: Service[] = [
     "price": "₹499",
     "notes": "",
     "badge": "",
-    "icon": "clean"
+    "icon": "clean",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "newborn-home-assessment",
@@ -706,7 +688,10 @@ export const services: Service[] = [
     "price": "₹399",
     "notes": "Products extra",
     "badge": "",
-    "icon": "baby_bath"
+    "icon": "baby_bath",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "newborn-hygiene-care",
@@ -721,7 +706,10 @@ export const services: Service[] = [
     "price": "₹299",
     "notes": "Diapers/products extra",
     "badge": "Value",
-    "icon": "diaper"
+    "icon": "diaper",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "umbilical-cord-care-education",
@@ -751,7 +739,10 @@ export const services: Service[] = [
     "price": "₹349",
     "notes": "",
     "badge": "",
-    "icon": "bottle"
+    "icon": "bottle",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "baby-grooming",
@@ -766,7 +757,10 @@ export const services: Service[] = [
     "price": "₹299",
     "notes": "Products extra",
     "badge": "Value",
-    "icon": "brush"
+    "icon": "brush",
+    "alsoIn": [
+      "Caregivers"
+    ]
   },
   {
     "id": "mother-baby-2-hour-support",
@@ -781,6 +775,9 @@ export const services: Service[] = [
     "price": "₹699",
     "notes": "",
     "badge": "",
-    "icon": "mother_baby"
+    "icon": "mother_baby",
+    "alsoIn": [
+      "Caregivers"
+    ]
   }
 ]

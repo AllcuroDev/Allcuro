@@ -26,6 +26,8 @@ export interface ServiceCategoryRecord {
   slug: string;
   label: string;
   blurb: string;
+  /** Page to open instead of a services list, e.g. '/centres'. */
+  href: string | null;
   icon: string;
   art: string;
   ink: string;
@@ -40,6 +42,8 @@ export interface ServiceRecord {
   id: string;
   name: string;
   category_id: string;
+  /** Also listed under these categories, e.g. ['Caregivers']. */
+  extra_category_ids: string[];
   subcategory: string;
   description: string;
   includes: string;

@@ -37,7 +37,12 @@ export const ServiceEditor: React.FC<ServiceEditorProps> = ({
     e.preventDefault();
     if (!id || idTaken) return;
     setBusy(true);
-    const row: ServiceRecord = { ...s, id, price_from: priceFrom(s.price) };
+    const row: ServiceRecord = {
+      ...s,
+      id,
+      price_from: priceFrom(s.price),
+      extra_category_ids: s.extra_category_ids.filter((c) => c !== s.category_id),
+    };
     const { data, error: err } = await supabase.from('services').upsert(row).select().single();
     setBusy(false);
     if (err) return setError(err.message);
@@ -45,7 +50,10 @@ export const ServiceEditor: React.FC<ServiceEditorProps> = ({
     onSaved(data as ServiceRecord);
   };
 
-  type TextKey = Exclude<keyof ServiceRecord, 'price_from' | 'image_url' | 'sort_order' | 'is_active'>;
+  type TextKey = Exclude<
+    keyof ServiceRecord,
+    'price_from' | 'image_url' | 'sort_order' | 'is_active' | 'extra_category_ids'
+  >;
 
   const text = (key: TextKey, label: string, placeholder = '') => (
     <label className="catalog-field">
@@ -97,13 +105,40 @@ export const ServiceEditor: React.FC<ServiceEditorProps> = ({
           <label className="catalog-field">
             <span>Category</span>
             <select value={s.category_id} onChange={(e) => set('category_id', e.target.value)}>
-              {categories.map((c) => (
+              {categories.filter((c) => !c.href).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label}
                 </option>
               ))}
             </select>
           </label>
+          <div className="catalog-field is-wide">
+            <span>Also show in</span>
+            <div className="catalog-chips">
+              {categories
+                .filter((c) => c.id !== s.category_id && !c.href)
+                .map((c) => {
+                  const on = s.extra_category_ids.includes(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={`catalog-chip ${on ? 'active' : ''}`}
+                      aria-pressed={on}
+                      onClick={() =>
+                        set(
+                          'extra_category_ids',
+                          on ? s.extra_category_ids.filter((x) => x !== c.id) : [...s.extra_category_ids, c.id],
+                        )
+                      }
+                    >
+                      {c.label}
+                    </button>
+                  );
+                })}
+            </div>
+            <small>The service stays in its main category and is also listed in these.</small>
+          </div>
           {text('subcategory', 'Subcategory', 'Personal Care')}
           {text('professional', 'Professional', 'Nurse')}
           <label className="catalog-field">

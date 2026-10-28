@@ -115,8 +115,17 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({
             <span>Short description</span>
             <textarea rows={2} value={c.blurb} onChange={(e) => set('blurb', e.target.value)} />
           </label>
+          <label className="catalog-field is-wide">
+            <span>Opens a page instead (optional)</span>
+            <input
+              value={c.href ?? ''}
+              placeholder="/centres"
+              onChange={(e) => set('href', e.target.value.trim() || null)}
+            />
+            <small>Leave empty to show this category&rsquo;s services. Care Centres uses /centres.</small>
+          </label>
           {text('icon', 'Icon key', 'nursing, elder_care…')}
-          {text('art', 'Illustration key', 'nursing, wellness…')}
+          {text('art', 'Illustration key', 'nursing, caregiver…')}
           {colour('ink', 'Icon colour')}
           {colour('wash', 'Tile background')}
           <label className="catalog-field">

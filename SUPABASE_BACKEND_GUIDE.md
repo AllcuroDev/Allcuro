@@ -12,7 +12,7 @@ This guide details how Supabase powers **Auth**, **PostgreSQL Database**, **Row-
    - `Project URL`
    - `anon public key`
    - `service_role secret` (for backend/admin operations)
-4. Run [`supabase/services.sql`](supabase/services.sql) the same way. It creates the public services catalog (`service_categories`, `services`) and seeds all 52 services. Anyone can read active rows without logging in; only admins can edit. Re-running it re-applies the seed.
+4. Run [`supabase/services.sql`](supabase/services.sql) the same way. It creates the public services catalog (`service_categories`, `services`) and seeds all 48 services across 7 categories. Anyone can read active rows without logging in; only admins can edit. Re-running it re-applies the seed.
 
 ---
 

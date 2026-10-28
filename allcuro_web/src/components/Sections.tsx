@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import centre from '../assets/images/centre-1.jpg'
 import wheelchair from '../assets/images/eq-wheelchair.jpg'
-import { categories, categoryPath } from '../data/categories'
+import { categories, categoryHref } from '../data/categories'
 import { faqs } from '../data/faqs'
 import { site } from '../data/site'
 import { Link } from './Link'
@@ -218,7 +218,7 @@ export function Footer() {
           <ul>
             {categories.map((c) => (
               <li key={c.slug}>
-                <Link to={categoryPath(c.slug)}>{c.label}</Link>
+                <Link to={categoryHref(c)}>{c.label}</Link>
               </li>
             ))}
           </ul>

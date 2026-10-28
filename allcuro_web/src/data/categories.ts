@@ -1,4 +1,4 @@
-import type { Category } from './types'
+import type { Category, Service } from './types'
 
 // Labels, icons and tones follow the home-screen grid and `CareTone`
 // in allcuro/lib/core/ui/care_icon.dart. Slugs match the app's
@@ -7,38 +7,38 @@ export const categories: Category[] = [
   {
     id: 'Nursing Care',
     slug: 'nursing',
-    label: 'Nursing Care',
-    blurb: 'Injections, IV, wound dressing, catheter and tube care by qualified nurses.',
+    label: 'Nursing Services',
+    blurb: 'Catheter, IV, injections, wound care & vital monitoring',
     icon: 'nursing',
     art: 'nursing',
     ink: '#26593B',
     wash: '#E7F4EB',
   },
   {
-    id: 'Elder Care',
-    slug: 'elder-care',
-    label: 'Elder Care',
-    blurb: 'Bathing, feeding, mobility, companionship and daily support for elders.',
-    icon: 'elder_care',
-    art: 'elder_care',
-    ink: '#B45309',
-    wash: '#FEF3E2',
-  },
-  {
     id: 'Mother & Baby Care',
     slug: 'mother-baby',
     label: 'Mother & Baby',
-    blurb: 'Pregnancy visits, recovery after delivery and gentle newborn care.',
+    blurb: 'Postnatal recovery, lactation guidance & newborn care',
     icon: 'mother_baby',
     art: 'mother_baby',
     ink: '#BE185D',
     wash: '#FDEEF4',
   },
   {
+    id: 'Elder Care',
+    slug: 'elder-care',
+    label: 'Elder Care',
+    blurb: 'Assisted bathing, mobility, daily companionship & support',
+    icon: 'elder_care',
+    art: 'elder_care',
+    ink: '#B45309',
+    wash: '#FEF3E2',
+  },
+  {
     id: 'Physiotherapy',
     slug: 'physiotherapy',
     label: 'Physiotherapy',
-    blurb: 'Assessment and home exercise to restore strength, balance and movement.',
+    blurb: 'Mobility rehab, stroke recovery & post-op therapy',
     icon: 'physio',
     art: 'physio',
     ink: '#1D4ED8',
@@ -48,31 +48,32 @@ export const categories: Category[] = [
     id: 'Doctor Care',
     slug: 'doctor-care',
     label: 'Doctor Visit',
-    blurb: 'A doctor examines the patient at home and advises next steps.',
+    blurb: 'Doctor & geriatric physician consultations at home',
     icon: 'doctor',
     art: 'doctor',
     ink: '#6D28D9',
     wash: '#F2EDFE',
   },
   {
-    id: 'Diagnostics',
-    slug: 'diagnostics',
-    label: 'Tests at Home',
-    blurb: 'Blood sample collection and ECG without leaving home.',
-    icon: 'diagnostics',
-    art: 'diagnostics',
-    ink: '#0E7490',
-    wash: '#E4F5F9',
+    id: 'Care Centres',
+    slug: 'care-centres',
+    label: 'Care Centres',
+    blurb: 'Verified assisted living, hospice & recovery facilities',
+    href: '/centres',
+    icon: 'care_centre',
+    art: 'care_centre',
+    ink: '#0369A1',
+    wash: '#E6F3FB',
   },
   {
-    id: 'Wellness',
-    slug: 'wellness',
-    label: 'Diet & Wellness',
-    blurb: 'Nutrition and lactation guidance from trained experts.',
-    icon: 'nutrition',
-    art: 'wellness',
-    ink: '#0F766E',
-    wash: '#E3F5F2',
+    id: 'Caregivers',
+    slug: 'caregiver',
+    label: 'Caregivers',
+    blurb: 'Compassionate bedside care, feeding & daily mobility',
+    icon: 'caregiver',
+    art: 'caregiver',
+    ink: '#C2410C',
+    wash: '#FFEFE6',
   },
 ]
 
@@ -85,3 +86,10 @@ export const categoryById = Object.fromEntries(categories.map((c) => [c.id, c]))
 export const ALL_SLUG = 'all'
 
 export const categoryPath = (slug: string) => `/services/${slug}`
+
+/** Where a category tile links: its own page (Care Centres → /centres) or its services list. */
+export const categoryHref = (c: Pick<Category, 'slug' | 'href'>) => c.href ?? categoryPath(c.slug)
+
+/** A service shows under its own category and any it is also listed in. */
+export const inCategory = (s: Service, categoryId: string) =>
+  s.category === categoryId || (s.alsoIn?.includes(categoryId) ?? false)

@@ -28,10 +28,14 @@ export async function uploadCatalogImage(folder: 'services' | 'categories', name
   return supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
-/** Best-effort delete of a logo we uploaded earlier; ignores URLs from elsewhere. */
+/**
+ * Best-effort delete of a logo uploaded from this panel. Ignores URLs from
+ * elsewhere and the shared `bundled/` artwork from `npm run upload-icons`,
+ * which several services can point at.
+ */
 export async function removeCatalogImage(url: string | null | undefined) {
   const marker = `/storage/v1/object/public/${IMAGE_BUCKET}/`;
   const at = url?.indexOf(marker) ?? -1;
-  if (!url || at < 0) return;
+  if (!url || at < 0 || url.includes('/bundled/')) return;
   await supabase.storage.from(IMAGE_BUCKET).remove([decodeURIComponent(url.slice(at + marker.length))]);
 }

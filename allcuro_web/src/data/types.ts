@@ -4,8 +4,8 @@ export type CategoryId =
   | 'Mother & Baby Care'
   | 'Physiotherapy'
   | 'Doctor Care'
-  | 'Diagnostics'
-  | 'Wellness'
+  | 'Care Centres'
+  | 'Caregivers'
 
 export interface Service {
   id: string
@@ -21,6 +21,8 @@ export interface Service {
   notes: string
   badge: string
   icon: string
+  /** Other categories this service is also listed under, e.g. ['Caregivers']. */
+  alsoIn?: string[]
   /** Supabase Storage artwork uploaded from the admin; overrides `icon` when set. */
   imageUrl?: string
 }
@@ -31,6 +33,8 @@ export interface Category {
   slug: string
   label: string
   blurb: string
+  /** Page this category opens instead of its services list, e.g. '/centres'. */
+  href?: string
   icon: string
   /** 3D-style illustration in assets/illustrations (shared with the app). */
   art: string

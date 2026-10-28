@@ -16,6 +16,7 @@ const newCategory = (sortOrder: number): ServiceCategoryRecord => ({
   slug: '',
   label: '',
   blurb: '',
+  href: null,
   icon: '',
   art: '',
   ink: '#26593B',
@@ -29,6 +30,7 @@ const newService = (categoryId: string, sortOrder: number): ServiceRecord => ({
   id: '',
   name: '',
   category_id: categoryId,
+  extra_category_ids: [],
   subcategory: '',
   description: '',
   includes: '',
@@ -79,7 +81,9 @@ export const ServicesCatalogView: React.FC = () => {
 
   const countByCategory = useMemo(() => {
     const counts: Record<string, number> = {};
-    services.forEach((s) => (counts[s.category_id] = (counts[s.category_id] ?? 0) + 1));
+    services.forEach((s) =>
+      [s.category_id, ...(s.extra_category_ids ?? [])].forEach((id) => (counts[id] = (counts[id] ?? 0) + 1)),
+    );
     return counts;
   }, [services]);
 
@@ -87,7 +91,9 @@ export const ServicesCatalogView: React.FC = () => {
     const q = query.trim().toLowerCase();
     return services.filter(
       (s) =>
-        (categoryFilter === 'all' || s.category_id === categoryFilter) &&
+        (categoryFilter === 'all' ||
+          s.category_id === categoryFilter ||
+          s.extra_category_ids?.includes(categoryFilter)) &&
         (!q || `${s.name} ${s.subcategory} ${s.id} ${s.professional}`.toLowerCase().includes(q)),
     );
   }, [services, categoryFilter, query]);
@@ -105,6 +111,16 @@ export const ServicesCatalogView: React.FC = () => {
 
   const deleteCategory = async (c: ServiceCategoryRecord) => {
     if (!window.confirm(`Delete the category "${c.label}"? This can't be undone.`)) return;
+    // Drop it from services that only list it as an extra category first.
+    const shared = services.filter((s) => s.extra_category_ids?.includes(c.id));
+    for (const s of shared) {
+      const extra = s.extra_category_ids.filter((x) => x !== c.id);
+      const { error: e } = await supabase.from('services').update({ extra_category_ids: extra }).eq('id', s.id);
+      if (e) return setError(e.message);
+    }
+    setServices((prev) =>
+      prev.map((s) => ({ ...s, extra_category_ids: (s.extra_category_ids ?? []).filter((x) => x !== c.id) })),
+    );
     const { error: err } = await supabase.from('service_categories').delete().eq('id', c.id);
     if (err) return setError(err.message);
     void removeCatalogImage(c.image_url);
@@ -162,7 +178,9 @@ export const ServicesCatalogView: React.FC = () => {
               onClick={() =>
                 setEditingService({
                   row: newService(
-                    categoryFilter === 'all' ? categories[0].id : categoryFilter,
+                    categoryFilter === 'all' || categories.find((c) => c.id === categoryFilter)?.href
+                      ? (categories.find((c) => !c.href)?.id ?? '')
+                      : categoryFilter,
                     nextOrder(services),
                   ),
                   isNew: true,
@@ -207,6 +225,7 @@ export const ServicesCatalogView: React.FC = () => {
           )}
           {categories.map((c) => {
             const count = countByCategory[c.id] ?? 0;
+            const ownCount = services.filter((s) => s.category_id === c.id).length;
             return (
               <div key={c.id} className={`catalog-category-card ${c.is_active ? '' : 'is-hidden'}`}>
                 <div className="catalog-category-top">
@@ -225,9 +244,15 @@ export const ServicesCatalogView: React.FC = () => {
                 </div>
                 <p className="catalog-category-blurb">{c.blurb || 'No description.'}</p>
                 <div className="catalog-category-actions">
-                  <button className="catalog-link-btn" onClick={() => openCategoryServices(c.id)}>
-                    {count} {count === 1 ? 'service' : 'services'} <ChevronRight size={14} />
-                  </button>
+                  {c.href ? (
+                    <span className="date-sub">
+                      Opens <span className="code-subaccount">{c.href}</span>
+                    </span>
+                  ) : (
+                    <button className="catalog-link-btn" onClick={() => openCategoryServices(c.id)}>
+                      {count} {count === 1 ? 'service' : 'services'} <ChevronRight size={14} />
+                    </button>
+                  )}
                   <div className="catalog-row-actions">
                     <button
                       className="btn-sm-outline"
@@ -238,8 +263,8 @@ export const ServicesCatalogView: React.FC = () => {
                     </button>
                     <button
                       className="btn-sm-outline"
-                      title={count ? 'Move or delete its services first' : 'Delete category'}
-                      disabled={count > 0}
+                      title={ownCount ? 'Move or delete its services first' : 'Delete category'}
+                      disabled={ownCount > 0}
                       onClick={() => deleteCategory(c)}
                     >
                       <Trash2 size={13} />
@@ -306,7 +331,12 @@ export const ServicesCatalogView: React.FC = () => {
                         {s.subcategory} · <span className="code-subaccount">{s.id}</span>
                       </div>
                     </td>
-                    <td>{categoryLabel(s.category_id)}</td>
+                    <td>
+                      {categoryLabel(s.category_id)}
+                      {s.extra_category_ids?.length > 0 && (
+                        <div className="date-sub">+ {s.extra_category_ids.map(categoryLabel).join(', ')}</div>
+                      )}
+                    </td>
                     <td>{s.professional}</td>
                     <td>
                       <div className="txn-id-bold">{s.price}</div>

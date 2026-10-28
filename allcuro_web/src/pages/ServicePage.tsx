@@ -22,6 +22,7 @@ const canServe: Record<string, (n: Nurse) => boolean> = {
   'Elder Care': (n) => /Attendant|GNM|ANM/.test(n.level),
   'Mother & Baby Care': (n) => /ANM|B\.Sc/.test(n.level),
   Physiotherapy: (n) => /Physio/.test(n.level),
+  Caregivers: (n) => /Attendant/.test(n.level),
 }
 
 /** One service: what's included, who can come, and the way into booking (the app's ServiceDetailScreen). */

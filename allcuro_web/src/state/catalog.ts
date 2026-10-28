@@ -22,6 +22,7 @@ interface ServiceRow {
   badge: string
   icon: string
   image_url: string | null
+  extra_category_ids: string[] | null
 }
 
 const catalog = memoryStore<Service[]>(bundledServices)
@@ -34,7 +35,7 @@ async function loadServices() {
   const { data, error } = await supabase
     .from('services')
     .select(
-      'id, name, category_id, subcategory, description, includes, not_included, duration, professional, price, notes, badge, icon, image_url',
+      'id, name, category_id, subcategory, description, includes, not_included, duration, professional, price, notes, badge, icon, image_url, extra_category_ids',
     )
     .order('sort_order')
   if (error || !data?.length) {
@@ -57,6 +58,7 @@ async function loadServices() {
       badge: r.badge,
       icon: r.icon,
       imageUrl: r.image_url ?? undefined,
+      alsoIn: r.extra_category_ids ?? [],
     })),
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import nurse from '../assets/images/nurse-1.jpg'
-import { ALL_SLUG, categories, categoryPath } from '../data/categories'
+import { ALL_SLUG, categories, categoryHref } from '../data/categories'
 import { site } from '../data/site'
 import { Link } from './Link'
 import { artUrl } from './art'
@@ -8,7 +8,7 @@ import { motionOn } from '../motion'
 import { CheckIcon, ClockIcon, HeadsetIcon, PhoneIcon, RupeeIcon, ShieldIcon, BoltIcon } from './Icons'
 
 const tiles = [
-  ...categories.map((c) => ({ slug: c.slug, label: c.label, art: c.art })),
+  ...categories.map((c) => ({ slug: c.slug, href: c.href, label: c.label, art: c.art })),
   { slug: ALL_SLUG, label: 'All Services', art: 'see_all' },
 ]
 
@@ -28,7 +28,7 @@ export function Hero() {
             <ul className="tiles">
               {tiles.map((t) => (
                 <li key={t.slug}>
-                  <Link to={categoryPath(t.slug)} className="tile">
+                  <Link to={categoryHref(t)} className="tile">
                     <span className="tile-art">
                       <img src={artUrl(t.art)} alt="" width={60} height={60} />
                     </span>
@@ -63,7 +63,7 @@ export function Hero() {
 }
 
 // Care types that circle the photo in the hero.
-const orbit = ['nursing', 'elder_care', 'mother_baby', 'physio', 'doctor', 'diagnostics']
+const orbit = ['nursing', 'elder_care', 'mother_baby', 'physio', 'doctor', 'caregiver']
 
 // The "on the way" card steps through a few kinds of visit.
 const visits = [

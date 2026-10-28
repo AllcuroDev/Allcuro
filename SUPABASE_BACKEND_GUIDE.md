@@ -45,14 +45,14 @@ This guide details how Supabase powers **Auth**, **PostgreSQL Database**, **Row-
 
 ### In `allcuro_admin/.env`:
 ```env
-VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
-VITE_SUPABASE_ANON_KEY=<your-anon-key>
+SUPABASE_URL=https://<your-project-id>.supabase.co
+SUPABASE_ANON_KEY=<your-anon-key>
 ```
 
 ### In `allcuro_web/.env` (copy `.env.example`):
 ```env
-VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
-VITE_SUPABASE_ANON_KEY=<your-anon-key>
+SUPABASE_URL=https://<your-project-id>.supabase.co
+SUPABASE_ANON_KEY=<your-anon-key>
 ```
 The website loads services from Supabase, falling back to the bundled catalog if these are unset or the request fails.
 

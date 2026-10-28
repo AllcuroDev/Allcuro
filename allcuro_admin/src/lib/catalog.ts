@@ -30,7 +30,7 @@ export async function uploadCatalogImage(folder: 'services' | 'categories', name
 
 /**
  * Best-effort delete of a logo uploaded from this panel. Ignores URLs from
- * elsewhere and the shared `bundled/` artwork from `npm run upload-icons`,
+ * elsewhere and the shared `bundled/` artwork (the app's icons, uploaded once),
  * which several services can point at.
  */
 export async function removeCatalogImage(url: string | null | undefined) {

@@ -2480,3 +2480,5 @@
   background-color: #FFFFFF;
   color: var(--ink-primary);
 }
+
+.catalog-field small.is-error { color: var(--accent-pink); }

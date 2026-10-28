@@ -1,5 +1,3 @@
-import { artUrl, serviceArtUrl } from './art'
-
 // Renders the app's duotone care icons inline so `currentColor` picks up the tone.
 const svgs = import.meta.glob<string>('../assets/icons/care/*.svg', {
   query: '?raw',
@@ -28,44 +26,50 @@ export function CareIcon({ name, size = 28, color }: Props) {
   )
 }
 
+/**
+ * A logo from Supabase Storage (services.image_url / service_categories.image_url),
+ * or the bundled care icon [icon] while it loads or when there is none.
+ */
+export function Artwork({ image, icon, size, color }: { image?: string; icon: string; size: number; color?: string }) {
+  if (!image) return <CareIcon name={icon} size={Math.round(size * 0.6)} color={color} />
+  return (
+    <img
+      src={image}
+      alt=""
+      width={size}
+      height={size}
+      style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
+      loading="lazy"
+    />
+  )
+}
+
 interface TileProps {
   name: string
+  image?: string
   ink: string
   wash: string
   size?: number
 }
 
-export function IconTile({ name, ink, wash, size = 56 }: TileProps) {
-  const art = serviceArtUrl(name)
-  if (art) {
-    const imgSize = Math.round(size * 0.88)
-    return (
-      <span className="icon-tile" style={{ width: size, height: size, background: wash }}>
-        <img
-          src={art}
-          alt=""
-          width={imgSize}
-          height={imgSize}
-          style={{ width: imgSize, height: imgSize, objectFit: 'contain', display: 'block' }}
-          loading="lazy"
-        />
-      </span>
-    )
-  }
+/** Soft-washed tile holding a service's logo (falls back to its tinted care icon). */
+export function IconTile({ name, image, ink, wash, size = 56 }: TileProps) {
   return (
     <span className="icon-tile" style={{ width: size, height: size, background: wash }}>
-      <CareIcon name={name} size={Math.round(size * 0.52)} color={ink} />
+      {image ? (
+        <Artwork image={image} icon={name} size={Math.round(size * 0.88)} />
+      ) : (
+        <CareIcon name={name} size={Math.round(size * 0.52)} color={ink} />
+      )}
     </span>
   )
 }
 
-
-/** Neutral tile holding a 3D-style category illustration (same artwork as the app's home grid). */
-export function ArtTile({ name, size = 56 }: { name: string; size?: number }) {
-  const img = Math.round(size * 0.86)
+/** Neutral tile holding a category logo (same artwork as the app's home grid). */
+export function ArtTile({ image, icon, size = 56 }: { image?: string; icon: string; size?: number }) {
   return (
     <span className="art-tile" style={{ width: size, height: size }}>
-      <img src={artUrl(name)} alt="" width={img} height={img} />
+      <Artwork image={image} icon={icon} size={Math.round(size * 0.86)} />
     </span>
   )
 }

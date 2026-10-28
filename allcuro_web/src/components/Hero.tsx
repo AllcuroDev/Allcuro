@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import nurse from '../assets/images/nurse-1.jpg'
-import { ALL_SLUG, categories, categoryHref } from '../data/categories'
+import { ALL_SLUG, categories, categoryById, categoryHref } from '../data/categories'
 import { site } from '../data/site'
 import { Link } from './Link'
-import { artUrl } from './art'
+import { Artwork } from './CareIcon'
+import { useCategoryImages } from '../state/catalog'
 import { motionOn } from '../motion'
 import { CheckIcon, ClockIcon, HeadsetIcon, PhoneIcon, RupeeIcon, ShieldIcon, BoltIcon } from './Icons'
 
 const tiles = [
-  ...categories.map((c) => ({ slug: c.slug, href: c.href, label: c.label, art: c.art })),
-  { slug: ALL_SLUG, label: 'All Services', art: 'see_all' },
+  ...categories.map((c) => ({ id: c.id, slug: c.slug, href: c.href, label: c.label, icon: c.icon })),
+  { id: ALL_SLUG, slug: ALL_SLUG, label: 'All Services', icon: 'see_all' },
 ]
 
 export function Hero() {
+  const images = useCategoryImages()
   return (
     <section className="hero" id="top">
       <div className="container hero-grid">
@@ -30,7 +32,7 @@ export function Hero() {
                 <li key={t.slug}>
                   <Link to={categoryHref(t)} className="tile">
                     <span className="tile-art">
-                      <img src={artUrl(t.art)} alt="" width={60} height={60} />
+                      <Artwork image={images[t.id]} icon={t.icon} size={60} />
                     </span>
                     <span className="tile-label">{t.label}</span>
                   </Link>
@@ -63,7 +65,7 @@ export function Hero() {
 }
 
 // Care types that circle the photo in the hero.
-const orbit = ['nursing', 'elder_care', 'mother_baby', 'physio', 'doctor', 'caregiver']
+const orbit = ['Nursing Care', 'Elder Care', 'Mother & Baby Care', 'Physiotherapy', 'Doctor Care', 'Caregivers']
 
 // The "on the way" card steps through a few kinds of visit.
 const visits = [
@@ -110,15 +112,16 @@ function HeroVisual() {
   }, [])
 
   const v = visits[visit]
+  const images = useCategoryImages()
 
   return (
     <div className="hv" ref={ref} aria-hidden="true">
       <div className="hv-blob" />
       <div className="hv-orbit">
-        {orbit.map((art, i) => (
-          <span key={art} className="hv-planet" style={{ '--a': `${(360 / orbit.length) * i}deg` } as CSSProperties}>
+        {orbit.map((id, i) => (
+          <span key={id} className="hv-planet" style={{ '--a': `${(360 / orbit.length) * i}deg` } as CSSProperties}>
             <span className="hv-planet-face">
-              <img src={artUrl(art)} alt="" width={40} height={40} />
+              <Artwork image={images[id]} icon={categoryById[id]?.icon ?? 'nursing'} size={40} />
             </span>
           </span>
         ))}

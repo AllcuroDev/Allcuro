@@ -78,23 +78,24 @@ Without the keys the apps run on their bundled demo data. The customer app loads
 
 ## 5. Icons, Images & Assets
 
-Ship the visual language with the apps, and keep content in Supabase. The database stores keys and URLs, never images.
+Category and service logos have one home per platform. The database stores URLs, never images.
 
 | Asset | Where it lives | Why |
 |---|---|---|
-| Care icons (`icons/care/*.svg`), category illustrations, 3D service artwork (`images/services/*.png`), logo, hero/marketing photos | **Bundled** in `allcuro/assets/` and `allcuro_web/src/assets/` | Instant, works offline, no network cost. Changes ship with a release. |
-| Artwork for a service added *after* a release | **Storage `service-images`** (public, admin-upload only) → `services.image_url` | New services appear without an app update. |
+| Category and service logos (3D artwork) | **Storage `service-images`** → `service_categories.image_url`, `services.image_url`. Uploaded and replaced from the admin's **Services Catalog**. | One copy for the website and admin; editable without a release. |
+| The same artwork, for the customer app | **Bundled** in `allcuro/assets/images/{categories,services}/` | The app renders instantly and offline. Changes ship with an app release. |
+| Small UI care icons (`icons/care/*.svg`) | **Bundled** in `allcuro/assets/` and `allcuro_web/src/assets/` | Fallback while a logo loads, plus other UI glyphs. |
+| Logo, hero/marketing photos | **Bundled** in each project | Part of each site's design. |
 | Nurse/patient photos | **Storage `avatars`** (public) → `profiles.avatar_url` | User-generated. |
 | Centre photos, equipment photos | **Storage `centre-photos`, `equipment-images`** (public) | Uploaded by partners and admins. |
 | KYC documents | **Storage `kyc-documents`** (private, signed URLs only) | Sensitive. Never public. |
 
-**How a service picks its image** (same order on web and app):
-1. `image_url` set → load it from Storage. *(Loaded into `Service.imageUrl` / `MasterServiceItem.imageUrl`; the icon tiles don't draw it yet.)*
-2. Otherwise `icon` (e.g. `bath`) → bundled `images/services/bath.png`, then `icons/care/bath.svg`.
-3. Otherwise → the generic nursing glyph.
+**How each platform draws a logo**
+- **Website and admin:** `image_url` from Supabase. Until it loads, or if it's empty, the website shows the tinted SVG care icon for the row's `icon` key.
+- **Customer app:** its bundled artwork, found by the `icon` (services) or `art` (categories) key.
 
 **Rules**
-- **The icon key is the contract.** A file named `bath.png` / `bath.svg` must exist in both `allcuro/assets` and `allcuro_web/src/assets` for every `icon` value used in the database. Add new artwork to both folders in the same commit.
-- **Formats:** SVG for flat icons; WebP (or PNG) for 3D artwork, exported at 256×256 and kept under ~60 KB. The current 3D PNGs are ~130 KB each, so converting them to WebP roughly halves the app size they add.
-- **Storage uploads:** use lowercase-kebab names (`services/<service-id>-<timestamp>.webp`). The `service-images` bucket only accepts images under 512 KB. A new file name per upload means caches never serve a stale image.
+- **Changing a logo:** upload it in the admin (website updates on next load), and replace the matching file in `allcuro/assets/images` for the next app release.
+- **Formats:** WebP (or PNG) at 256×256, kept under ~60 KB. The `service-images` bucket rejects files over 512 KB.
+- **Storage names:** the admin saves uploads as `services/<service-id>-<timestamp>.<ext>`. A new name per upload means caches never serve a stale image. The first, shared upload of the app's artwork lives under `…/bundled/`, and the admin never deletes those files because several services can point at one.
 - **Never** put images in the database as base64, and never make `kyc-documents` public.

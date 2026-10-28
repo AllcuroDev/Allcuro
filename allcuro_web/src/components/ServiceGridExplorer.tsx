@@ -4,7 +4,7 @@ import { ArrowIcon, ClockIcon, SearchIcon } from './Icons'
 import { ServiceDialog } from './ServiceDialog'
 import { ALL_SLUG, categories, categoryById, inCategory } from '../data/categories'
 import { navigate } from '../router'
-import { useServices } from '../state/catalog'
+import { useCategoryImages, useServices } from '../state/catalog'
 import type { Service } from '../data/types'
 
 interface Props {
@@ -15,8 +15,8 @@ interface Props {
 
 // "All Services" leads the dock, then each care type.
 const dockItems = [
-  { slug: ALL_SLUG, label: 'All Services', art: 'see_all' } as { slug: string; label: string; art: string; href?: string },
-  ...categories.map((c) => ({ slug: c.slug, label: c.label, art: c.art, href: c.href })),
+  { id: ALL_SLUG, slug: ALL_SLUG, label: 'All Services', icon: 'see_all' } as { id: string; slug: string; label: string; icon: string; href?: string },
+  ...categories.map((c) => ({ id: c.id, slug: c.slug, label: c.label, icon: c.icon, href: c.href })),
 ]
 
 export function ServiceGridExplorer({
@@ -30,6 +30,7 @@ export function ServiceGridExplorer({
   const [selectedService, setSelectedService] = useState<Service | null>(null)
   const dockRef = useRef<HTMLDivElement>(null)
   const services = useServices()
+  const categoryImages = useCategoryImages()
 
   // On narrow screens the dock scrolls sideways; centre the active tab in it.
   useEffect(() => {
@@ -105,7 +106,7 @@ export function ServiceGridExplorer({
                   aria-pressed={isActive}
                 >
                   <span className="dock-art">
-                    <ArtTile name={c.art} size={34} />
+                    <ArtTile image={categoryImages[c.id]} icon={c.icon} size={34} />
                   </span>
                   <span className="dock-label">{c.label}</span>
                 </button>
@@ -204,7 +205,7 @@ function ServiceCard({ service: s, index, onSelect }: { service: Service; index:
       onClick={onSelect}
       aria-label={`${s.name}, ${s.price}. View details`}
     >
-      <IconTile name={s.icon} ink={cat.ink} wash={cat.wash} size={44} />
+      <IconTile name={s.icon} image={s.imageUrl} ink={cat.ink} wash={cat.wash} size={44} />
       <span className="card-body">
         <span className="card-title">{s.name}</span>
         <span className="card-meta">

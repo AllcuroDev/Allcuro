@@ -47,7 +47,7 @@ export function ServicePage({ id }: { id: string }) {
         <div className="detail-grid">
           <section className="panel">
             <div className="svc-hero">
-              <IconTile name={s.icon} ink={cat.ink} wash={cat.wash} size={64} />
+              <IconTile name={s.icon} image={s.imageUrl} ink={cat.ink} wash={cat.wash} size={64} />
               <p>{s.description}</p>
             </div>
             <div className="fact-row">

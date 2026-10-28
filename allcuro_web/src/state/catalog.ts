@@ -5,7 +5,8 @@ import { memoryStore } from '../lib/store'
 
 // The public services catalog. Starts with the bundled list so pages render
 // instantly, then swaps in the live rows from Supabase (public.services is
-// readable without login — see supabase/services.sql).
+// readable without login — see supabase/services.sql). Logos live only in
+// Supabase Storage; until they load, tiles show the bundled SVG care icons.
 
 interface ServiceRow {
   id: string
@@ -26,9 +27,25 @@ interface ServiceRow {
 }
 
 const catalog = memoryStore<Service[]>(bundledServices)
+const categoryImages = memoryStore<Record<string, string>>({})
 
 export const useServices = () => catalog.use()
 export const getServices = () => catalog.get()
+/** Category id → logo URL in Supabase Storage. */
+export const useCategoryImages = () => categoryImages.use()
+
+async function loadCategoryImages() {
+  if (!supabase) return
+  const { data } = await supabase.from('service_categories').select('id, image_url')
+  if (!data) return
+  categoryImages.set(
+    Object.fromEntries(
+      (data as { id: string; image_url: string | null }[])
+        .filter((c) => c.image_url)
+        .map((c) => [c.id, c.image_url!]),
+    ),
+  )
+}
 
 async function loadServices() {
   if (!supabase) return
@@ -64,3 +81,4 @@ async function loadServices() {
 }
 
 void loadServices()
+void loadCategoryImages()

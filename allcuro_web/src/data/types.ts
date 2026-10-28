@@ -36,7 +36,7 @@ export interface Category {
   /** Page this category opens instead of its services list, e.g. '/centres'. */
   href?: string
   icon: string
-  /** 3D-style illustration in assets/illustrations (shared with the app). */
+  /** Illustration key shared with the app (its logo itself lives in Supabase Storage). */
   art: string
   /** Mirrors `CareTone` in the app: deep glyph colour + soft tile wash. */
   ink: string

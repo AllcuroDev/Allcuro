@@ -21,6 +21,17 @@ class ProfileScreen extends ConsumerWidget {
     final notifier = ref.read(authViewModelProvider.notifier);
     final isCentre = session?.role == ProviderRole.centre;
     final isClinician = session?.role == ProviderRole.clinician;
+    final identity = session?.practitionerIdentity;
+    final practitionerName = identity == null
+        ? (isClinician ? 'Dr. Arjun Rao' : 'Priya Sharma')
+        : (identity.profession == 'doctor' ? 'Dr. ${identity.fullName}' : identity.fullName);
+    final initials = practitionerName
+        .replaceFirst('Dr. ', '')
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .take(2)
+        .map((w) => w[0].toUpperCase())
+        .join();
 
     return Scaffold(
       backgroundColor: AppColors.card,
@@ -64,7 +75,7 @@ class ProfileScreen extends ConsumerWidget {
                           shape: BoxShape.circle,
                         ),
                         child: Text(
-                          isCentre ? 'SC' : (isClinician ? 'AR' : 'PS'),
+                          isCentre ? 'SC' : initials,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -80,7 +91,7 @@ class ProfileScreen extends ConsumerWidget {
                             Text(
                               isCentre
                                   ? 'Sanjeevani Elder Care Sanctuary'
-                                  : (isClinician ? 'Dr. Arjun Rao' : 'Priya Sharma'),
+                                  : practitionerName,
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
@@ -200,7 +211,7 @@ class _NurseVerificationCard extends StatelessWidget {
           _SetupActionTile(
             icon: Icons.folder_shared_outlined,
             title: 'Document Vault',
-            subtitle: 'Aadhaar, Nursing Council & Degree certificates',
+            subtitle: 'Degree certificates & HPR registry',
             isComplete: true,
             onTap: () => context.push('/nurse/documents'),
           ),

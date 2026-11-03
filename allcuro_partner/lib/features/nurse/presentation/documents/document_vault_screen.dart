@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/upload_tile.dart';
+import '../../../auth/presentation/auth_view_model.dart';
 import '../../../auth/presentation/onboarding_view_model.dart';
 
 class DocumentVaultScreen extends ConsumerWidget {
@@ -76,6 +77,7 @@ class DocumentVaultScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(partnerOnboardingProvider);
     final docs = state.nurseDocs;
+    final identity = ref.watch(authViewModelProvider).valueOrNull?.practitionerIdentity;
 
     return Scaffold(
       backgroundColor: AppColors.card,
@@ -99,18 +101,21 @@ class DocumentVaultScreen extends ConsumerWidget {
                       color: AppColors.successSoft,
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.verified_outlined,
                           size: 18,
                           color: AppColors.success,
                         ),
-                        SizedBox(width: 10),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'All mandatory KYC & nursing council documents on file',
-                            style: TextStyle(
+                            identity == null
+                                ? 'Aadhaar & registration verified at sign-up — no uploads needed'
+                                : 'Aadhaar ${identity.maskedAadhaar} & ${identity.registrationLabel} '
+                                    '${identity.registrationNumber} verified at sign-up — no uploads needed',
+                            style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: AppColors.success,

@@ -7,6 +7,7 @@ class AppRoutes {
   static const welcome = '/welcome';
   static const phoneAuth = '/phone-auth';
   static const roleSelect = '/role-select';
+  static const identityVerification = '/verify-identity';
   static const profile = '/profile';
 
   static const nurseSignup = '/nurse/signup';

@@ -5,15 +5,6 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/wizard_scaffold.dart';
 import 'nurse_signup_view_model.dart';
 
-const qualificationOptions = [
-  'ANM',
-  'GNM',
-  'B.Sc Nursing',
-  'M.Sc Nursing',
-  'Certified Attendant',
-  'Physio-assistant',
-];
-
 const documentLabels = {
   'govt_id': 'Government-issued ID (Aadhaar / Passport)',
   'council_reg': 'State Nursing Council registration',
@@ -29,7 +20,11 @@ const medicalDocumentLabels = {
   'tb_report': 'TB / health screening report',
 };
 
-/// Step 1: name, DOB, gender, city, address.
+String _formatDate(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+/// Step 1: name, DOB, gender and address (locked — from Aadhaar), plus the
+/// city they'll work in.
 class BasicDetailsStep extends ConsumerStatefulWidget {
   const BasicDetailsStep({super.key});
 
@@ -38,17 +33,11 @@ class BasicDetailsStep extends ConsumerStatefulWidget {
 }
 
 class _BasicDetailsStepState extends ConsumerState<BasicDetailsStep> {
-  late final _name = TextEditingController(text: _data.fullName);
-  late final _city = TextEditingController(text: _data.city);
-  late final _address = TextEditingController(text: _data.address);
-
-  NurseSignupData get _data => ref.read(nurseSignupViewModelProvider).data;
+  late final _city = TextEditingController(text: ref.read(nurseSignupViewModelProvider).data.city);
 
   @override
   void dispose() {
-    _name.dispose();
     _city.dispose();
-    _address.dispose();
     super.dispose();
   }
 
@@ -62,93 +51,22 @@ class _BasicDetailsStepState extends ConsumerState<BasicDetailsStep> {
       children: [
         const WizardStepHeader(
           title: 'Tell us about yourself',
-          subtitle: 'These details go on your public profile once verified.',
+          subtitle: "Your identity details come from Aadhaar and can't be changed.",
         ),
-        WizardTextField(controller: _name, label: 'Full name', hint: 'As per your govt ID', onChanged: (v) {
-          data.fullName = v;
-          notifier.touch();
-        }),
-        const SizedBox(height: 16),
-        const WizardSectionLabel('Date of birth'),
-        Material(
-          color: AppColors.primaryForeground.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            onTap: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: data.dob ?? DateTime(1995, 1, 1),
-                firstDate: DateTime(1950),
-                lastDate: DateTime.now(),
-              );
-              if (picked != null) {
-                data.dob = picked;
-                notifier.touch();
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.primaryForeground.withValues(alpha: 0.25)),
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 18,
-                    color: AppColors.primaryForeground.withValues(alpha: 0.6),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    data.dob == null
-                        ? 'Select date of birth'
-                        : '${data.dob!.day}/${data.dob!.month}/${data.dob!.year}',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: data.dob == null
-                          ? AppColors.primaryForeground.withValues(alpha: 0.5)
-                          : AppColors.primaryForeground,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        WizardVerifiedCard(
+          title: 'Verified from Aadhaar',
+          rows: [
+            ('Full name', data.fullName),
+            if (data.dob != null) ('Date of birth', _formatDate(data.dob!)),
+            if (data.gender != null) ('Gender', data.gender!),
+            ('Address', data.address),
+          ],
         ),
         const SizedBox(height: 16),
-        const WizardSectionLabel('Gender'),
-        Wrap(
-          spacing: 8,
-          children: ['Female', 'Male', 'Other'].map((g) {
-            return WizardChoiceChip(
-              label: g,
-              selected: data.gender == g,
-              onTap: () {
-                data.gender = g;
-                notifier.touch();
-              },
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 16),
-        WizardTextField(controller: _city, label: 'City', hint: 'Bengaluru', onChanged: (v) {
+        WizardTextField(controller: _city, label: "City you'll work in", hint: 'Bengaluru', onChanged: (v) {
           data.city = v;
           notifier.touch();
         }),
-        const SizedBox(height: 16),
-        WizardTextField(
-          controller: _address,
-          label: 'Address',
-          hint: 'House / street / area',
-          maxLines: 2,
-          onChanged: (v) {
-            data.address = v;
-            notifier.touch();
-          },
-        ),
         const SizedBox(height: 24),
       ],
     );
@@ -279,7 +197,8 @@ class _EmploymentCard extends StatelessWidget {
   }
 }
 
-/// Step 3: qualification, years of experience, previous employer.
+/// Step 3: qualification and NUID (locked — from the council register),
+/// years of experience, previous employer.
 class QualificationStep extends ConsumerStatefulWidget {
   const QualificationStep({super.key});
 
@@ -288,6 +207,8 @@ class QualificationStep extends ConsumerStatefulWidget {
 }
 
 class _QualificationStepState extends ConsumerState<QualificationStep> {
+  late final _qualification = TextEditingController(text: _data.qualification);
+  late final _nuid = TextEditingController(text: _data.registrationNumber);
   late final _years = TextEditingController(text: _data.experienceYears);
   late final _employer = TextEditingController(text: _data.previousEmployer);
 
@@ -295,6 +216,8 @@ class _QualificationStepState extends ConsumerState<QualificationStep> {
 
   @override
   void dispose() {
+    _qualification.dispose();
+    _nuid.dispose();
     _years.dispose();
     _employer.dispose();
     super.dispose();
@@ -308,25 +231,15 @@ class _QualificationStepState extends ConsumerState<QualificationStep> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const WizardStepHeader(
+        WizardStepHeader(
           title: 'Qualification & experience',
-          subtitle: 'This decides which specialised requests you\'re eligible for.',
+          subtitle: data.council.isEmpty
+              ? "This decides which specialised requests you're eligible for."
+              : 'Qualification and NUID are as registered with the ${data.council}.',
         ),
-        const WizardSectionLabel('Qualification'),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: qualificationOptions.map((q) {
-            return WizardChoiceChip(
-              label: q,
-              selected: data.qualification == q,
-              onTap: () {
-                data.qualification = q;
-                notifier.touch();
-              },
-            );
-          }).toList(),
-        ),
+        WizardTextField(controller: _qualification, label: 'Qualification', locked: true),
+        const SizedBox(height: 16),
+        WizardTextField(controller: _nuid, label: 'NUID', locked: true),
         const SizedBox(height: 16),
         WizardTextField(
           controller: _years,

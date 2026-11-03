@@ -13,7 +13,7 @@ const NAV = [
   { to: '/nurses', label: 'Nurses', match: '/nurses' },
   { to: '/centres', label: 'Care Centres', match: '/centres' },
   { to: '/equipment', label: 'Equipment', match: '/equipment' },
-  { to: '/bookings', label: 'My Bookings', match: '/bookings' },
+  { to: '/bookings', label: 'My Bookings', match: '/bookings', authOnly: true },
 ]
 
 export function Header() {
@@ -40,7 +40,7 @@ export function Header() {
         </Link>
 
         <nav className={`header-nav ${open ? 'is-open' : ''}`} aria-label="Main">
-          {NAV.map((n) => (
+          {NAV.filter((n) => isLoggedIn || !n.authOnly).map((n) => (
             <Link
               key={n.to}
               to={n.to}

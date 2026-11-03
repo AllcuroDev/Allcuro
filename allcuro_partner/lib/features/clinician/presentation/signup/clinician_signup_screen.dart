@@ -8,8 +8,9 @@ import 'clinician_signup_steps.dart';
 import 'clinician_signup_view_model.dart';
 
 /// 3-step doctor / physiotherapist sign-up wizard — the counterpart of
-/// `NurseSignupScreen`. Documents, bank payout and availability are completed
-/// progressively from the Home & Profile screens without blocking access.
+/// `NurseSignupScreen`, shown after identity verification. Documents, bank
+/// payout and availability are completed progressively from the Home &
+/// Profile screens without blocking access.
 class ClinicianSignupScreen extends ConsumerWidget {
   const ClinicianSignupScreen({super.key});
 
@@ -80,18 +81,27 @@ class ClinicianSignupScreen extends ConsumerWidget {
       stepIndex: state.stepIndex,
       stepCount: ClinicianSignupViewModel.stepCount,
       step: _stepContent(state.stepIndex),
-      bottomBar: WizardPrimaryButton(
-        label: isLastStep ? 'Submit & Enter Dashboard' : 'Continue',
-        loading: state.isSubmitting,
-        onPressed: canContinue
-            ? () {
-                if (isLastStep) {
-                  notifier.submit();
-                } else {
-                  notifier.next();
-                }
-              }
-            : null,
+      bottomBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          WizardPrimaryButton(
+            label: isLastStep ? 'Submit & Enter Dashboard' : 'Continue',
+            loading: state.isSubmitting,
+            onPressed: canContinue
+                ? () {
+                    if (isLastStep) {
+                      notifier.submit();
+                    } else {
+                      notifier.next();
+                    }
+                  }
+                : null,
+          ),
+          WizardSecondaryButton(
+            label: 'Skip for now',
+            onPressed: state.isSubmitting ? null : notifier.submit,
+          ),
+        ],
       ),
     );
   }

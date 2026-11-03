@@ -5,7 +5,7 @@ import { categories, categoryHref } from '../data/categories'
 import { faqs } from '../data/faqs'
 import { site } from '../data/site'
 import { Link } from './Link'
-import { ArrowIcon, PhoneIcon, WhatsAppIcon } from './Icons'
+import { ArrowIcon, PhoneIcon } from './Icons'
 import { Logo } from './Logo'
 import { motionOn } from '../motion'
 
@@ -194,9 +194,6 @@ export function CallBand() {
               <PhoneIcon />
             </span>
             {site.phoneDisplay}
-          </a>
-          <a className="btn btn-ghost-light btn-lg" href={site.whatsappHref} target="_blank" rel="noreferrer">
-            <WhatsAppIcon /> WhatsApp us
           </a>
         </div>
       </div>

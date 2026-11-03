@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/provider_role.dart';
 import '../../../core/verification_status.dart';
+import '../../identity/data/verified_identity.dart';
 
 /// Thrown by [AuthService.sendOtp] / [AuthService.verifyOtp] on invalid
 /// input. The message is shown directly to the user by `PhoneAuthScreen`.
@@ -26,6 +29,8 @@ class AuthService {
   static const _nurseStatusKey = 'auth.nurse_verification_status';
   static const _clinicianStatusKey = 'auth.clinician_verification_status';
   static const _centreStatusKey = 'auth.centre_verification_status';
+  static const _nurseIdentityKey = 'auth.nurse_identity';
+  static const _clinicianIdentityKey = 'auth.clinician_identity';
 
   /// The only code [verifyOtp] accepts, since there's no real SMS backend
   /// yet. Shown to the user on the OTP step so the mock flow is usable.
@@ -108,6 +113,32 @@ class AuthService {
     await prefs.setString(_centreStatusKey, status.name);
   }
 
+  Future<VerifiedIdentity?> getNurseIdentity() => _readIdentity(_nurseIdentityKey);
+
+  Future<void> setNurseIdentity(VerifiedIdentity identity) => _writeIdentity(_nurseIdentityKey, identity);
+
+  Future<VerifiedIdentity?> getClinicianIdentity() => _readIdentity(_clinicianIdentityKey);
+
+  Future<void> setClinicianIdentity(VerifiedIdentity identity) =>
+      _writeIdentity(_clinicianIdentityKey, identity);
+
+  Future<VerifiedIdentity?> _readIdentity(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(key);
+    if (raw == null) return null;
+    try {
+      return VerifiedIdentity.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } on Object {
+      // Unreadable (e.g. an older shape) — treat as not yet verified.
+      return null;
+    }
+  }
+
+  Future<void> _writeIdentity(String key, VerifiedIdentity identity) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, jsonEncode(identity.toJson()));
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_loggedInKey);
@@ -115,6 +146,8 @@ class AuthService {
     await prefs.remove(_nurseStatusKey);
     await prefs.remove(_clinicianStatusKey);
     await prefs.remove(_centreStatusKey);
+    await prefs.remove(_nurseIdentityKey);
+    await prefs.remove(_clinicianIdentityKey);
   }
 
   String _digitsOf(String phone) => phone.replaceAll(RegExp(r'\D'), '');

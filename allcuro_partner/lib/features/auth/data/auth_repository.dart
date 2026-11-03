@@ -1,5 +1,6 @@
 import '../../../core/provider_role.dart';
 import '../../../core/verification_status.dart';
+import '../../identity/data/verified_identity.dart';
 import 'auth_service.dart';
 
 /// Signed-in state: whether there's a session at all, which
@@ -19,12 +20,19 @@ class AuthSession {
   final NurseVerificationStatus clinicianVerificationStatus;
   final CentreVerificationStatus centreVerificationStatus;
 
+  /// Aadhaar + registration proved at sign-up, per visit-based role. Null
+  /// until that role has been through the identity verification step.
+  final VerifiedIdentity? nurseIdentity;
+  final VerifiedIdentity? clinicianIdentity;
+
   const AuthSession({
     required this.isLoggedIn,
     this.role,
     this.nurseVerificationStatus = NurseVerificationStatus.incomplete,
     this.clinicianVerificationStatus = NurseVerificationStatus.incomplete,
     this.centreVerificationStatus = CentreVerificationStatus.incomplete,
+    this.nurseIdentity,
+    this.clinicianIdentity,
   });
 
   static const initial = AuthSession(isLoggedIn: false);
@@ -33,6 +41,14 @@ class AuthSession {
   /// what the shared nurse dashboard and profile screens should read.
   NurseVerificationStatus get practitionerVerificationStatus =>
       role == ProviderRole.clinician ? clinicianVerificationStatus : nurseVerificationStatus;
+
+  /// Verified identity for whichever visit-based role is active.
+  VerifiedIdentity? get practitionerIdentity =>
+      role == ProviderRole.clinician ? clinicianIdentity : nurseIdentity;
+
+  /// Whether the active role must still verify registration + Aadhaar. This
+  /// comes before the sign-up wizard, which prefills from the result.
+  bool get identityPending => role != null && role!.usesNurseShell && practitionerIdentity == null;
 
   /// Whether the active role still has its basic sign-up wizard to finish.
   bool get signupIncomplete => switch (role) {
@@ -46,6 +62,8 @@ class AuthSession {
     NurseVerificationStatus? nurseVerificationStatus,
     NurseVerificationStatus? clinicianVerificationStatus,
     CentreVerificationStatus? centreVerificationStatus,
+    VerifiedIdentity? nurseIdentity,
+    VerifiedIdentity? clinicianIdentity,
   }) {
     return AuthSession(
       isLoggedIn: isLoggedIn,
@@ -53,6 +71,8 @@ class AuthSession {
       nurseVerificationStatus: nurseVerificationStatus ?? this.nurseVerificationStatus,
       clinicianVerificationStatus: clinicianVerificationStatus ?? this.clinicianVerificationStatus,
       centreVerificationStatus: centreVerificationStatus ?? this.centreVerificationStatus,
+      nurseIdentity: nurseIdentity ?? this.nurseIdentity,
+      clinicianIdentity: clinicianIdentity ?? this.clinicianIdentity,
     );
   }
 }
@@ -73,6 +93,8 @@ class AuthRepository {
       nurseVerificationStatus: await _service.getNurseVerificationStatus(),
       clinicianVerificationStatus: await _service.getClinicianVerificationStatus(),
       centreVerificationStatus: await _service.getCentreVerificationStatus(),
+      nurseIdentity: await _service.getNurseIdentity(),
+      clinicianIdentity: await _service.getClinicianIdentity(),
     );
   }
 
@@ -103,6 +125,15 @@ class AuthRepository {
 
   Future<AuthSession> setCentreVerificationStatus(CentreVerificationStatus status) async {
     await _service.setCentreVerificationStatus(status);
+    return loadSession();
+  }
+
+  Future<AuthSession> saveIdentity(ProviderRole role, VerifiedIdentity identity) async {
+    if (role == ProviderRole.clinician) {
+      await _service.setClinicianIdentity(identity);
+    } else {
+      await _service.setNurseIdentity(identity);
+    }
     return loadSession();
   }
 

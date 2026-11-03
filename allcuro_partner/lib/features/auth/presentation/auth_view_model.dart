@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/provider_role.dart';
 import '../../../core/verification_status.dart';
+import '../../identity/data/verified_identity.dart';
 import '../data/auth_repository.dart';
 import '../data/auth_service.dart';
 
@@ -32,6 +33,14 @@ class AuthViewModel extends AsyncNotifier<AuthSession> {
 
   Future<void> selectRole(ProviderRole role) async {
     state = await AsyncValue.guard(() => _repository.selectRole(role));
+  }
+
+  /// Called once registration + Aadhaar verification succeed for the active
+  /// visit-based role — the router then moves on to the sign-up wizard.
+  Future<void> saveIdentity(VerifiedIdentity identity) async {
+    final role = state.valueOrNull?.role;
+    if (role == null) return;
+    state = await AsyncValue.guard(() => _repository.saveIdentity(role, identity));
   }
 
   /// Called when the nurse sign-up wizard is submitted, and by the demo

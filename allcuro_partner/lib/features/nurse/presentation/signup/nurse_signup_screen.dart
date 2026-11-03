@@ -7,8 +7,9 @@ import '../../../auth/presentation/auth_view_model.dart';
 import 'nurse_signup_steps_a.dart';
 import 'nurse_signup_view_model.dart';
 
-/// Streamlined 3-step nurse sign-up wizard.
-/// Collects core details required to create the account, and allows completing
+/// Streamlined 3-step nurse sign-up wizard, shown after identity verification.
+/// Collects core details required to create the account (or skip straight to
+/// the dashboard), and allows completing
 /// the Document Vault, Medical fitness, References, Bank payout, and Skills setup
 /// progressively from the Home & Profile screen without blocking dashboard access.
 class NurseSignupScreen extends ConsumerWidget {
@@ -79,18 +80,27 @@ class NurseSignupScreen extends ConsumerWidget {
       stepIndex: state.stepIndex,
       stepCount: NurseSignupViewModel.stepCount,
       step: _stepContent(state.stepIndex),
-      bottomBar: WizardPrimaryButton(
-        label: isLastStep ? 'Submit & Enter Dashboard' : 'Continue',
-        loading: state.isSubmitting,
-        onPressed: canContinue
-            ? () {
-                if (isLastStep) {
-                  notifier.submit();
-                } else {
-                  notifier.next();
-                }
-              }
-            : null,
+      bottomBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          WizardPrimaryButton(
+            label: isLastStep ? 'Submit & Enter Dashboard' : 'Continue',
+            loading: state.isSubmitting,
+            onPressed: canContinue
+                ? () {
+                    if (isLastStep) {
+                      notifier.submit();
+                    } else {
+                      notifier.next();
+                    }
+                  }
+                : null,
+          ),
+          WizardSecondaryButton(
+            label: 'Skip for now',
+            onPressed: state.isSubmitting ? null : notifier.submit,
+          ),
+        ],
       ),
     );
   }

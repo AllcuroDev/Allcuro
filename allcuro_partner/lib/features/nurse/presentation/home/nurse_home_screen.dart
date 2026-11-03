@@ -10,6 +10,7 @@ import '../../../../core/ui/tool_tile.dart';
 import '../../../../core/verification_status.dart';
 import '../../../auth/presentation/auth_view_model.dart';
 import '../../../auth/presentation/onboarding_view_model.dart';
+import '../../../identity/data/verified_identity.dart';
 import '../../data/models/job_request_summary.dart';
 import '../../data/models/nurse_visit_model.dart';
 import 'nurse_home_view_model.dart';
@@ -54,16 +55,20 @@ class NurseHomeScreen extends ConsumerWidget {
     final session = ref.watch(authViewModelProvider).valueOrNull;
     final onboardingState = ref.watch(partnerOnboardingProvider);
     final status = session?.practitionerVerificationStatus ?? NurseVerificationStatus.incomplete;
+    final identity = session?.practitionerIdentity;
+    final name = identity?.fullName ?? 'Priya Sharma';
 
     return ProviderShell(
       role: session?.role ?? ProviderRole.nurse,
       currentIndex: 0,
       onTabSelected: onTabSelected,
       onProfileTap: onProfileTap,
-      initials: 'PS',
+      initials: name.split(' ').where((w) => w.isNotEmpty).take(2).map((w) => w[0].toUpperCase()).join(),
       child: summary.when(
         data: (data) => _NurseHomeContent(
           status: status,
+          name: name,
+          identity: identity,
           onboardingState: onboardingState,
           summary: data,
           onSeeAllRequests: onSeeAllRequests,
@@ -88,6 +93,8 @@ class NurseHomeScreen extends ConsumerWidget {
 
 class _NurseHomeContent extends ConsumerWidget {
   final NurseVerificationStatus status;
+  final String name;
+  final VerifiedIdentity? identity;
   final PartnerOnboardingState onboardingState;
   final NurseHomeSummary summary;
   final VoidCallback onSeeAllRequests;
@@ -105,6 +112,8 @@ class _NurseHomeContent extends ConsumerWidget {
 
   const _NurseHomeContent({
     required this.status,
+    required this.name,
+    required this.identity,
     required this.onboardingState,
     required this.summary,
     required this.onSeeAllRequests,
@@ -232,7 +241,7 @@ class _NurseHomeContent extends ConsumerWidget {
                         style: TextStyle(fontSize: 13, color: AppColors.mutedForeground),
                       ),
                       Text(
-                        'Priya Sharma',
+                        name,
                         style: appHeadingStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.3),
                       ),
                     ],
@@ -299,6 +308,7 @@ class _NurseHomeContent extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: _NurseSetupHub(
               onboarding: onboardingState,
+              identity: identity,
               onOpenDocuments: onOpenDocuments,
               onOpenBankAccount: onOpenBankAccount,
               onOpenAvailability: onOpenAvailability,
@@ -893,6 +903,7 @@ class _RequestPreviewCard extends StatelessWidget {
 
 class _NurseSetupHub extends StatelessWidget {
   final PartnerOnboardingState onboarding;
+  final VerifiedIdentity? identity;
   final VoidCallback onOpenDocuments;
   final VoidCallback onOpenBankAccount;
   final VoidCallback onOpenAvailability;
@@ -900,6 +911,7 @@ class _NurseSetupHub extends StatelessWidget {
 
   const _NurseSetupHub({
     required this.onboarding,
+    required this.identity,
     required this.onOpenDocuments,
     required this.onOpenBankAccount,
     required this.onOpenAvailability,
@@ -962,24 +974,26 @@ class _NurseSetupHub extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Upload govt ID, council & HPR registry, bank details, and declare skills to activate patient matching.',
+            'Your identity is verified. Add certificates, bank details and skills to activate patient matching.',
             style: TextStyle(fontSize: 11.5, color: AppColors.mutedForeground, height: 1.35),
           ),
           const SizedBox(height: 14),
 
           _NurseCheckTile(
             stepNumber: 1,
-            title: 'Basic Profile & Qualification',
-            subtitle: 'GNM qualification & clinical experience registered',
+            title: 'Identity & Basic Profile',
+            subtitle: identity == null
+                ? 'Aadhaar & registration verified at sign-up'
+                : 'Aadhaar & ${identity!.registrationLabel} ${identity!.registrationNumber} verified at sign-up',
             isComplete: onboarding.nurseProfileDone,
-            statusLabel: 'Done',
+            statusLabel: 'Verified',
             onTap: () {},
           ),
           const SizedBox(height: 8),
           _NurseCheckTile(
             stepNumber: 2,
-            title: 'Document Vault & HPR Registration',
-            subtitle: 'Govt ID, State Nursing Council & ABHA-HPR license',
+            title: 'Certificates & HPR Registration',
+            subtitle: 'Degree / diploma certificate & ABHA-HPR license',
             isComplete: onboarding.nurseDocsDone,
             statusLabel: onboarding.nurseDocsDone ? 'Uploaded' : 'Upload Docs',
             onTap: onOpenDocuments,
@@ -1015,7 +1029,7 @@ class _NurseSetupHub extends StatelessWidget {
           _NurseCheckTile(
             stepNumber: 6,
             title: 'Police Background Clearance Consent',
-            subtitle: 'Automated background clearance check via Aadhaar',
+            subtitle: 'Automated background check using your verified Aadhaar',
             isComplete: onboarding.nursePoliceDone,
             statusLabel: 'Consented',
             onTap: () {},
@@ -1084,12 +1098,12 @@ class _NurseUnderReviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Your documents and police background clearance are being verified by ALLCURO ops. Verified nurses get instant access to shift requests.',
+            'Your certificates and police background clearance are being reviewed by ALLCURO ops. Verified nurses get instant access to shift requests.',
             style: TextStyle(fontSize: 11.5, color: AppColors.mutedForeground, height: 1.35),
           ),
           const SizedBox(height: 14),
-          _AuditStepRow(title: 'Aadhaar ID & Face-Match Verification', isDone: true, time: 'Passed (98.4%)'),
-          _AuditStepRow(title: 'Nursing Council & HPR Registry Cross-Check', isDone: true, time: 'Passed'),
+          _AuditStepRow(title: 'Aadhaar & Registration (verified at sign-up)', isDone: true, time: 'Verified'),
+          _AuditStepRow(title: 'Certificates & HPR Registry Review', isDone: true, time: 'Passed'),
           _AuditStepRow(title: 'Police Background Verification Clearance', isDone: true, time: 'Clean Record'),
           _AuditStepRow(title: 'ALLCURO Nurse Badge & Shift Matching', isDone: false, time: 'Final Review'),
           const SizedBox(height: 14),

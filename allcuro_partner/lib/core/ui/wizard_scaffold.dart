@@ -204,6 +204,10 @@ class WizardTextField extends StatelessWidget {
   final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
 
+  /// Read-only with a lock icon — for values that come from a verified ID
+  /// and can't be edited.
+  final bool locked;
+
   const WizardTextField({
     super.key,
     required this.controller,
@@ -213,6 +217,7 @@ class WizardTextField extends StatelessWidget {
     this.maxLines = 1,
     this.inputFormatters,
     this.onChanged,
+    this.locked = false,
   });
 
   @override
@@ -232,23 +237,27 @@ class WizardTextField extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          readOnly: locked,
           keyboardType: keyboardType,
           maxLines: maxLines,
           inputFormatters: inputFormatters,
           onChanged: onChanged,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: AppColors.primaryForeground,
+            color: AppColors.primaryForeground.withValues(alpha: locked ? 0.75 : 1),
           ),
           decoration: InputDecoration(
             hintText: hint,
+            suffixIcon: locked
+                ? Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.primaryForeground.withValues(alpha: 0.6))
+                : null,
             hintStyle: TextStyle(
               color: AppColors.primaryForeground.withValues(alpha: 0.5),
               fontWeight: FontWeight.w400,
             ),
             filled: true,
-            fillColor: AppColors.primaryForeground.withValues(alpha: 0.12),
+            fillColor: AppColors.primaryForeground.withValues(alpha: locked ? 0.06 : 0.12),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -258,9 +267,11 @@ class WizardTextField extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.lg),
               borderSide: BorderSide(color: AppColors.primaryForeground.withValues(alpha: 0.25)),
             ),
-            focusedBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(AppRadius.lg)),
-              borderSide: BorderSide(color: AppColors.accent, width: 1.5),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: const BorderRadius.all(Radius.circular(AppRadius.lg)),
+              borderSide: locked
+                  ? BorderSide(color: AppColors.primaryForeground.withValues(alpha: 0.25))
+                  : const BorderSide(color: AppColors.accent, width: 1.5),
             ),
           ),
         ),
@@ -355,6 +366,98 @@ class WizardPrimaryButton extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.accentForeground),
               )
             : Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+      ),
+    );
+  }
+}
+
+/// Low-emphasis text action under [WizardPrimaryButton] — e.g. "Skip for now".
+class WizardSecondaryButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+
+  const WizardSecondaryButton({super.key, required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primaryForeground,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
+        ),
+        child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+}
+
+/// Read-only card of details that were fetched from a verified source
+/// (Aadhaar e-KYC, a council register) — shown with a check badge so it's
+/// clear these can't be edited.
+class WizardVerifiedCard extends StatelessWidget {
+  final String title;
+  final List<(String, String)> rows;
+
+  const WizardVerifiedCard({super.key, required this.title, required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryForeground.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.verified_rounded, size: 18, color: AppColors.primarySoft),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primaryForeground),
+                ),
+              ),
+              Icon(Icons.lock_outline_rounded, size: 16, color: AppColors.primaryForeground.withValues(alpha: 0.6)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (final (label, value) in rows)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 110,
+                    child: Text(
+                      label,
+                      style: TextStyle(fontSize: 12.5, color: AppColors.primaryForeground.withValues(alpha: 0.65)),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryForeground,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

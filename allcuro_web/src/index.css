@@ -2433,134 +2433,6 @@ button {
 }
 
 /* ==========================================================================
-   FLOW BACKGROUND — the scroll-driven DNA helix on the home page
-   ========================================================================== */
-.flow-area {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-}
-
-.flow-area .section-tint {
-  --fog: #f6f9f7;
-  background: rgb(240 246 242 / 0.55);
-}
-
-/* A soft wash of page colour behind headings, so the thread fades out
-   where it passes behind them instead of cutting through the text. */
-.flow-area .section-head {
-  position: relative;
-}
-
-.flow-area .section-head::before {
-  content: '';
-  position: absolute;
-  inset: -48px -80px;
-  z-index: -1;
-  background: radial-gradient(closest-side, var(--fog, var(--bg)) 62%, transparent);
-  pointer-events: none;
-}
-
-.flow-bg {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-
-.flow-thread {
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-}
-
-/* The full helix, very faint, shows the path still ahead. */
-.dna-ghost {
-  opacity: 0.09;
-}
-
-.flow-head {
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-
-.flow-head.is-on {
-  opacity: 1;
-}
-
-.flow-dot {
-  fill: #26593b;
-  stroke: #fff;
-  stroke-width: 2.5;
-}
-
-.flow-halo {
-  fill: rgb(58 131 87 / 0.16);
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.motion .flow-halo {
-  animation: haloPulse 2.4s ease-in-out infinite;
-}
-
-@keyframes haloPulse {
-  0%, 100% { transform: scale(0.7); opacity: 0.9; }
-  50% { transform: scale(1.25); opacity: 0.35; }
-}
-
-/* Blobs and motifs drift at their own speed (--k) as the page scrolls (--sy). */
-.flow-blob,
-.flow-motif {
-  position: absolute;
-  translate: -50% calc(-50% + var(--sy, 0) * var(--k, 0) * 1px);
-  will-change: translate;
-}
-
-.flow-blob {
-  border-radius: 50%;
-}
-
-.flow-motif {
-  opacity: 0;
-  scale: 0.5;
-  rotate: calc(var(--sy, 0) * var(--r, 0) * 1deg);
-  transition: opacity 0.8s ease, scale 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.flow-motif.is-lit {
-  opacity: 0.75;
-  scale: 1;
-}
-
-.flow-motif svg {
-  width: 100%;
-  height: 100%;
-  fill: color-mix(in srgb, currentColor 10%, transparent);
-}
-
-.motion .flow-motif svg {
-  animation: motifBob var(--bob, 6s) ease-in-out infinite alternate;
-}
-
-@keyframes motifBob {
-  from { transform: translateY(-4px); }
-  to { transform: translateY(4px); }
-}
-
-@media (max-width: 880px) {
-  .flow-motif.is-wide {
-    display: none;
-  }
-  .flow-motif.is-lit {
-    opacity: 0.35;
-  }
-  .flow-thread {
-    opacity: 0.7;
-  }
-}
-
-/* ==========================================================================
    HERO VISUAL — arch photo, orbiting care icons, floating visit cards.
    Leans toward the mouse via --px / --py (−0.5 … 0.5), set in HeroVisual.
    ========================================================================== */
@@ -2630,7 +2502,6 @@ button {
   border-radius: 999px 999px 36px 36px;
   overflow: hidden;
   background: var(--primary-soft);
-  border: 6px solid #fff;
   box-shadow: 0 30px 60px -24px rgb(12 52 30 / 0.4);
   translate: calc(var(--px) * -8px) calc(var(--py) * -8px);
   transition: translate 0.6s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2902,7 +2773,6 @@ button {
     width: 200px;
     height: 264px;
     margin: -132px 0 0 -100px;
-    border-width: 4px;
   }
   .hv-card {
     padding: 9px 11px;

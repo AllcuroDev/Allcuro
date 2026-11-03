@@ -7,6 +7,7 @@ import centreImg from '../assets/images/centre-1.jpg'
 import eqBedImg from '../assets/images/eq-bed.jpg'
 import eqOxygenImg from '../assets/images/eq-oxygen.jpg'
 import eqWheelchairImg from '../assets/images/eq-wheelchair.jpg'
+// Photo: Tima Miroshnichenko via Pexels (free license) — pexels.com/photo/8376281
 import nurse1Img from '../assets/images/nurse-1.jpg'
 import nurse2Img from '../assets/images/nurse-2.jpg'
 

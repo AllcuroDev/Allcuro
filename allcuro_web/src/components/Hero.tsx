@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import nurse from '../assets/images/nurse-1.jpg'
+// Photo: Tima Miroshnichenko via Pexels (free license) — pexels.com/photo/8376281
+import heroPhoto from '../assets/images/nurse-1.jpg'
 import { ALL_SLUG, categories, categoryById, categoryHref } from '../data/categories'
 import { site } from '../data/site'
 import { Link } from './Link'
@@ -76,7 +77,7 @@ const visits = [
 ]
 
 /**
- * Right-hand side of the hero: a nurse photo in an arch, care icons orbiting
+ * Right-hand side of the hero: a doctor photo in an arch, care icons orbiting
  * it, and small floating cards that hint at what a visit looks like. The whole
  * scene leans gently toward the mouse.
  */
@@ -128,7 +129,7 @@ function HeroVisual() {
       </div>
 
       <div className="hv-photo">
-        <img src={nurse} alt="" />
+        <img src={heroPhoto} alt="" />
       </div>
 
       <div className="hv-card hv-eta" style={{ '--d': 0 } as CSSProperties}>

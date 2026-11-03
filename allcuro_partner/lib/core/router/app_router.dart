@@ -20,6 +20,7 @@ import '../../features/centre/presentation/rooms/room_inventory_screen.dart';
 import '../../features/centre/presentation/signup/centre_signup_screen.dart';
 import '../../features/centre/presentation/staff/staff_management_screen.dart';
 import '../../features/clinician/presentation/signup/clinician_signup_screen.dart';
+import '../../features/identity/presentation/identity_verification_screen.dart';
 import '../../features/nurse/presentation/availability/availability_screen.dart';
 import '../../features/nurse/presentation/documents/document_vault_screen.dart';
 import '../../features/nurse/presentation/earnings/earnings_screen.dart';
@@ -83,6 +84,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final home = role.usesNurseShell ? AppRoutes.nurseHome : AppRoutes.centreHome;
       final ownShellPrefix = role.usesNurseShell ? '/nurse' : '/centre';
 
+      // Nurses and doctors / physios prove their registration and Aadhaar
+      // before anything else — the sign-up wizard prefills from that.
+      if (session.identityPending) {
+        return path == AppRoutes.identityVerification ? null : AppRoutes.identityVerification;
+      }
+
       // A brand-new account for this role hasn't completed the 3-step basic sign-up
       final signupIncomplete = session.signupIncomplete;
       final signupRoute = switch (role) {
@@ -97,6 +104,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (path == AppRoutes.welcome ||
           path == AppRoutes.phoneAuth ||
           path == AppRoutes.roleSelect ||
+          path == AppRoutes.identityVerification ||
           path == signupRoute) {
         return home;
       }
@@ -135,6 +143,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             onSelect: (role) => ref.read(authViewModelProvider.notifier).selectRole(role),
           ),
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.identityVerification,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const IdentityVerificationScreen(),
       ),
       GoRoute(
         path: AppRoutes.profile,

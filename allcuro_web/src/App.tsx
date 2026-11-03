@@ -1,6 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
 import { ActiveVisitBar } from './components/ActiveVisitBar'
-import { FlowBackground } from './components/FlowBackground'
 import { Header } from './components/Header'
 import { Hero, TrustBand } from './components/Hero'
 import { LoginDialog } from './components/LoginDialog'
@@ -27,12 +26,9 @@ function Home() {
     <>
       <Hero />
       <TrustBand />
-      <div className="flow-area">
-        <FlowBackground />
-        <HowItWorks />
-        <MoreCare />
-        <Faq />
-      </div>
+      <HowItWorks />
+      <MoreCare />
+      <Faq />
       <CallBand />
       <ActiveVisitBar />
     </>

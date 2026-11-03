@@ -323,25 +323,9 @@ class PartnerOnboardingNotifier extends StateNotifier<PartnerOnboardingState> {
                 isVerified: true,
               ),
             ],
+            // Aadhaar and NUID / council registration are verified
+            // electronically at sign-up, so they aren't uploads here.
             nurseDocs: const [
-              ComplianceDocItem(
-                id: 'nd-1',
-                title: 'Government Identity Proof (Aadhaar / Passport)',
-                docType: 'govt_id',
-                fileName: 'aadhaar_card.pdf',
-                expiry: 'Verified via UIDAI',
-                isUploaded: true,
-                isVerified: true,
-              ),
-              ComplianceDocItem(
-                id: 'nd-2',
-                title: 'Nursing Council Registration Certificate',
-                docType: 'nursing_council',
-                fileName: 'nursing_council_reg.pdf',
-                expiry: 'Expires 02 Sep 2027',
-                isUploaded: true,
-                isVerified: true,
-              ),
               ComplianceDocItem(
                 id: 'nd-hpr',
                 title: 'Healthcare Professionals Registry (HPR / ABHA ID)',

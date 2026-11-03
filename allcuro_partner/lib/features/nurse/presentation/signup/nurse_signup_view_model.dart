@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/verification_status.dart';
 import '../../../auth/presentation/auth_view_model.dart';
+import '../../../identity/data/verified_identity.dart';
 
 /// One of the 1–2 previous employer/supervisor contacts ALLCURO ops calls
 /// during reference checks.
@@ -26,6 +27,8 @@ class NurseSignupData {
   String? employmentType = 'Full-time';
 
   String? qualification = 'GNM';
+  String registrationNumber = '';
+  String council = '';
   String experienceYears = '5';
   String previousEmployer = 'Manipal Hospital';
 
@@ -51,6 +54,18 @@ class NurseSignupData {
   String bankIfsc = '';
 
   String? interviewSlot;
+
+  /// Overwrites the fields that came from Aadhaar / NUID — the wizard shows
+  /// these locked.
+  void applyIdentity(VerifiedIdentity identity) {
+    fullName = identity.fullName;
+    dob = identity.dob;
+    gender = identity.gender;
+    address = identity.address;
+    qualification = identity.qualification;
+    registrationNumber = identity.registrationNumber;
+    council = identity.council;
+  }
 }
 
 class NurseSignupState {
@@ -90,13 +105,20 @@ final nurseSignupViewModelProvider =
 
 /// Drives the streamlined nurse sign-up wizard (`NurseSignupScreen`).
 /// Essential 3-step sign-up: Basic Details -> Qualification & Reg -> Background Consent & Submit.
+/// Runs after identity verification: name, DOB, gender, address, qualification and NUID are
+/// prefilled from Aadhaar / the council register and locked. Every step can be skipped.
 /// Remaining items (Document Vault, Medical Certs, References, Bank Account) are setup progressively
 /// from the Nurse Home & Profile screen!
 class NurseSignupViewModel extends AutoDisposeNotifier<NurseSignupState> {
   static const stepCount = 3;
 
   @override
-  NurseSignupState build() => NurseSignupState(stepIndex: 0, data: NurseSignupData());
+  NurseSignupState build() {
+    final data = NurseSignupData();
+    final identity = ref.read(authViewModelProvider).valueOrNull?.practitionerIdentity;
+    if (identity != null) data.applyIdentity(identity);
+    return NurseSignupState(stepIndex: 0, data: data);
+  }
 
   void next() {
     if (state.stepIndex < stepCount - 1) {

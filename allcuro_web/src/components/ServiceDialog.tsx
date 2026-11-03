@@ -4,7 +4,7 @@ import { site } from '../data/site'
 import type { Service } from '../data/types'
 import { IconTile } from './CareIcon'
 import { Link } from './Link'
-import { ArrowIcon, CheckIcon, ClockIcon, CloseIcon, MinusIcon, PhoneIcon, ShieldIcon, SparklesIcon, UserIcon, WhatsAppIcon } from './Icons'
+import { ArrowIcon, CheckIcon, ClockIcon, CloseIcon, MinusIcon, PhoneIcon, ShieldIcon, SparklesIcon, UserIcon } from './Icons'
 
 const split = (text: string) =>
   text
@@ -49,11 +49,6 @@ export function ServiceDialog({ service: s, onClose }: { service: Service; onClo
       savingsText = `Save ₹${saved} (15% off)`
     }
   }
-
-  const freqLabel = frequency === 'single' ? (isShift ? 'Single Shift' : 'Single Visit') : frequency === 'triple' ? '3-Care Sessions' : '7-Day Care Plan'
-  const whatsapp = `${site.whatsappHref}?text=${encodeURIComponent(
-    `Hello ALLCURO Clinical Desk, I would like to book: ${s.name} (${freqLabel} - ${effectivePrice}). Please confirm availability.`
-  )}`
 
   return (
     <dialog
@@ -183,9 +178,6 @@ export function ServiceDialog({ service: s, onClose }: { service: Service; onClo
           <Link className="btn btn-primary btn-lg" to={`/service/${s.id}`} onClick={onClose}>
             <ArrowIcon size={18} /> Book online
           </Link>
-          <a className="btn btn-outline btn-lg" href={whatsapp} target="_blank" rel="noreferrer">
-            <WhatsAppIcon size={18} /> Book via WhatsApp ({effectivePrice})
-          </a>
           <a className="btn btn-outline btn-lg" href={site.phoneHref}>
             <PhoneIcon size={18} /> Call Clinical Desk
           </a>

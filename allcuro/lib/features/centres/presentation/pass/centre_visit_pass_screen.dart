@@ -81,9 +81,13 @@ class CentreVisitPassScreen extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      booking.id,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.ink),
+                    Flexible(
+                      child: Text(
+                        booking.id,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.ink),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -136,21 +140,26 @@ class CentreVisitPassScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.badge_outlined, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
-                  Text(
-                    'CENTRE CHECK-IN PASS & OTP',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 10.5,
-                      letterSpacing: 1.2,
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.badge_outlined, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'CENTRE CHECK-IN PASS & OTP',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 10.5,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -296,10 +305,13 @@ class CentreVisitPassScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Admission Formalities & Documents',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink),
+              const Expanded(
+                child: Text(
+                  'Admission Formalities & Documents',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink),
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(

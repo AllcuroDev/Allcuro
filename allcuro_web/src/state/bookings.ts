@@ -6,7 +6,7 @@ import { currentPhone, useAuth } from './auth'
 // BookingsService). Kept per signed-in phone number in localStorage until the
 // backend exists.
 
-export type BookingType = 'nurse' | 'centre' | 'equipment'
+export type BookingType = 'nurse' | 'centre' | 'equipment' | 'medicine'
 export type LiveStatus = 'assigned' | 'enRoute' | 'reached' | 'inProgress' | 'completed'
 
 export interface Payment {
@@ -16,6 +16,15 @@ export interface Payment {
   lines: BillLine[]
   /** "Pay after visit": nothing charged online yet. */
   payLater?: boolean
+}
+
+/** One line of a medicine order, as it was when the order was placed. */
+export interface OrderItem {
+  name: string
+  pack: string
+  qty: number
+  /** Unit price (GST-inclusive). */
+  price: number
 }
 
 export interface Booking {
@@ -45,6 +54,27 @@ export interface Booking {
   formalities: string[]
   payment?: Payment
   rating?: { stars: number; review: string }
+  /** Medicine orders: what was ordered, and the prescription file sent with it. */
+  items?: OrderItem[]
+  prescriptionName?: string
+}
+
+// ---- Medicine order timeline ----
+// No pharmacy backend yet: an order moves through its stages on a clock from
+// the moment it was placed, the way the nurse tracker follows its trip.
+
+export const MEDICINE_STAGES = ['Order placed', 'Pharmacist verified', 'Packed', 'Out for delivery', 'Delivered'] as const
+const MEDICINE_STAGE_AT_MS = [0, 2 * 60_000, 10 * 60_000, 30 * 60_000, 120 * 60_000]
+
+/** Index into MEDICINE_STAGES (4 = delivered). */
+export function medicineStageAt(b: Booking, now: number) {
+  if (b.liveStatus === 'completed') return MEDICINE_STAGES.length - 1
+  const t = now - b.createdAt
+  let stage = 0
+  MEDICINE_STAGE_AT_MS.forEach((at, i) => {
+    if (t >= at) stage = i
+  })
+  return stage
 }
 
 // ---- Live visit timeline (instant nurse bookings) ----
@@ -71,6 +101,9 @@ export function tripProgress(b: Booking, now: number) {
 }
 
 export function statusLabel(b: Booking, now: number) {
+  if (b.type === 'medicine') {
+    return ['Confirmed', 'Pharmacist Verified', 'Packed', 'Out for Delivery', 'Delivered'][medicineStageAt(b, now)]
+  }
   const s = liveStatusAt(b, now)
   if (b.type === 'centre') return s === 'completed' ? 'Discharged' : 'Confirmed'
   if (b.type === 'equipment') return s === 'completed' ? 'Returned' : s === 'inProgress' ? 'Active' : 'Order Confirmed'
@@ -83,7 +116,8 @@ export function statusLabel(b: Booking, now: number) {
   }[s]
 }
 
-export const isActive = (b: Booking) => b.liveStatus !== 'completed'
+export const isActive = (b: Booking, now = Date.now()) =>
+  b.type === 'medicine' ? medicineStageAt(b, now) < MEDICINE_STAGES.length - 1 : b.liveStatus !== 'completed'
 
 // ---- Store ----
 
@@ -200,7 +234,12 @@ export function seedDemoBookings(phone: string) {
   store.set((all) => ({ ...all, [phone]: demoBookings() }))
 }
 
-const PREFIX: Record<BookingType, string> = { nurse: 'ALC-NUR', centre: 'ALC-CTR', equipment: 'ALC-EQP' }
+const PREFIX: Record<BookingType, string> = {
+  nurse: 'ALC-NUR',
+  centre: 'ALC-CTR',
+  equipment: 'ALC-EQP',
+  medicine: 'ALC-MED',
+}
 const randomDigits = (n: number) => String(Math.floor(Math.random() * 10 ** n)).padStart(n, '0')
 
 export type NewBooking = Omit<Booking, 'id' | 'otp' | 'createdAt' | 'tripStartedAt'> & {

@@ -6,6 +6,7 @@ export type CategoryId =
   | 'Doctor Care'
   | 'Care Centres'
   | 'Caregivers'
+  | 'Hospital Companion'
 
 export interface Service {
   id: string

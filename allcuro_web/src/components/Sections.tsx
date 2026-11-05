@@ -6,6 +6,7 @@ import { faqs } from '../data/faqs'
 import { site } from '../data/site'
 import { Link } from './Link'
 import { ArrowIcon, PhoneIcon } from './Icons'
+import { CareIcon } from './CareIcon'
 import { Logo } from './Logo'
 import { motionOn } from '../motion'
 
@@ -64,7 +65,7 @@ export function HowItWorks() {
             <li
               key={s.title}
               className={`spotlight ${i === active ? 'is-active' : ''} ${i < active ? 'is-done' : ''}`}
-              style={{ '--d': i } as CSSProperties}
+              style={{ '--d': i * 2 } as CSSProperties}
               tabIndex={0}
               onPointerEnter={() => {
                 setPaused(true)
@@ -78,11 +79,28 @@ export function HowItWorks() {
               <span className="step-num">{String(i + 1).padStart(2, '0')}</span>
               <h3>{s.title}</h3>
               <p>{s.text}</p>
+              {i < steps.length - 1 && <StepArrow order={i * 2 + 1} />}
             </li>
           ))}
         </ol>
       </div>
     </section>
+  )
+}
+
+/**
+ * Decorative arrow in the gap after a step card: points right while the cards
+ * sit in a row, and down (rotated in CSS) once they stack. Under `.motion` it
+ * draws itself in after the card before it (`--d` continues the cards' stagger).
+ */
+function StepArrow({ order }: { order: number }) {
+  return (
+    <span className="step-arrow" aria-hidden="true" style={{ '--d': order } as CSSProperties}>
+      <svg viewBox="0 0 44 20" width="44" height="20" focusable="false">
+        <path className="step-arrow-line" d="M3 10H37" pathLength={100} />
+        <path className="step-arrow-head" d="M30 3l8 7-8 7" />
+      </svg>
+    </span>
   )
 }
 
@@ -104,19 +122,31 @@ export function MoreCare() {
       to: '/equipment',
       cta: 'Rent equipment',
     },
+    {
+      img: null,
+      alt: '',
+      title: 'Order medicines',
+      text: 'Search medicines or upload a prescription. A licensed pharmacist checks it, and we deliver within 3 hours.',
+      to: '/medicines',
+      cta: 'Order medicines',
+    },
   ]
   return (
     <section className="section section-tint" aria-labelledby="more-title">
       <div className="container">
         <div className="section-head reveal">
           <p className="eyebrow">Also on ALLCURO</p>
-          <h2 id="more-title">Need a stay or equipment?</h2>
+          <h2 id="more-title">Need a stay, equipment or medicines?</h2>
         </div>
         <div className="more-grid">
           {cards.map((c, i) => (
             <article className="more-card spotlight reveal" key={c.title} style={{ '--d': i } as CSSProperties}>
-              <div className="more-img">
-                <img src={c.img} alt={c.alt} loading="lazy" />
+              <div className={`more-img ${c.img ? '' : 'more-img-art'}`}>
+                {c.img ? (
+                  <img src={c.img} alt={c.alt} loading="lazy" />
+                ) : (
+                  <CareIcon name="med_kit" size={72} />
+                )}
               </div>
               <div>
                 <h3>{c.title}</h3>

@@ -166,12 +166,15 @@ class _ProfileBody extends StatelessWidget {
                         color: AppColors.primary,
                       ),
                       SizedBox(width: 6),
-                      Text(
-                        'Light KYC Active · Short Stays Unlocked',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                      Flexible(
+                        child: Text(
+                          'Light KYC Active · Short Stays Unlocked',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                     ],
@@ -260,12 +263,15 @@ class _ProfileBody extends StatelessWidget {
                       color: AppColors.primary,
                     ),
                     SizedBox(width: 6),
-                    Text(
-                      'ALLCURO · Healthcare, Made Simple v1.0',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.mutedForeground,
+                    Flexible(
+                      child: Text(
+                        'ALLCURO · Healthcare, Made Simple v1.0',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.mutedForeground,
+                        ),
                       ),
                     ),
                   ],

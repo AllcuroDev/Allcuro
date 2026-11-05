@@ -12,6 +12,9 @@ import '../features/centres/presentation/pass/centre_visit_pass_screen.dart';
 import '../features/checkout/presentation/checkout_screen.dart';
 import '../features/equipment/presentation/equipment_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/medicines/presentation/medicine_cart_screen.dart';
+import '../features/medicines/presentation/medicine_order_screen.dart';
+import '../features/medicines/presentation/medicines_screen.dart';
 import '../features/nurses/presentation/nurse_detail/nurse_detail_screen.dart';
 import '../features/nurses/presentation/nurses_list/nurses_list_screen.dart';
 import '../features/nurses/presentation/quick_booking/nurse_quick_booking_screen.dart';
@@ -123,6 +126,22 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/equipment',
       builder: (context, state) => const EquipmentScreen(),
+    ),
+    GoRoute(
+      path: '/medicines',
+      builder: (context, state) => MedicinesScreen(
+        openUpload: state.uri.queryParameters['upload'] == '1',
+      ),
+    ),
+    GoRoute(
+      path: '/medicines/cart',
+      builder: (context, state) => const MedicineCartScreen(),
+    ),
+    GoRoute(
+      path: '/medicine-order/:id',
+      builder: (context, state) => MedicineOrderScreen(
+        orderId: state.pathParameters['id']!,
+      ),
     ),
     GoRoute(
       path: '/bookings',

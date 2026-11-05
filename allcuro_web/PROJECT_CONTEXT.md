@@ -21,15 +21,17 @@ Routing is a tiny history-API router (`src/router.ts` + `src/components/Link.tsx
 | Route | Component | Purpose |
 |---|---|---|
 | `/` | `Home` in `App.tsx` | Landing page (sections below). |
-| `/services/:slug` | `CategoryPage` (`pages/CategoryPage.tsx`) | Lists one category's services, grouped by subcategory. Slugs: `nursing`, `elder-care`, `mother-baby`, `physiotherapy`, `doctor-care`, `diagnostics`, `wellness` (same as the app's `/category-services/:slug`). |
+| `/services/:slug` | `CategoryPage` (`pages/CategoryPage.tsx`) | Lists one category's services, grouped by subcategory. Slugs: `nursing`, `elder-care`, `mother-baby`, `physiotherapy`, `doctor-care`, `caregiver`, `hospital-companion` (`care-centres` redirects to `/centres`) (same as the app's `/category-services/:slug`). |
 | `/services/all` | `CategoryPage` | Every service, grouped by category. |
-| `/service/:id` | `ServicePage` | One service: included / not included, professionals who can do it (nurse cards → "Book Slot" sheet), Book Service. App: `/services/:serviceId`. |
-| `/book-nurse` | `NurseBookingPage` | Service, nurse, slot, patient, address, coupon, bill → payment. Query: `service`, `nurse`, `duration`, `slot`. App: `/nurse-quick-booking`. |
+| `/service/:id` | `ServicePage` | One service: included / not included, professionals who can do it (nurse cards → "Book Slot" sheet), Book Service. Hospital Companion services (non-clinical) show no nurse cards — a "verified ALLCURO companion will be assigned" note with Book / Call instead (`isCompanionService` in `categories.ts`). App: `/services/:serviceId`. |
+| `/book-nurse` | `NurseBookingPage` | Service, nurse, slot, patient, address, coupon, bill → payment. Query: `service`, `nurse`, `duration`, `slot`. For a Hospital Companion service it becomes "Book a Hospital Companion" (companion assigned by the desk, no nurse pick). App: `/nurse-quick-booking`. |
 | `/nurses`, `/nurses/:id` | `NursesPage`, `NursePage` | Nurse list with specialty filters; nurse profile. |
 | `/centres`, `/centres/:id`, `/centres/:id/book` | `CentresPages.tsx` | Centre list, detail, admission booking (room, stay, patient, deposit) → payment. |
 | `/equipment`, `/equipment/:id/rent` | `EquipmentPages.tsx` | Equipment list; rental checkout (plan, delivery slot, address, coupon) → payment. App: `/checkout?item=`. |
+| `/medicines` | `MedicinesPage` (`pages/MedicinesPages.tsx`) | Order Medicines: prescription upload card, search (name / category / pack), category chips, medicine cards with Rx badge + qty stepper, sticky cart bar. `?upload=1` scrolls to and focuses the upload button. |
+| `/medicines/cart` | `MedicineCartPage` | Cart lines (qty 1–10, remove), prescription (upload / drag & drop, simulated ~2.5 s pharmacist review that adds the demo items tagged "From your prescription", replace / remove), delivery address (`AddressPicker`), bill (MRP, discount, ₹39 delivery — free from ₹499; GST-inclusive) → `PaymentDialog`. Rx items without a prescription disable Pay. Also takes `?upload=1`. Cart: `state/cart.ts`; catalog + price rules: `data/medicines.ts`. |
 | `/bookings` | `BookingsPage` | Active / past bookings with OTPs. |
-| `/bookings/:id` | `BookingDetailPage` | Nurse → live tracker (Leaflet map, OTP, steps, vitals, call, rate, SOS); centre → admission pass; equipment → delivery tracker. App: `/nurse-tracker/:id`, `/centre-pass/:id`. |
+| `/bookings/:id` | `BookingDetailPage` | Nurse → live tracker (Leaflet map, OTP, steps, vitals, call, rate, SOS); centre → admission pass; equipment → delivery tracker; medicine (`ALC-MED-xxxxx`) → items, bill, delivery OTP and a 5-step timeline (Order placed → Pharmacist verified → Packed → Out for delivery → Delivered) that advances on a clock from the order time (`medicineStageAt` in `state/bookings.ts`). App: `/nurse-tracker/:id`, `/centre-pass/:id`. |
 | `/login?next=` | `LoginPage` | Phone → OTP → first-time profile setup (app: `/auth/phone` + `/onboarding`). |
 | `/profile` | `ProfilePage` | Profile, KYC tier, saved addresses, sign out. |
 | anything else | `NotFound` | Links to all services / home. |
@@ -40,10 +42,10 @@ Booking actions call `requireLogin()` (`state/auth.ts`), which opens `LoginDialo
 
 | Anchor | Component | Purpose |
 |---|---|---|
-| `#top` | `Hero` (`components/Hero.tsx`) | "Healthcare at your doorstep" plus a compact bordered box of 8 illustrated category tiles (7 care types + All Services) linking to `/services/:slug`. Photo collage on the right with a "100% verified" card. Layout inspired by Urban Company. |
+| `#top` | `Hero` (`components/Hero.tsx`) | "Healthcare at your doorstep" plus a compact bordered box of 10 illustrated tiles (8 care types incl. Hospital Companion, Order Medicines → `/medicines`, All Services): 5 × 2 on wider screens, 3 × 3 on phones with All Services as a full-width row. Photo collage on the right with a "100% verified" card. Layout inspired by Urban Company. |
 | `#why-allcuro` | `TrustBand` (`components/Hero.tsx`) | Green gradient band: 100% Verified, Flexible Slots, Transparent Pricing, 24/7 Care Desk (same claims as the app home screen). |
-| `#how-it-works` | `HowItWorks` (`components/Sections.tsx`) | Three numbered step cards (same copy as the app). |
-| — | `MoreCare` (`components/Sections.tsx`) | Care centres and equipment rental teaser cards. |
+| `#how-it-works` | `HowItWorks` (`components/Sections.tsx`) | Three numbered step cards (same copy as the app) with decorative arrows between them (`StepArrow`): pointing right while the cards are in a row, down once they stack (both at the 880px breakpoint). Under `.motion` each arrow draws in (stroke-dashoffset + head slide) in sequence with the cards when the section is revealed. |
+| — | `MoreCare` (`components/Sections.tsx`) | Care centres, equipment rental and Order Medicines teaser cards (3 across on desktop, stacked below 1080px). |
 | `#faq` | `Faq` (`components/Sections.tsx`) | `<details>` accordion; content from the app's `faq_screen.dart`. |
 | — | `CallBand`, `Footer` (`components/Sections.tsx`) | Closing call/WhatsApp CTA, contact details, and the emergency note ("call 112"). |
 
@@ -60,6 +62,7 @@ Booking actions call `requireLogin()` (`state/auth.ts`), which opens `LoginDialo
 | `src/data/services.ts` | `allcuro/lib/features/services/data/master_services_catalog.dart` + icon map in `allcuro/lib/core/ui/care_icon.dart` | **Generated** — do not hand-edit if the app catalog changes; regenerate it (see below). |
 | `src/data/categories.ts` | Home grid in `home_screen.dart` + `CareTone` in `care_icon.dart` | Category id = `mainCategory` string from the catalog. Each has `ink` (glyph) and `wash` (tile) colours. |
 | `src/data/faqs.ts` | `allcuro/lib/features/profile/presentation/faq_screen.dart` | Plus one pricing FAQ. |
+| `src/data/medicines.ts` | `allcuro/lib/features/medicines/data/medicine.dart` | Medicine catalog, categories, Rx flags and price rules (free delivery from ₹499, else ₹39). Keep identical to the app. |
 | `src/data/providers.ts` | `nurses_service.dart`, `centres_service.dart`, `equipment_service.dart` | Nurses, centres, equipment. |
 | `src/data/booking.ts` | `nurse_quick_booking_screen.dart`, `service_detail_screen.dart`, `centre_booking_screen.dart`, `checkout_repository.dart` | Booking options and price rules (fee ₹99 + 18% GST, centre deposit, coupons). |
 | `src/data/route.ts` | `nurse_live_map.dart` | Simulated nurse route for the tracker. |

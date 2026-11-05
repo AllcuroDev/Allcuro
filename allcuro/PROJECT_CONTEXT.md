@@ -20,7 +20,11 @@
 | `/centres` | `CentresListScreen` | Verified homecare centres and hospice listings with bed counts. |
 | `/centres/:id`| `CentreDetailScreen`| Detailed centre overview with sub-scores, staff ratio, amenities, and room picker. |
 | `/equipment` | `EquipmentScreen` | Medical equipment on rent/buy with deposit calculation and delivery slots. |
-| `/bookings` | `BookingsScreen` | Active, upcoming, and past care appointments. |
+| `/medicines` | `MedicinesScreen` | Order Medicines: search + category chips + add to cart, or upload a prescription (`?upload=1` opens the picker). Sticky cart bar. |
+| `/medicines/cart` | `MedicineCartScreen` | Cart, prescription (required for Rx items), delivery address, bill (free delivery from ₹499, else ₹39; GST-inclusive), login guard → payment sheet → order. |
+| `/medicine-order/:id` | `MedicineOrderScreen` | Order confirmation & tracking: delivery OTP, 5-step status, items, address. |
+| `/category-services/hospital-companion` | `CategoryServicesScreen` | Hospital Companion: non-clinical hospital-visit support (3 services). |
+| `/bookings` | `BookingsScreen` | Active, upcoming, and past care appointments. | Includes medicine orders (`BookingType.medicine`).
 | `/checkout` | `CheckoutScreen` | Transparent price breakdown, Razorpay steps, and address selection. |
 | `/profile` | `ProfileScreen` | Member profile, Light KYC tier badge, emergency contacts, and Sign Out. |
 
@@ -59,8 +63,16 @@
 
 ---
 
+## 3b. Order Medicines (`lib/features/medicines/`)
+
+- **Catalog:** `data/medicine.dart` (`MedicineCatalog`, `MedicinePricing`). Mirrors `allcuro_web/src/data/medicines.ts` — keep ids, prices and Rx flags identical.
+- **Cart:** `medicineCartProvider` (Riverpod `Notifier`, session-only). Rx items block checkout until a prescription is attached.
+- **Prescription:** `pickPrescription()` uses `file_picker` (photo library or PDF/JPG/PNG, ≤ 10 MB; no camera/photo permissions needed). Demo mode simulates a 2.5 s pharmacist review that adds `MedicineCatalog.prescriptionDemoItems`; replace with the pharmacy partner's response once a backend exists.
+- **Orders** are stored as `Booking(type: BookingType.medicine, items: [...], prescriptionName: ...)`.
+
 ## 4. Key Rules for Development
 
-1. **Zero Overflow:** Always ensure horizontal filter lists have adequate container height (`height: 40px` with horizontal-only padding) and avoid hardcoded fixed height on multi-line text cards.
+1. **Zero Overflow (real phones):** `app.dart` caps system text scale at 1.3×. Never size a box that holds text with a fixed height or a grid `childAspectRatio` — derive it from `MediaQuery.textScalerOf(context)` (see `_HomeGridItem.extent`) or use `minHeight`. Test new screens at 320dp wide with 1.3× text (`test/medicines_test.dart` shows the harness).
+1b. **Zero Overflow (original rule):** Always ensure horizontal filter lists have adequate container height (`height: 40px` with horizontal-only padding) and avoid hardcoded fixed height on multi-line text cards.
 2. **Light-Touch KYC:** Customers do not require full medical KYC up-front; basic mobile OTP + address unlocks short stays and visits, while higher-value equipment rentals prompt for Aadhaar verification at checkout.
 3. **Emergency Care Priority:** Keep the 2-hour priority urgent banner prominent on the home screen.

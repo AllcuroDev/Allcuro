@@ -10,6 +10,23 @@ import '../../features/location/presentation/location_view_model.dart';
 import '../theme/app_theme.dart';
 import 'tappable.dart';
 
+/// The nurse visit currently under way, if any. The home screen shows it as a
+/// floating card above the bottom nav (and pads its list so the card never
+/// hides the last item).
+final activeNurseVisitProvider = Provider<Booking?>((ref) {
+  final bookings = ref.watch(bookingsViewModelProvider).valueOrNull ?? const <Booking>[];
+  for (final b in bookings) {
+    if (b.type == BookingType.nurse &&
+        (b.status == 'In Progress' || b.status == 'Active' || b.status == 'Confirmed')) {
+      return b;
+    }
+  }
+  return null;
+});
+
+/// Space to leave under scrolling content for the floating live-visit card.
+const double kLiveVisitCardInset = 84;
+
 class _TabItem {
   final String path;
   final String label;
@@ -121,18 +138,7 @@ class AppShell extends ConsumerWidget {
     final effectiveArrivalTime =
         arrivalTime ?? locationState.currentAddress.arrivalTime;
 
-    final bookingsAsync = ref.watch(bookingsViewModelProvider);
-    Booking? activeNurseBooking;
-    final bookings = bookingsAsync.valueOrNull ?? [];
-    for (final b in bookings) {
-      if (b.type == BookingType.nurse &&
-          (b.status == 'In Progress' ||
-              b.status == 'Active' ||
-              b.status == 'Confirmed')) {
-        activeNurseBooking = b;
-        break;
-      }
-    }
+    final activeNurseBooking = ref.watch(activeNurseVisitProvider);
     final showVisitPopup = activeNurseBooking != null && currentPath == '/';
 
     // Only the bottom-nav root pages carry the green location header; every
@@ -144,14 +150,24 @@ class AppShell extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: isTabRoot ? Colors.transparent : AppColors.card,
-      body: isTabRoot
-          ? _buildHeaderBody(topPadding, effectiveAddress, effectiveArrivalTime)
-          : _buildPlainBody(),
-      bottomNavigationBar: _buildBottomNav(
-        context,
-        showVisitPopup,
-        activeNurseBooking,
+      // The live-visit card floats over the page, just above the bottom nav.
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: isTabRoot
+                ? _buildHeaderBody(topPadding, effectiveAddress, effectiveArrivalTime)
+                : _buildPlainBody(),
+          ),
+          if (showVisitPopup)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _MinimalActiveNurseVisitPopup(booking: activeNurseBooking),
+            ),
+        ],
       ),
+      bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
@@ -178,6 +194,7 @@ class AppShell extends ConsumerWidget {
               pinned: true,
               delegate: _CompactHeaderDelegate(
                 topPadding: topPadding,
+                textScaler: MediaQuery.textScalerOf(context),
                 currentPath: currentPath,
                 address: effectiveAddress,
                 arrivalTime: effectiveArrivalTime,
@@ -208,11 +225,7 @@ class AppShell extends ConsumerWidget {
     );
   }
 
-  Widget _buildBottomNav(
-    BuildContext context,
-    bool showVisitPopup,
-    Booking? activeNurseBooking,
-  ) {
+  Widget _buildBottomNav(BuildContext context) {
     return SafeArea(
       top: false,
       child: ColoredBox(
@@ -220,8 +233,6 @@ class AppShell extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (showVisitPopup)
-              _MinimalActiveNurseVisitPopup(booking: activeNurseBooking!),
             ?bottomBar,
             DecoratedBox(
               decoration: const BoxDecoration(
@@ -341,6 +352,7 @@ class AppShell extends ConsumerWidget {
 
 class _CompactHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double topPadding;
+  final TextScaler textScaler;
   final String currentPath;
   final String address;
   final String arrivalTime;
@@ -352,6 +364,7 @@ class _CompactHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   _CompactHeaderDelegate({
     required this.topPadding,
+    required this.textScaler,
     required this.currentPath,
     required this.address,
     required this.arrivalTime,
@@ -362,11 +375,19 @@ class _CompactHeaderDelegate extends SliverPersistentHeaderDelegate {
     this.notificationCount = 2,
   });
 
-  @override
-  double get minExtent => topPadding + 56.0;
+  /// Height the two address lines need at the phone's font size: the 16pt
+  /// arrival line + 2pt gap + the 13pt address line, with Plus Jakarta Sans'
+  /// ~1.3 line height, plus the 10pt of vertical padding and a little slack.
+  /// A fixed extent overflowed on phones with a larger system font.
+  double get _contentExtent =>
+      textScaler.scale(16) * 1.35 + 2 + textScaler.scale(13) * 1.4 + 10 + 6;
 
   @override
-  double get maxExtent => topPadding + 64.0;
+  double get minExtent =>
+      topPadding + (_contentExtent < 56 ? 56.0 : _contentExtent);
+
+  @override
+  double get maxExtent => minExtent + 8.0;
 
   @override
   Widget build(
@@ -374,7 +395,10 @@ class _CompactHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
+    // Fill the full extent: a pinned header that paints shorter than its
+    // layout extent is an invalid sliver geometry.
+    return SizedBox.expand(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: DecoratedBox(
         decoration: const BoxDecoration(gradient: AppColors.gradientPrimary),
@@ -390,6 +414,7 @@ class _CompactHeaderDelegate extends SliverPersistentHeaderDelegate {
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // First Line: "Allcuro in 44 mins"
@@ -555,6 +580,7 @@ class _CompactHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -565,6 +591,7 @@ class _CompactHeaderDelegate extends SliverPersistentHeaderDelegate {
         oldDelegate.currentPath != currentPath ||
         oldDelegate.notificationCount != notificationCount ||
         oldDelegate.topPadding != topPadding ||
+        oldDelegate.textScaler != textScaler ||
         oldDelegate.initials != initials;
   }
 }
@@ -578,7 +605,7 @@ class _MinimalActiveNurseVisitPopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -588,9 +615,9 @@ class _MinimalActiveNurseVisitPopup extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),

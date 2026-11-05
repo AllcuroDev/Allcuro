@@ -13,6 +13,7 @@ const NAV = [
   { to: '/nurses', label: 'Nurses', match: '/nurses' },
   { to: '/centres', label: 'Care Centres', match: '/centres' },
   { to: '/equipment', label: 'Equipment', match: '/equipment' },
+  { to: '/medicines', label: 'Medicines', match: '/medicines' },
   { to: '/bookings', label: 'My Bookings', match: '/bookings', authOnly: true },
 ]
 

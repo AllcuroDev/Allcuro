@@ -75,6 +75,17 @@ export const categories: Category[] = [
     ink: '#C2410C',
     wash: '#FFEFE6',
   },
+  {
+    id: 'Hospital Companion',
+    slug: 'hospital-companion',
+    label: 'Hospital Companion',
+    blurb: 'Non-clinical support during a hospital visit',
+    icon: 'companionship',
+    // No dedicated artwork yet: the caregiver illustration is the closest match.
+    art: 'caregiver',
+    ink: '#0F766E',
+    wash: '#E3F5F2',
+  },
 ]
 
 export const categoryById = Object.fromEntries(categories.map((c) => [c.id, c])) as Record<
@@ -93,3 +104,7 @@ export const categoryHref = (c: Pick<Category, 'slug' | 'href'>) => c.href ?? ca
 /** A service shows under its own category and any it is also listed in. */
 export const inCategory = (s: Service, categoryId: string) =>
   s.category === categoryId || (s.alsoIn?.includes(categoryId) ?? false)
+
+/** Hospital Companion services are non-clinical: no nurse list, a companion is assigned by the care desk. */
+export const COMPANION_CATEGORY = 'Hospital Companion'
+export const isCompanionService = (s: Pick<Service, 'category'>) => s.category === COMPANION_CATEGORY

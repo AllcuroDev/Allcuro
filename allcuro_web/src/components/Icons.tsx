@@ -199,3 +199,37 @@ export const ExpandIcon = ({ size = 16 }: P) => (
     <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
   </svg>
 )
+
+export const PillIcon = ({ size = 18 }: P) => (
+  <svg {...base(size)}>
+    <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7z" />
+    <path d="m8.5 8.5 7 7" />
+  </svg>
+)
+
+export const UploadIcon = ({ size = 18 }: P) => (
+  <svg {...base(size)}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+  </svg>
+)
+
+export const FileIcon = ({ size = 18 }: P) => (
+  <svg {...base(size)}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <path d="M14 2v6h6M9 13h6M9 17h6" />
+  </svg>
+)
+
+export const TrashIcon = ({ size = 18 }: P) => (
+  <svg {...base(size)}>
+    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+  </svg>
+)
+
+export const CartIcon = ({ size = 18 }: P) => (
+  <svg {...base(size)}>
+    <circle cx="9" cy="20" r="1.5" />
+    <circle cx="18" cy="20" r="1.5" />
+    <path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 7H6" />
+  </svg>
+)

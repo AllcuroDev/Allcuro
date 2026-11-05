@@ -796,6 +796,63 @@ class MasterServicesCatalog {
       icon: Icons.child_care_rounded,
       badge: '',
     ),
+    // Hospital Companion — non-clinical support during hospital visits.
+    MasterServiceItem(
+      id: 'hospital-visit-companion',
+      name: 'Hospital Visit Companion',
+      mainCategory: 'Hospital Companion',
+      alsoIn: ['Elder Care'],
+      subcategory: 'Hospital Visit',
+      description:
+          'Non-clinical support during a hospital visit, including wayfinding, waiting support, belongings and family updates with consent.',
+      includes:
+          'Meet at home or hospital entrance; wayfinding to OPD, labs, scans & pharmacy; waiting-room support and queue help; minding belongings & documents; family updates with consent.',
+      notIncluded: 'Medical care, medication, clinical decisions, signing consent forms or transport fare.',
+      duration: 'Up to 4 hr',
+      professional: 'Hospital Companion',
+      price: '₹999',
+      notes: 'Extra time ₹199/hr',
+      icon: Icons.local_hospital_outlined,
+      iconKey: 'companionship',
+      badge: 'Popular',
+    ),
+    MasterServiceItem(
+      id: 'full-day-hospital-companion',
+      name: 'Full-Day Hospital Companion',
+      mainCategory: 'Hospital Companion',
+      alsoIn: ['Elder Care'],
+      subcategory: 'Hospital Visit',
+      description:
+          'A companion stays with the patient through a long hospital day — day-care procedures, dialysis or multiple tests.',
+      includes:
+          'Everything in a hospital visit; meal & refreshment reminders; help between departments; collecting reports; family updates with consent.',
+      notIncluded: 'Medical care, medication, clinical decisions or overnight stay.',
+      duration: 'Up to 8 hr',
+      professional: 'Hospital Companion',
+      price: '₹1,699',
+      notes: 'Extra time ₹199/hr',
+      icon: Icons.local_hospital_outlined,
+      iconKey: 'caregiver',
+      badge: '',
+    ),
+    MasterServiceItem(
+      id: 'admission-discharge-companion',
+      name: 'Admission & Discharge Support',
+      mainCategory: 'Hospital Companion',
+      alsoIn: ['Elder Care'],
+      subcategory: 'Admission & Discharge',
+      description: 'Non-clinical help through hospital admission or discharge paperwork and waiting.',
+      includes:
+          'Queue & desk support; carrying belongings; collecting discharge summary, bills & reports; settling the patient in; family updates with consent.',
+      notIncluded: 'Paying bills on your behalf, insurance decisions, medical care or transport fare.',
+      duration: '3–5 hr',
+      professional: 'Hospital Companion',
+      price: '₹1,299',
+      notes: '',
+      icon: Icons.assignment_outlined,
+      iconKey: 'clipboard',
+      badge: 'Value',
+    ),
   ];
 
   /// Get service by slug / ID
@@ -821,6 +878,7 @@ class MasterServicesCatalog {
 
   static bool _matches(String key, String categoryName) {
     final m = categoryName.toLowerCase();
+    if (key.contains('hospital') || key.contains('companion')) return m.contains('hospital');
     if (key.contains('nurs')) return m.contains('nurs');
     if (key.contains('baby') || key.contains('matern') || key.contains('mother')) {
       return m.contains('baby') || m.contains('mother');

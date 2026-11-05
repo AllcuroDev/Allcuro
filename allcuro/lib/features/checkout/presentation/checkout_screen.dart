@@ -187,7 +187,9 @@ class _BottomBar extends StatelessWidget {
               ],
             ),
           ),
-          ElevatedButton(
+          const SizedBox(width: 12),
+          Flexible(
+            child: ElevatedButton(
             onPressed: isProcessing ? null : onPay,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -202,7 +204,13 @@ class _BottomBar extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                   )
-                : const Text('Pay securely', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                : const Text(
+                    'Pay securely',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+          ),
           ),
         ],
       ),
@@ -358,7 +366,8 @@ class _Row extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, color: AppColors.mutedForeground)),
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.mutedForeground))),
+        const SizedBox(width: 8),
         Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink)),
       ],
     );

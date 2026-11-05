@@ -192,9 +192,14 @@ class _NurseLiveMapState extends State<NurseLiveMap> with SingleTickerProviderSt
                 ],
               ),
             ),
-            const SimpleAttributionWidget(
-              source: Text('© OpenStreetMap · CARTO', style: TextStyle(fontSize: 9)),
-              backgroundColor: Color(0xB3FFFFFF),
+            // The package's attribution is a non-wrapping Row with a 14pt
+            // prefix; keep it at its designed size so it never overflows the
+            // narrow in-card map on large system font scales.
+            MediaQuery.withNoTextScaling(
+              child: const SimpleAttributionWidget(
+                source: Text('© OpenStreetMap · CARTO', style: TextStyle(fontSize: 9)),
+                backgroundColor: Color(0xB3FFFFFF),
+              ),
             ),
           ],
         ),

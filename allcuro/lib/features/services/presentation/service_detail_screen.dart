@@ -63,6 +63,8 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
     final serviceDuration = masterService?.duration ?? '30–45 min';
     final serviceProfessional = masterService?.professional ?? fallbackCat.requiredDegree;
     final serviceNotes = masterService?.notes;
+    // Hospital Companion is non-clinical: a companion is assigned, not a nurse.
+    final isCompanion = masterService?.mainCategory == 'Hospital Companion';
 
     final List<String> proceduresList = masterService != null
         ? masterService.includes
@@ -91,29 +93,31 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
           top: false,
           child: Row(
             children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    servicePrice,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.ink,
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      servicePrice,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.ink,
+                      ),
                     ),
-                  ),
-                  Text(
-                    serviceDuration,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.mutedForeground,
-                      fontWeight: FontWeight.w600,
+                    Text(
+                      serviceDuration,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.mutedForeground,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 12),
               ElevatedButton.icon(
                 onPressed: () {
                   _handleBookingGuard(() {
@@ -253,7 +257,32 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
               // ---------------------------------------------------------------
               // 2. NURSES LIST
               // ---------------------------------------------------------------
-              if (!snapshot.hasData)
+              if (isCompanion)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3F5F2),
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.verified_user_outlined, color: Color(0xFF0F766E), size: 22),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'A verified, background-checked ALLCURO companion is assigned to you. '
+                            'This is non-clinical support — the hospital\'s doctors and nurses provide all medical care.',
+                            style: TextStyle(fontSize: 12.5, height: 1.4, color: Color(0xFF134E4A)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (!snapshot.hasData)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
@@ -598,304 +627,309 @@ class _NurseSlotBookingSheetState extends State<_NurseSlotBookingSheet> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Drag Handle
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD1D5DB),
-                    borderRadius: BorderRadius.circular(2),
+          // Scrolls on short screens / large font scales.
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag Handle
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD1D5DB),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Nurse Profile Header
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primarySoft,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      widget.nurse.name
-                          .trim()
-                          .split(' ')
-                          .map((e) => e.isNotEmpty ? e[0] : '')
-                          .take(2)
-                          .join(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                widget.nurse.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 15,
-                                  color: AppColors.ink,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.verified, color: AppColors.success, size: 14),
-                          ],
-                        ),
-                        Text(
-                          '${widget.nurse.level} · ${widget.nurse.experience} yrs exp · ⭐ ${widget.nurse.rating.toStringAsFixed(1)}',
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(height: 1, color: AppColors.border),
-              const SizedBox(height: 14),
-
-              // 1. DURATION SELECTOR
-              const Text(
-                'Select Visit Duration',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Price dynamically adjusts based on required time and clinical scope',
-                style: TextStyle(fontSize: 11, color: AppColors.mutedForeground),
-              ),
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _DurationOptionTile(
-                      title: '30 Mins',
-                      subtitle: 'Quick Visit',
-                      price: '₹399',
-                      isSelected: _selectedDuration == '30min',
-                      onTap: () => setState(() => _selectedDuration = '30min'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _DurationOptionTile(
-                      title: '1 Hour',
-                      subtitle: 'Standard Care',
-                      price: '₹699',
-                      isSelected: _selectedDuration == '1hr',
-                      onTap: () => setState(() => _selectedDuration = '1hr'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _DurationOptionTile(
-                      title: '2 Hours',
-                      subtitle: 'Extended Visit',
-                      price: '₹1,199',
-                      isSelected: _selectedDuration == '2hr',
-                      onTap: () => setState(() => _selectedDuration = '2hr'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _DurationOptionTile(
-                      title: 'Custom',
-                      subtitle: 'Extended Shifts',
-                      price: '₹1,999+',
-                      isSelected: _selectedDuration == 'custom',
-                      onTap: () => setState(() => _selectedDuration = 'custom'),
-                    ),
-                  ),
-                ],
-              ),
-
-              // Custom hours selector if 'custom' is picked
-              if (_selectedDuration == 'custom') ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Shift Hours:',
-                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(width: 8),
-                      ...[4, 8, 12, 24].map((hours) {
-                        final isHSelected = _customHours == hours;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: InkWell(
-                            onTap: () => setState(() => _customHours = hours),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isHSelected ? AppColors.primary : Colors.white,
-                                borderRadius: BorderRadius.circular(AppRadius.sm),
-                                border: Border.all(
-                                  color: isHSelected ? AppColors.primary : AppColors.border,
-                                ),
-                              ),
-                              child: Text(
-                                '${hours}h',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: isHSelected ? Colors.white : AppColors.ink,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 16),
-
-              // 2. AVAILABILITY SLOT SELECTOR
-              const Text(
-                'Preferred Arrival Time',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  '⚡ Within 45 mins (Immediate)',
-                  'Today 2:30 PM',
-                  'Today 6:00 PM',
-                  'Tomorrow 9:00 AM',
-                ].map((slot) {
-                  final isSlotSelected = _selectedSlot == slot;
-                  return InkWell(
-                    onTap: () => setState(() => _selectedSlot = slot),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isSlotSelected ? AppColors.primarySoft : Colors.white,
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                        border: Border.all(
-                          color: isSlotSelected ? AppColors.primary : AppColors.border,
-                          width: isSlotSelected ? 1.4 : 1,
-                        ),
+                // Nurse Profile Header
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primarySoft,
+                        shape: BoxShape.circle,
                       ),
                       child: Text(
-                        slot,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: isSlotSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSlotSelected ? AppColors.primary : AppColors.ink,
+                        widget.nurse.name
+                            .trim()
+                            .split(' ')
+                            .map((e) => e.isNotEmpty ? e[0] : '')
+                            .take(2)
+                            .join(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-
-              const SizedBox(height: 18),
-
-              // 3. PRICE SUMMARY & CTA
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          inr(price),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        Text(
-                          _getDurationLabel(),
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    ElevatedButton(
-                      onPressed: widget.onProceed,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Row(
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Confirm & Book',
-                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  widget.nurse.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    color: AppColors.ink,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.verified, color: AppColors.success, size: 14),
+                            ],
                           ),
-                          SizedBox(width: 4),
-                          Icon(Icons.arrow_forward_rounded, size: 14),
+                          Text(
+                            '${widget.nurse.level} · ${widget.nurse.experience} yrs exp · ⭐ ${widget.nurse.rating.toStringAsFixed(1)}',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.mutedForeground,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 14),
+
+                // 1. DURATION SELECTOR
+                const Text(
+                  'Select Visit Duration',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Price dynamically adjusts based on required time and clinical scope',
+                  style: TextStyle(fontSize: 11, color: AppColors.mutedForeground),
+                ),
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _DurationOptionTile(
+                        title: '30 Mins',
+                        subtitle: 'Quick Visit',
+                        price: '₹399',
+                        isSelected: _selectedDuration == '30min',
+                        onTap: () => setState(() => _selectedDuration = '30min'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _DurationOptionTile(
+                        title: '1 Hour',
+                        subtitle: 'Standard Care',
+                        price: '₹699',
+                        isSelected: _selectedDuration == '1hr',
+                        onTap: () => setState(() => _selectedDuration = '1hr'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _DurationOptionTile(
+                        title: '2 Hours',
+                        subtitle: 'Extended Visit',
+                        price: '₹1,199',
+                        isSelected: _selectedDuration == '2hr',
+                        onTap: () => setState(() => _selectedDuration = '2hr'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _DurationOptionTile(
+                        title: 'Custom',
+                        subtitle: 'Extended Shifts',
+                        price: '₹1,999+',
+                        isSelected: _selectedDuration == 'custom',
+                        onTap: () => setState(() => _selectedDuration = 'custom'),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Custom hours selector if 'custom' is picked
+                if (_selectedDuration == 'custom') ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Shift Hours:',
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(width: 8),
+                        ...[4, 8, 12, 24].map((hours) {
+                          final isHSelected = _customHours == hours;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: InkWell(
+                              onTap: () => setState(() => _customHours = hours),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isHSelected ? AppColors.primary : Colors.white,
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                  border: Border.all(
+                                    color: isHSelected ? AppColors.primary : AppColors.border,
+                                  ),
+                                ),
+                                child: Text(
+                                  '${hours}h',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: isHSelected ? Colors.white : AppColors.ink,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+
+                // 2. AVAILABILITY SLOT SELECTOR
+                const Text(
+                  'Preferred Arrival Time',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    '⚡ Within 45 mins (Immediate)',
+                    'Today 2:30 PM',
+                    'Today 6:00 PM',
+                    'Tomorrow 9:00 AM',
+                  ].map((slot) {
+                    final isSlotSelected = _selectedSlot == slot;
+                    return InkWell(
+                      onTap: () => setState(() => _selectedSlot = slot),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSlotSelected ? AppColors.primarySoft : Colors.white,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                          border: Border.all(
+                            color: isSlotSelected ? AppColors.primary : AppColors.border,
+                            width: isSlotSelected ? 1.4 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          slot,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isSlotSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: isSlotSelected ? AppColors.primary : AppColors.ink,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 18),
+
+                // 3. PRICE SUMMARY & CTA
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              inr(price),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            Text(
+                              _getDurationLabel(),
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.mutedForeground,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: widget.onProceed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Row(
+                          children: [
+                            Text(
+                              'Confirm & Book',
+                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_rounded, size: 14),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

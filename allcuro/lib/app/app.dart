@@ -13,6 +13,11 @@ class AllcuroApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       routerConfig: appRouter,
+      // Real phones often run a system font size above 100%. Honour it, but
+      // cap it so the compact cards and grids keep their shape; layouts are
+      // built to stay overflow-free up to this cap.
+      builder: (context, child) =>
+          MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: child!),
     );
   }
 }

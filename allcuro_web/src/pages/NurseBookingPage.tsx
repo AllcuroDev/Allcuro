@@ -18,6 +18,7 @@ import {
   type QuickService,
 } from '../data/booking'
 import { nurseById, nurses } from '../data/providers'
+import { isCompanionService } from '../data/categories'
 import { useServices } from '../state/catalog'
 import { inr, priceFrom } from '../lib/format'
 import { navigate, useQuery } from '../router'
@@ -68,6 +69,9 @@ export function NurseBookingPage() {
     return [slotParam, ...timeSlots]
   }, [slotParam])
 
+  // Hospital Companion services are non-clinical: the desk assigns a companion, not a nurse.
+  const pickedService = services.find((x) => x.id === serviceId)
+
   const [optionId, setOptionId] = useState(options[serviceId ? 0 : 1]?.id ?? options[0].id)
   const [slot, setSlot] = useState(slotParam && !slotParam.startsWith('⚡') ? slotParam : INSTANT_SLOT)
   const [patient, setPatient] = useState({ name: profile?.name ?? '', age: '', gender: GENDERS[0], notes: '' })
@@ -78,6 +82,7 @@ export function NurseBookingPage() {
   const [error, setError] = useState('')
 
   const option = options.find((o) => o.id === optionId) ?? options[0]
+  const companion = !!pickedService && isCompanionService(pickedService) && option.id === pickedService.id
   const nurse = nurseById(nurseId) ?? nurses[0]
   const discount = coupon ? coupons[coupon].off(option.price) : 0
   const lines = visitBill(option.title, option.price, discount)
@@ -108,7 +113,7 @@ export function NurseBookingPage() {
     const instant = slot === INSTANT_SLOT
     const booking = await createBooking({
       type: 'nurse',
-      title: `${nurse.name} (${nurse.level}) · ${option.title}`,
+      title: companion ? `Hospital Companion · ${option.title}` : `${nurse.name} (${nurse.level}) · ${option.title}`,
       when: slot,
       amount: total,
       liveStatus: 'assigned',
@@ -118,10 +123,19 @@ export function NurseBookingPage() {
       patientGender: patient.gender,
       address: fullAddress(current),
       locality: current.locality,
-      providerName: nurse.name,
-      providerPhone: '+91 98450 12345',
-      providerRating: nurse.rating,
-      providerQualifications: `${nurse.level} · ${nurse.experience} yrs exp · HPR Verified`,
+      ...(companion
+        ? {
+            providerName: 'ALLCURO Hospital Companion',
+            providerPhone: '+91 80 4120 5500',
+            providerRating: 4.8,
+            providerQualifications: 'Police-verified companion · Non-clinical support',
+          }
+        : {
+            providerName: nurse.name,
+            providerPhone: '+91 98450 12345',
+            providerRating: nurse.rating,
+            providerQualifications: `${nurse.level} · ${nurse.experience} yrs exp · HPR Verified`,
+          }),
       condition: patient.notes.trim() || option.title,
       formalities: [],
       payment,
@@ -132,14 +146,25 @@ export function NurseBookingPage() {
   return (
     <>
       <div className="container page page-narrow">
-        <PageHead back="/" title="Quick Nurse Booking" subtitle="Verified home nursing delivered in 30–45 mins" />
+        {companion ? (
+          <PageHead
+            back={`/service/${serviceId}`}
+            title="Book a Hospital Companion"
+            subtitle="Non-clinical support during a hospital visit"
+          />
+        ) : (
+          <PageHead back="/" title="Quick Nurse Booking" subtitle="Verified home nursing delivered in 30–45 mins" />
+        )}
 
         <p className="trust-note">
-          <ShieldIcon size={20} /> 100% Govt ID & HPR registered nurses · Police checked · Clinical-grade safety
+          <ShieldIcon size={20} />{' '}
+          {companion
+            ? 'Govt ID & police-verified companions · Non-clinical support only'
+            : '100% Govt ID & HPR registered nurses · Police checked · Clinical-grade safety'}
         </p>
 
         <section className="form-section">
-          <StepTitle n={1}>Select nursing service</StepTitle>
+          <StepTitle n={1}>{companion ? 'Select service' : 'Select nursing service'}</StepTitle>
           <div className="stack-sm">
             {options.map((o) => (
               <OptionCard key={o.id} name="service" checked={o.id === option.id} onSelect={() => setOptionId(o.id)}>
@@ -159,7 +184,16 @@ export function NurseBookingPage() {
         </section>
 
         <section className="form-section">
-          <StepTitle n={2}>Your nurse</StepTitle>
+          <StepTitle n={2}>{companion ? 'Your companion' : 'Your nurse'}</StepTitle>
+          {companion ? (
+            <div className="panel nurse-pick">
+              <Avatar name="Hospital Companion" />
+              <div>
+                <strong>A verified ALLCURO companion will be assigned</strong>
+                <small>You’ll see their name, photo ID and a visit OTP in My Bookings.</small>
+              </div>
+            </div>
+          ) : (
           <div className="panel nurse-pick">
             <Avatar name={nurse.name} />
             <div>
@@ -173,6 +207,7 @@ export function NurseBookingPage() {
               Change
             </Link>
           </div>
+          )}
         </section>
 
         <section className="form-section">
@@ -261,14 +296,14 @@ export function NurseBookingPage() {
 
       <ActionBar label="Total payable" amount={inr(total)}>
         <button type="button" className="btn btn-primary btn-lg" onClick={submit} disabled={paying}>
-          {paying ? <Spinner /> : 'Book Nurse Now'}
+          {paying ? <Spinner /> : companion ? 'Book Companion' : 'Book Nurse Now'}
         </button>
       </ActionBar>
 
       {pickingAddress && <AddressPicker onClose={() => setPickingAddress(false)} />}
       {paying && (
         <PaymentDialog
-          title={`${option.title} · ${nurse.name}`}
+          title={companion ? `${option.title} · Hospital Companion` : `${option.title} · ${nurse.name}`}
           lines={lines}
           allowPayLater
           onClose={() => setPaying(false)}

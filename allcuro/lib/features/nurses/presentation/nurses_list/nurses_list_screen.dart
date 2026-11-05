@@ -423,32 +423,46 @@ class _NurseCard extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      size: 16,
-                      color: Color(0xFFFFB800),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${n.rating}',
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.ink,
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 16,
+                        color: Color(0xFFFFB800),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '(${n.reviews} reviews)',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.mutedForeground,
+                      const SizedBox(width: 4),
+                      // One paragraph so it can ellipsize as a unit on
+                      // narrow phones / large font scales.
+                      Flexible(
+                        child: Text.rich(
+                          TextSpan(
+                            text: '${n.rating}',
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink,
+                            ),
+                            children: [
+                              const WidgetSpan(child: SizedBox(width: 4)),
+                              TextSpan(
+                                text: '(${n.reviews} reviews)',
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w400,
+                                  color: AppColors.mutedForeground,
+                                ),
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Row(
                   children: [
                     Text.rich(

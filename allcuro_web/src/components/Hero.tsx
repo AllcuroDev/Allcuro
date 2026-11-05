@@ -9,8 +9,11 @@ import { useCategoryImages } from '../state/catalog'
 import { motionOn } from '../motion'
 import { CheckIcon, ClockIcon, HeadsetIcon, PhoneIcon, RupeeIcon, ShieldIcon, BoltIcon } from './Icons'
 
-const tiles = [
+// Every care type, then medicine delivery, then the full list. Ten tiles:
+// 5 × 2 on wider screens; 3 × 3 on phones with "All Services" as a full-width row.
+const tiles: { id: string; slug: string; href?: string; label: string; icon: string }[] = [
   ...categories.map((c) => ({ id: c.id, slug: c.slug, href: c.href, label: c.label, icon: c.icon })),
+  { id: 'medicines', slug: 'medicines', href: '/medicines', label: 'Order Medicines', icon: 'med_kit' },
   { id: ALL_SLUG, slug: ALL_SLUG, label: 'All Services', icon: 'see_all' },
 ]
 

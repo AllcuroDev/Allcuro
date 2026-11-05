@@ -305,10 +305,13 @@ class _NurseQuickBookingScreenState
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        s.title,
-                                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink),
+                                      Expanded(
+                                        child: Text(
+                                          s.title,
+                                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink),
+                                        ),
                                       ),
+                                      const SizedBox(width: 8),
                                       Text(
                                         inr(s.price),
                                         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.ink),

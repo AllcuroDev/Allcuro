@@ -34,6 +34,7 @@ class CareTone {
     if (c.contains('doctor')) return doctor;
     if (c.contains('diag')) return diagnostics;
     if (c.contains('well')) return wellness;
+    if (c.contains('hospital') || c.contains('companion')) return wellness;
     return nursing;
   }
 }
@@ -110,6 +111,9 @@ class CareIcons {
     'feeding-assistance': feeding,
     'mobility-assistance': wheelchair,
     'companionship-visit': companionship,
+    'hospital-visit-companion': companionship,
+    'full-day-hospital-companion': caregiver,
+    'admission-discharge-companion': clipboard,
     'medication-reminder': medReminder,
     'vital-signs-check': vitals,
     'bp-blood-sugar-check': bpSugar,
@@ -253,6 +257,10 @@ class CareIllustrations {
   static const wellness = '$_dir/wellness.png';
   static const equipment = '$_dir/equipment.png';
   static const seeAll = '$_dir/see_all.png';
+
+  // Service artworks reused as home-grid tiles (no category artwork yet).
+  static const hospitalCompanion = '$_srvDir/companionship.png';
+  static const medicines = '$_srvDir/med_reminder.png';
 
   /// 3D service illustration asset path for any service ID
   static String forService(String serviceId) {

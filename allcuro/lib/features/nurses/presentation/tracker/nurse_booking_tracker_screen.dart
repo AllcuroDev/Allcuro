@@ -65,81 +65,84 @@ class _NurseBookingTrackerScreenState
             24,
             MediaQuery.of(context).viewInsets.bottom + 24,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'Rate Your Nursing Experience',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'How was your session with ${booking.providerName}?',
-                style: const TextStyle(fontSize: 12.5, color: AppColors.mutedForeground),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  final star = index + 1;
-                  return IconButton(
-                    icon: Icon(
-                      star <= _userRating ? Icons.star_rounded : Icons.star_outline_rounded,
-                      color: const Color(0xFFF59E0B),
-                      size: 36,
+          // Scrolls when the keyboard + large font scale exceed the sheet height.
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    onPressed: () {
-                      setModalState(() => _userRating = star.toDouble());
-                    },
-                  );
-                }),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _reviewController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Write a review for Sister Priya...',
-                  hintText: 'e.g. Very gentle with wound dressing, punctual and caring.',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() => _reviewSubmitted = true);
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('⭐ Thank you for your feedback! Rating submitted.'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
                   ),
-                  child: const Text('Submit Rating & Review', style: TextStyle(fontWeight: FontWeight.w800)),
                 ),
-              ),
-            ],
+                const SizedBox(height: 18),
+                const Text(
+                  'Rate Your Nursing Experience',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'How was your session with ${booking.providerName}?',
+                  style: const TextStyle(fontSize: 12.5, color: AppColors.mutedForeground),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    final star = index + 1;
+                    return IconButton(
+                      icon: Icon(
+                        star <= _userRating ? Icons.star_rounded : Icons.star_outline_rounded,
+                        color: const Color(0xFFF59E0B),
+                        size: 36,
+                      ),
+                      onPressed: () {
+                        setModalState(() => _userRating = star.toDouble());
+                      },
+                    );
+                  }),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _reviewController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Write a review for Sister Priya...',
+                    hintText: 'e.g. Very gentle with wound dressing, punctual and caring.',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() => _reviewSubmitted = true);
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('⭐ Thank you for your feedback! Rating submitted.'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
+                    ),
+                    child: const Text('Submit Rating & Review', style: TextStyle(fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -156,7 +159,9 @@ class _NurseBookingTrackerScreenState
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.destructive, size: 24),
             SizedBox(width: 8),
-            Text('Customer SOS Helpdesk', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.destructive)),
+            Flexible(
+              child: Text('Customer SOS Helpdesk', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.destructive)),
+            ),
           ],
         ),
         content: const Text(
@@ -261,9 +266,13 @@ class _NurseBookingTrackerScreenState
               children: [
                 Row(
                   children: [
-                    Text(
-                      booking.id,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.ink),
+                    Flexible(
+                      child: Text(
+                        booking.id,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.ink),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -355,21 +364,26 @@ class _NurseBookingTrackerScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.security_rounded, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
-                  Text(
-                    'SERVICE VERIFICATION OTP',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 10.5,
-                      letterSpacing: 1.2,
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.security_rounded, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'SERVICE VERIFICATION OTP',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 10.5,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -493,9 +507,11 @@ class _NurseBookingTrackerScreenState
                       children: [
                         const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
                         const SizedBox(width: 2),
-                        Text(
-                          '${booking.providerRating} (142 visits completed)',
-                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.ink),
+                        Flexible(
+                          child: Text(
+                            '${booking.providerRating} (142 visits completed)',
+                            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.ink),
+                          ),
                         ),
                       ],
                     ),
@@ -557,16 +573,21 @@ class _NurseBookingTrackerScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.monitor_heart, color: AppColors.primary, size: 18),
-                  SizedBox(width: 8),
-                  Text(
-                    'Real-Time Clinical Vitals',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink),
-                  ),
-                ],
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.monitor_heart, color: AppColors.primary, size: 18),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Real-Time Clinical Vitals',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(

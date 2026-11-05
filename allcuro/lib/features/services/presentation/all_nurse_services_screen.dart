@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/app_shell.dart';
+import '../../../core/ui/scaled_tile_grid_delegate.dart';
 import '../../auth/presentation/auth_view_model.dart';
 import '../../auth/presentation/quick_login_sheet.dart';
 
@@ -377,11 +378,13 @@ class _AllNurseServicesScreenState extends ConsumerState<AllNurseServicesScreen>
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                // Icon box (68) + gap (8) + two label lines.
+                gridDelegate: ScaledTileGridDelegate(
                   crossAxisCount: 4,
                   childAspectRatio: 0.70,
                   crossAxisSpacing: 8,
                   mainAxisSpacing: 14,
+                  minTileHeight: labelTileHeight(context, fixedHeight: 68 + 8, fontSize: 11.5, lineHeight: 1.18),
                 ),
                 itemCount: filtered.length,
                 itemBuilder: (context, index) {

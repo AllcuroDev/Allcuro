@@ -22,7 +22,7 @@ class BookingsScreen extends ConsumerWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          const ScreenHeader(title: 'My Bookings', subtitle: 'Nurses, centres & equipment'),
+          const ScreenHeader(title: 'My Bookings', subtitle: 'Nurses, centres, equipment & medicines'),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             child: bookingsAsync.when(
@@ -55,6 +55,7 @@ class _BookingCard extends StatelessWidget {
     final b = booking;
     final isNurse = b.type == BookingType.nurse;
     final isCentre = b.type == BookingType.careCentre;
+    final isMedicine = b.type == BookingType.medicine;
     final isCompleted = b.status == 'Completed';
 
     return Padding(
@@ -78,7 +79,11 @@ class _BookingCard extends StatelessWidget {
                   child: Icon(
                     isNurse
                         ? Icons.medical_services_outlined
-                        : (isCentre ? Icons.apartment_outlined : Icons.inventory_2_outlined),
+                        : isCentre
+                            ? Icons.apartment_outlined
+                            : isMedicine
+                                ? Icons.medication_outlined
+                                : Icons.inventory_2_outlined,
                     color: AppColors.primary,
                     size: 20,
                   ),
@@ -99,9 +104,19 @@ class _BookingCard extends StatelessWidget {
                         b.when,
                         style: const TextStyle(fontSize: 11.5, color: AppColors.mutedForeground),
                       ),
+                      if (isMedicine && b.items.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          b.items.map((i) => i.split(' · ').first).join(', '),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11.5, height: 1.35, color: AppColors.ink),
+                        ),
+                      ],
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -165,6 +180,18 @@ class _BookingCard extends StatelessWidget {
                   onPressed: () => context.push('/nurse-tracker/${b.id}'),
                   icon: const Icon(Icons.radar_rounded, size: 16),
                   label: const Text('Live Track Nurse & View OTP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                  ),
+                )
+              else if (isMedicine)
+                ElevatedButton.icon(
+                  onPressed: () => context.push('/medicine-order/${b.id}'),
+                  icon: const Icon(Icons.local_shipping_outlined, size: 16),
+                  label: const Text('Track Order & View OTP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,

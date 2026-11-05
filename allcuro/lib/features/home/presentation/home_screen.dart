@@ -247,6 +247,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final authState = ref.watch(authViewModelProvider);
     ref.watch(servicesCatalogProvider); // rebuild once live services load
 
+    final hasLiveVisit = ref.watch(activeNurseVisitProvider) != null;
     final isGuest = authState.status == AuthStatus.unauthenticated || authState.status == AuthStatus.unknown;
     final userName = authState.userProfile['name'] ?? (isGuest ? 'Guest' : 'Customer');
     final initials = isGuest
@@ -354,9 +355,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   padding: EdgeInsets.zero,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 4,
-                    childAspectRatio: 0.78,
+                    mainAxisExtent: _HomeGridItem.extent(context),
                     crossAxisSpacing: 8,
                     mainAxisSpacing: 10,
                   ),
@@ -375,22 +376,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 16),
           ] else ...[
             // -----------------------------------------------------------------
-            // 2. HEALTHCARE SERVICES (Nursing, Mother/Baby, Elder, Physio, Doctor, Centres, Equipments, See All)
+            // 1b. ORDER MEDICINES ENTRY (search & add, or upload a prescription)
+            // -----------------------------------------------------------------
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: _MedicinesEntryBanner(onTap: () => context.push('/medicines')),
+            ),
+
+            // -----------------------------------------------------------------
+            // 2. HEALTHCARE SERVICES (8 care tiles; 'View all' in the header opens every category)
             // -----------------------------------------------------------------
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 6, 20, 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'HealthCare Services',
-                    style: TextStyle(
-                      fontSize: 16.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                      color: AppColors.ink,
+                  const Flexible(
+                    child: Text(
+                      'HealthCare Services',
+                      style: TextStyle(
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        color: AppColors.ink,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   InkWell(
                     onTap: () => context.push('/category-services/all'),
                     child: const Text(
@@ -408,14 +420,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GridView.count(
+              child: GridView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
-                crossAxisCount: 4,
-                childAspectRatio: 0.82,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 10,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisExtent: _HomeGridItem.extent(context),
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 10,
+                ),
                 children: [
                   // 1. Nursing Services
                   _HomeGridItem(
@@ -447,11 +461,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     icon: CareIllustrations.doctor,
                     onTap: () => context.push('/category-services/doctor-care'),
                   ),
-                  // 6. Care Centres
+                  // 6. Hospital Companion
                   _HomeGridItem(
-                    title: 'Care Centres',
-                    icon: CareIllustrations.careCentre,
-                    onTap: () => context.push('/centres'),
+                    title: 'Hospital Companion',
+                    icon: CareIllustrations.hospitalCompanion,
+                    onTap: () => context.push('/category-services/hospital-companion'),
                   ),
                   // 7. Caregivers
                   _HomeGridItem(
@@ -459,12 +473,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     icon: CareIllustrations.caregiver,
                     onTap: () => context.push('/category-services/caregiver'),
                   ),
-                  // 8. See All
+                  // 8. Care Centres
                   _HomeGridItem(
-                    title: 'See All',
-                    icon: CareIllustrations.seeAll,
-                    isSeeAll: true,
-                    onTap: () => context.push('/category-services/all'),
+                    title: 'Care Centres',
+                    icon: CareIllustrations.careCentre,
+                    onTap: () => context.push('/centres'),
                   ),
                 ],
               ),
@@ -492,15 +505,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Our Nurse Care',
-                    style: TextStyle(
-                      fontSize: 16.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                      color: AppColors.ink,
+                  const Flexible(
+                    child: Text(
+                      'Our Nurse Care',
+                      style: TextStyle(
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        color: AppColors.ink,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   InkWell(
                     onTap: () => context.push('/category-services/nursing'),
                     child: const Text(
@@ -518,14 +534,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GridView.count(
+              child: GridView(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
-                crossAxisCount: 4,
-                childAspectRatio: 0.82,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 10,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisExtent: _HomeGridItem.extent(context),
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 10,
+                ),
                 children: [
                   _HomeGridItem(
                     title: 'Catheter Care',
@@ -652,12 +670,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         children: [
                           Row(
                             children: [
-                              const Text(
-                                'Talk to Our Team',
-                                style: TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF9A3412),
+                              const Flexible(
+                                child: Text(
+                                  'Talk to Our Team',
+                                  style: TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF9A3412),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -720,19 +740,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Popular Procedures at Home',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink),
-                    ),
-                    Text(
-                      '30m & 1h visits · Sterile kits · Fast arrival',
-                      style: TextStyle(fontSize: 11, color: AppColors.mutedForeground),
-                    ),
-                  ],
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Popular Procedures at Home',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink),
+                      ),
+                      Text(
+                        '30m & 1h visits · Sterile kits · Fast arrival',
+                        style: TextStyle(fontSize: 11, color: AppColors.mutedForeground),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 InkWell(
                   onTap: () => context.push('/category-services/nursing'),
                   child: const Text(
@@ -925,7 +948,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // -----------------------------------------------------------------
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+            padding: EdgeInsets.fromLTRB(24, 28, 24, 32 + (hasLiveVisit ? kLiveVisitCardInset : 0)),
             decoration: BoxDecoration(
               color: AppColors.secondary,
               border: const Border(top: BorderSide(color: AppColors.border)),
@@ -975,7 +998,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                 // Trust Grid Badges
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _TrustBadgeItem(
                       icon: Icons.verified_user_rounded,
@@ -1038,6 +1061,14 @@ class _HomeGridItem extends StatelessWidget {
     required this.onTap,
     this.isSeeAll = false,
   });
+
+  /// Row height for a grid of these tiles: the 60pt artwork, the gap and two
+  /// lines of label at the phone's font size. A fixed childAspectRatio made
+  /// tiles shorter on narrow phones and overflowed the label.
+  static double extent(BuildContext context) {
+    final label = MediaQuery.textScalerOf(context).scale(11.5);
+    return 60 + 8 + label * 1.18 * 2 + 6;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1374,6 +1405,88 @@ class _ExpressNurseBannerState extends State<_ExpressNurseBanner> with TickerPro
 }
 
 // ---------------------------------------------------------------------------
+// ORDER MEDICINES ENTRY — one slim saffron banner into the medicines section
+// ---------------------------------------------------------------------------
+class _MedicinesEntryBanner extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _MedicinesEntryBanner({required this.onTap});
+
+  static const _saffron = Color(0xFFEE6D01);
+  static const _saffronDeep = Color(0xFFC85A00);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          gradient: const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Color(0xFFFFF3E6), Color(0xFFFFE6CC)],
+          ),
+          border: Border.all(color: const Color(0xFFFFD2A6)),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _saffron,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    boxShadow: [
+                      BoxShadow(color: _saffron.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3)),
+                    ],
+                  ),
+                  child: const Icon(Icons.medication_rounded, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order medicines',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: Color(0xFF7C2D12)),
+                      ),
+                      SizedBox(height: 1),
+                      Text(
+                        'Search or upload a prescription',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: Color(0xFF9A3412)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(color: _saffronDeep, shape: BoxShape.circle),
+                  child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // EXPLORE HEALTH CARE CENTRES BANNER (photo card with brand-green scrim)
 // ---------------------------------------------------------------------------
 class _CentresBanner extends StatelessWidget {
@@ -1383,32 +1496,38 @@ class _CentresBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Sized by its text (at least 156pt) rather than a fixed height, so a
+    // larger system font grows the card instead of overflowing it.
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.xl),
-      child: SizedBox(
-        height: 156,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 156),
         child: Stack(
-          fit: StackFit.expand,
           children: [
-            Image.asset(
-              'assets/images/centre-1.jpg',
-              fit: BoxFit.cover,
-              alignment: const Alignment(0.4, 0),
-              cacheWidth: 900,
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/centre-1.jpg',
+                fit: BoxFit.cover,
+                alignment: const Alignment(0.4, 0),
+                cacheWidth: 900,
+              ),
             ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [Color(0xF20C341E), Color(0xB30C341E), Color(0x000C341E)],
-                  stops: [0.0, 0.5, 0.95],
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Color(0xF20C341E), Color(0xB30C341E), Color(0x000C341E)],
+                    stops: [0.0, 0.5, 0.95],
+                  ),
                 ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
@@ -1429,7 +1548,7 @@ class _CentresBanner extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 18),
                   const Text(
                     'Explore Health Care\nCentres',
                     style: TextStyle(
@@ -1533,7 +1652,9 @@ class _QuickProcedureCard extends StatelessWidget {
                   ),
                   child: CareIcon(icon, color: AppColors.primary, size: 21),
                 ),
-                Container(
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1F5F9),
@@ -1541,12 +1662,15 @@ class _QuickProcedureCard extends StatelessWidget {
                   ),
                   child: Text(
                     duration,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF475569),
                     ),
                   ),
+                ),
                 ),
               ],
             ),
@@ -1721,13 +1845,27 @@ class _TrustBadgeItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, size: 22, color: AppColors.primary),
-        const SizedBox(height: 4),
-        Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.ink)),
-        Text(subtitle, style: const TextStyle(fontSize: 9.5, color: AppColors.mutedForeground)),
-      ],
+    // Expanded so three badges share narrow phones instead of overflowing.
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: Column(
+          children: [
+            Icon(icon, size: 22, color: AppColors.primary),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.ink),
+            ),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 9.5, color: AppColors.mutedForeground),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

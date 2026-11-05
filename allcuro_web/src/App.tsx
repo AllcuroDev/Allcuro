@@ -13,6 +13,7 @@ import { BookingDetailPage, BookingsPage } from './pages/BookingsPages'
 import { CategoryPage, NotFound } from './pages/CategoryPage'
 import { CentreBookingPage, CentrePage, CentresPage } from './pages/CentresPages'
 import { EquipmentCheckoutPage, EquipmentPage } from './pages/EquipmentPages'
+import { MedicineCartPage, MedicinesPage } from './pages/MedicinesPages'
 import { NurseBookingPage } from './pages/NurseBookingPage'
 import { NursePage, NursesPage } from './pages/NursesPages'
 import { ServicePage } from './pages/ServicePage'
@@ -66,6 +67,8 @@ const routes: { pattern: RegExp; page: (id: string) => ReactNode; title: (id: st
     page: (id) => <EquipmentCheckoutPage key={id} id={id} />,
     title: (id) => equipmentById(id) && `Rent ${equipmentById(id)!.name}`,
   },
+  { pattern: /^\/medicines$/, page: () => <MedicinesPage />, title: () => 'Order Medicines' },
+  { pattern: /^\/medicines\/cart$/, page: () => <MedicineCartPage />, title: () => 'Medicine Cart' },
   { pattern: /^\/bookings$/, page: () => <BookingsPage />, title: () => 'My Bookings' },
   { pattern: /^\/bookings\/([\w-]+)$/, page: (id) => <BookingDetailPage key={id} id={id} />, title: (id) => `Booking ${id}` },
   { pattern: /^\/login$/, page: () => <LoginPage />, title: () => 'Sign in' },

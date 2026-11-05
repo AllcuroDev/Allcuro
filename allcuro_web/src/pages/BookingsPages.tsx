@@ -7,6 +7,7 @@ import {
   NavigateIcon,
   NurseIcon,
   PhoneIcon,
+  PillIcon,
   ShieldIcon,
   StarIcon,
 } from '../components/Icons'
@@ -21,6 +22,8 @@ import {
   ASSIGN_MS,
   isActive,
   liveStatusAt,
+  MEDICINE_STAGES,
+  medicineStageAt,
   rateBooking,
   statusLabel,
   tripProgress,
@@ -35,11 +38,12 @@ import { SignInPrompt } from './AccountPages'
 // Leaflet is only needed on the live tracker, so it loads with it.
 const LiveMap = lazy(() => import('../components/LiveMap').then((m) => ({ default: m.LiveMap })))
 
-const TYPE_ICON = { nurse: NurseIcon, centre: BuildingIcon, equipment: BoxIcon }
+const TYPE_ICON = { nurse: NurseIcon, centre: BuildingIcon, equipment: BoxIcon, medicine: PillIcon }
 const DETAIL_CTA = {
   nurse: 'Live Track Nurse & View OTP',
   centre: 'View Digital Admission Pass & OTP',
   equipment: 'Track Delivery',
+  medicine: 'Track Order & View OTP',
 }
 
 /** Nurses, centres & equipment in one list (the app's BookingsScreen). */
@@ -52,17 +56,17 @@ export function BookingsPage() {
   if (!isLoggedIn) {
     return (
       <div className="container page page-narrow">
-        <PageHead back="/" title="My Bookings" subtitle="Nurses, centres & equipment" />
+        <PageHead back="/" title="My Bookings" subtitle="Nurses, centres, equipment & medicines" />
         <SignInPrompt reason="Sign in to see and track your bookings." />
       </div>
     )
   }
 
-  const list = bookings.filter((b) => (tab === 'active' ? isActive(b) : !isActive(b)))
+  const list = bookings.filter((b) => (tab === 'active' ? isActive(b, now) : !isActive(b, now)))
 
   return (
     <div className="container page page-narrow">
-      <PageHead back="/" title="My Bookings" subtitle="Nurses, centres & equipment" />
+      <PageHead back="/" title="My Bookings" subtitle="Nurses, centres, equipment & medicines" />
       <div className="seg" role="tablist" aria-label="Booking status">
         {(['active', 'past'] as const).map((t) => (
           <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
@@ -81,13 +85,16 @@ export function BookingsPage() {
             <Link to="/services/all" className="btn btn-outline">
               See all services
             </Link>
+            <Link to="/medicines" className="btn btn-outline">
+              Order medicines
+            </Link>
           </div>
         </div>
       ) : (
         <div className="stack">
           {list.map((b) => {
             const Icon = TYPE_ICON[b.type]
-            const done = !isActive(b)
+            const done = !isActive(b, now)
             return (
               <article key={b.id} className="booking-card">
                 <div className="booking-card-head">
@@ -131,6 +138,7 @@ export function BookingDetailPage({ id }: { id: string }) {
   if (!booking) return <NotFound />
   if (booking.type === 'centre') return <CentrePass booking={booking} />
   if (booking.type === 'equipment') return <EquipmentTracker booking={booking} />
+  if (booking.type === 'medicine') return <MedicineOrderTracker booking={booking} />
   return <NurseTracker booking={booking} />
 }
 
@@ -385,6 +393,90 @@ function EquipmentTracker({ booking: b }: { booking: Booking }) {
           <div className="row-actions">
             <a className="btn btn-primary" href={site.phoneHref}>
               <PhoneIcon size={18} /> Call Equipment Desk
+            </a>
+          </div>
+        </section>
+        <PaymentCard booking={b} />
+        <Link to="/bookings" className="btn btn-outline btn-lg btn-block">
+          Back to My Bookings
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// ---- Medicine order ----
+
+const MEDICINE_STEP_NOTES = [
+  'Payment received · order sent to a licensed partner pharmacy',
+  'A licensed pharmacist checks the medicines and any prescription',
+  'Sealed and labelled at the pharmacy',
+  'Our delivery partner is on the way',
+  'Handed over after OTP check',
+]
+
+function MedicineOrderTracker({ booking: b }: { booking: Booking }) {
+  const now = useNow(5000)
+  const stage = medicineStageAt(b, now)
+  const delivered = stage === MEDICINE_STAGES.length - 1
+  const steps: Step[] = MEDICINE_STAGES.map((title, i) => ({
+    title,
+    subtitle: i === 3 ? `${MEDICINE_STEP_NOTES[i]} · ${b.when}` : MEDICINE_STEP_NOTES[i],
+  }))
+  const items = b.items ?? []
+  return (
+    <div className="container page page-narrow">
+      <PageHead
+        back="/bookings"
+        title={
+          <>
+            {b.id} <span className={`status-pill ${delivered ? 'is-muted' : ''}`}>{statusLabel(b, now)}</span>
+          </>
+        }
+        subtitle={b.title}
+      />
+      <div className="stack">
+        {!delivered && (
+          <OtpCard
+            label="DELIVERY OTP"
+            badge="CONFIDENTIAL"
+            otp={b.otp}
+            note="Share this 4-digit code with the delivery partner only when you receive your medicines."
+          />
+        )}
+        <section className="panel">
+          <h2 className="panel-title">Order status</h2>
+          <StepList steps={steps} current={delivered ? steps.length : stage + 1} />
+        </section>
+        <section className="panel">
+          <div className="panel-head">
+            <h2 className="panel-title">Medicines ({items.length})</h2>
+          </div>
+          <ul className="order-items">
+            {items.map((it) => (
+              <li key={it.name}>
+                <span>
+                  <strong>{it.name}</strong>
+                  <small>
+                    {it.pack} · {inr(it.price)} × {it.qty}
+                  </small>
+                </span>
+                <strong>{inr(it.price * it.qty)}</strong>
+              </li>
+            ))}
+          </ul>
+          {b.prescriptionName && (
+            <p className="trust-note">
+              <ShieldIcon size={20} /> Prescription sent: {b.prescriptionName}
+            </p>
+          )}
+        </section>
+        <section className="panel">
+          <h2 className="panel-title">Delivery address</h2>
+          <p>{b.address}</p>
+          <div className="row-actions">
+            <a className="btn btn-primary" href={site.phoneHref}>
+              <PhoneIcon size={18} /> Call Pharmacy Desk
             </a>
           </div>
         </section>

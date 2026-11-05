@@ -1,9 +1,10 @@
 import { IconTile } from '../components/CareIcon'
-import { CheckIcon, ClockIcon, MinusIcon, UserIcon, BoltIcon } from '../components/Icons'
+import { CheckIcon, ClockIcon, MinusIcon, UserIcon, BoltIcon, PhoneIcon, ShieldIcon } from '../components/Icons'
 import { NurseCard } from '../components/NurseCard'
 import { bookingPath } from '../data/booking'
 import { ActionBar, PageHead } from '../components/ui'
-import { categories, categoryById, categoryPath } from '../data/categories'
+import { categories, categoryById, categoryPath, isCompanionService } from '../data/categories'
+import { site } from '../data/site'
 import { nurses, type Nurse } from '../data/providers'
 import { useServices } from '../state/catalog'
 import { navigate } from '../router'
@@ -30,7 +31,8 @@ export function ServicePage({ id }: { id: string }) {
   const s = useServices().find((x) => x.id === id)
   if (!s) return <NotFound />
   const cat = categoryById[s.category] ?? categories[0]
-  const pros = nurses.filter(canServe[s.category] ?? (() => false))
+  const companion = isCompanionService(s)
+  const pros = companion ? [] : nurses.filter(canServe[s.category] ?? (() => false))
 
   const book = () => requireLogin(() => navigate(bookingPath({ service: s.id })))
 
@@ -93,7 +95,26 @@ export function ServicePage({ id }: { id: string }) {
             <h2 id="pros-title" className="step-title">
               {pros.length ? 'Choose your professional' : 'How it works'}
             </h2>
-            {pros.length ? (
+            {companion ? (
+              <div className="panel stack-sm">
+                <p className="trust-note">
+                  <ShieldIcon size={20} /> A verified ALLCURO companion will be assigned
+                </p>
+                <p className="muted">
+                  Book now and our care desk assigns a police-verified hospital companion for your visit. Companions
+                  give non-clinical support only — the hospital’s doctors and nurses handle all medical care. You’ll see
+                  who is coming and a visit OTP in My Bookings.
+                </p>
+                <div className="row-actions">
+                  <button type="button" className="btn btn-primary" onClick={book}>
+                    <BoltIcon /> Book Service
+                  </button>
+                  <a className="btn btn-outline" href={site.phoneHref}>
+                    <PhoneIcon size={18} /> Call {site.phoneDisplay}
+                  </a>
+                </div>
+              </div>
+            ) : pros.length ? (
               <div className="stack">
                 {pros.map((n) => (
                   <NurseCard key={n.id} nurse={n} serviceId={s.id} />

@@ -4,6 +4,7 @@ enum BookingType {
   nurse,
   careCentre,
   equipment,
+  medicine,
 }
 
 enum BookingLiveStatus {
@@ -38,6 +39,12 @@ class Booking {
   final String? roomType;
   final List<String> formalities;
 
+  /// Medicine orders: one line per item, e.g. 'Metformin 500 mg SR Tablet × 2 · ₹82'.
+  final List<String> items;
+
+  /// Medicine orders: the prescription file sent to the pharmacist, if any.
+  final String? prescriptionName;
+
   const Booking({
     required this.id,
     this.type = BookingType.nurse,
@@ -65,6 +72,8 @@ class Booking {
       'Digital Admission Pass & Check-In OTP',
       'Emergency Contact Verification',
     ],
+    this.items = const [],
+    this.prescriptionName,
   });
 
   Booking copyWith({
@@ -89,6 +98,8 @@ class Booking {
     String? condition,
     String? roomType,
     List<String>? formalities,
+    List<String>? items,
+    String? prescriptionName,
   }) {
     return Booking(
       id: id ?? this.id,
@@ -112,6 +123,8 @@ class Booking {
       condition: condition ?? this.condition,
       roomType: roomType ?? this.roomType,
       formalities: formalities ?? this.formalities,
+      items: items ?? this.items,
+      prescriptionName: prescriptionName ?? this.prescriptionName,
     );
   }
 }

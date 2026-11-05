@@ -514,12 +514,16 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                                 children: [
                                   Row(
                                     children: [
-                                      Text(
-                                        addr.title,
-                                        style: const TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppColors.ink,
+                                      Flexible(
+                                        child: Text(
+                                          addr.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.ink,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 8),

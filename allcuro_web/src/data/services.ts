@@ -779,5 +779,59 @@ export const services: Service[] = [
     "alsoIn": [
       "Caregivers"
     ]
+  },
+  {
+    "id": "hospital-visit-companion",
+    "name": "Hospital Visit Companion",
+    "category": "Hospital Companion",
+    "subcategory": "Hospital Visit",
+    "description": "Non-clinical support during a hospital visit, including wayfinding, waiting support, belongings and family updates with consent.",
+    "includes": "Meet at home or hospital entrance; wayfinding to OPD, labs, scans & pharmacy; waiting-room support and queue help; minding belongings & documents; family updates with consent.",
+    "notIncluded": "Medical care, medication, clinical decisions, signing consent forms or transport fare.",
+    "duration": "Up to 4 hr",
+    "professional": "Hospital Companion",
+    "price": "₹999",
+    "notes": "Extra time ₹199/hr",
+    "badge": "Popular",
+    "icon": "companionship",
+    "alsoIn": [
+      "Elder Care"
+    ]
+  },
+  {
+    "id": "full-day-hospital-companion",
+    "name": "Full-Day Hospital Companion",
+    "category": "Hospital Companion",
+    "subcategory": "Hospital Visit",
+    "description": "A companion stays with the patient through a long hospital day — day-care procedures, dialysis or multiple tests.",
+    "includes": "Everything in a hospital visit; meal & refreshment reminders; help between departments; collecting reports; family updates with consent.",
+    "notIncluded": "Medical care, medication, clinical decisions or overnight stay.",
+    "duration": "Up to 8 hr",
+    "professional": "Hospital Companion",
+    "price": "₹1,699",
+    "notes": "Extra time ₹199/hr",
+    "badge": "",
+    "icon": "caregiver",
+    "alsoIn": [
+      "Elder Care"
+    ]
+  },
+  {
+    "id": "admission-discharge-companion",
+    "name": "Admission & Discharge Support",
+    "category": "Hospital Companion",
+    "subcategory": "Admission & Discharge",
+    "description": "Non-clinical help through hospital admission or discharge paperwork and waiting.",
+    "includes": "Queue & desk support; carrying belongings; collecting discharge summary, bills & reports; settling the patient in; family updates with consent.",
+    "notIncluded": "Paying bills on your behalf, insurance decisions, medical care or transport fare.",
+    "duration": "3–5 hr",
+    "professional": "Hospital Companion",
+    "price": "₹1,299",
+    "notes": "",
+    "badge": "Value",
+    "icon": "clipboard",
+    "alsoIn": [
+      "Elder Care"
+    ]
   }
 ]

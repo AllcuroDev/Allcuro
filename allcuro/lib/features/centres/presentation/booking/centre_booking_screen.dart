@@ -166,22 +166,33 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
                 ],
               ),
             ),
-            ElevatedButton(
-              onPressed: _isBooking ? null : _submitCentreBooking,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
-                elevation: 0,
+            // Cap the button so the total keeps ~110dp on narrow phones /
+            // large font scales; the label wraps instead of overflowing.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width - 40 - 110),
+              child: ElevatedButton(
+                onPressed: _isBooking ? null : _submitCentreBooking,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+                  elevation: 0,
+                ),
+                child: _isBooking
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text(
+                        'Confirm Admission & Get Pass',
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
+                      ),
               ),
-              child: _isBooking
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Text('Confirm Admission & Get Pass', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800)),
             ),
           ],
         ),
@@ -250,7 +261,10 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(r.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink)),
+                                      Expanded(
+                                        child: Text(r.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink)),
+                                      ),
+                                      const SizedBox(width: 8),
                                       Text('${inr(r.pricePerDay)} / day', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink)),
                                     ],
                                   ),

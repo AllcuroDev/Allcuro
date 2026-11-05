@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/app_shell.dart';
 import '../../../core/ui/care_icon.dart';
+import '../../../core/ui/scaled_tile_grid_delegate.dart';
 import '../data/master_services_catalog.dart';
 import '../data/services_repository.dart';
 
@@ -96,6 +97,14 @@ class _CategoryServicesScreenState extends ConsumerState<CategoryServicesScreen>
       serviceCount: 6,
     ),
     MajorServiceItem(
+      title: 'Hospital Companion',
+      image: CareIllustrations.hospitalCompanion,
+      route: '/category-services/hospital-companion',
+      subtitle: 'Wayfinding, waiting support, belongings & family updates',
+      badge: 'Non-clinical',
+      serviceCount: 3,
+    ),
+    MajorServiceItem(
       title: 'Caregivers',
       image: CareIllustrations.caregiver,
       route: '/category-services/caregiver',
@@ -115,6 +124,15 @@ class _CategoryServicesScreenState extends ConsumerState<CategoryServicesScreen>
 
   _CategoryMeta _getCategoryMeta(String key) {
     final k = key.toLowerCase().trim();
+    if (k.contains('hospital') || k.contains('companion')) {
+      return const _CategoryMeta(
+        title: 'Hospital Companion',
+        badge: 'Non-clinical Support',
+        subtitle: 'A trained companion for hospital visits: wayfinding, waiting, belongings & family updates with consent',
+        imageAsset: CareIllustrations.hospitalCompanion,
+        accentColor: Color(0xFF0F766E),
+      );
+    }
     if (k.contains('nurs')) {
       return const _CategoryMeta(
         title: 'Nursing Care',
@@ -285,15 +303,18 @@ class _CategoryServicesScreenState extends ConsumerState<CategoryServicesScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Major Services',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.2,
-                    color: AppColors.ink,
+                const Expanded(
+                  child: Text(
+                    'Major Services',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                      color: AppColors.ink,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -320,11 +341,13 @@ class _CategoryServicesScreenState extends ConsumerState<CategoryServicesScreen>
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: EdgeInsets.zero,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              // Illustration tile (60) + gap (8) + two label lines.
+              gridDelegate: ScaledTileGridDelegate(
                 crossAxisCount: 4,
                 childAspectRatio: 0.82,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 10,
+                minTileHeight: labelTileHeight(context, fixedHeight: 60 + 8, fontSize: 11.5, lineHeight: 1.18),
               ),
               itemCount: _allMajorServices.length,
               itemBuilder: (context, index) {
@@ -633,11 +656,19 @@ class _CategoryServicesScreenState extends ConsumerState<CategoryServicesScreen>
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: EdgeInsets.zero,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              // Icon tile (60) + gap (6) + two name lines + gap (3) + price
+              // tag (2px padding + one 10pt line).
+              gridDelegate: ScaledTileGridDelegate(
                 crossAxisCount: 4,
                 childAspectRatio: 0.72,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 12,
+                minTileHeight: labelTileHeight(
+                  context,
+                  fixedHeight: 60 + 6 + 3 + 2 + MediaQuery.textScalerOf(context).scale(10) * 1.3,
+                  fontSize: 11,
+                  lineHeight: 1.15,
+                ),
               ),
               itemCount: filteredServices.length,
               itemBuilder: (context, index) {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { categories, categoryById } from '../data/categories'
+import { categories, categoryById, isCompanionService } from '../data/categories'
 import { site } from '../data/site'
 import type { Service } from '../data/types'
 import { IconTile } from './CareIcon'
@@ -164,7 +164,7 @@ export function ServiceDialog({ service: s, onClose }: { service: Service; onClo
           </div>
           <div className="trust-pill">
             <CheckIcon size={16} />
-            <span>Sterile Sealed Medical Kits</span>
+            <span>{isCompanionService(s) ? 'Non-clinical support only' : 'Sterile Sealed Medical Kits'}</span>
           </div>
           <div className="trust-pill">
             <ClockIcon size={16} />

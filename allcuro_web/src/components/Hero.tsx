@@ -5,6 +5,8 @@ import { ALL_SLUG, categories, categoryById, categoryHref } from '../data/catego
 import { site } from '../data/site'
 import { Link } from './Link'
 import { Artwork } from './CareIcon'
+import { MedicinesBanner } from './HomeSections'
+import { SearchBar } from './SearchBar'
 import { useCategoryImages } from '../state/catalog'
 import { motionOn } from '../motion'
 import { CheckIcon, ClockIcon, HeadsetIcon, PhoneIcon, RupeeIcon, ShieldIcon, BoltIcon } from './Icons'
@@ -26,6 +28,10 @@ export function Hero() {
           <h1>
             Healthcare <span className="hl">at your doorstep</span>
           </h1>
+
+          {/* Same order as the app: search, then Order medicines, then the care tiles. */}
+          <SearchBar className="hero-search" />
+          <MedicinesBanner />
 
           <nav className="tile-box" aria-labelledby="tiles-title">
             <h2 id="tiles-title" className="tile-box-title">
@@ -62,6 +68,7 @@ export function Hero() {
           </p>
         </div>
 
+        {/* Photo + floating cards: wide screens only — hidden on phones (home.css). */}
         <HeroVisual />
       </div>
     </section>

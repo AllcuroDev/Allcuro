@@ -5,6 +5,7 @@ import { initials } from '../lib/format'
 import { usePath } from '../router'
 import { useAuth } from '../state/auth'
 import { Link } from './Link'
+import { LocationButton } from './LocationButton'
 import { CloseIcon, MenuIcon, PhoneIcon, UserIcon } from './Icons'
 
 // Main sections, matching the app's bottom tabs (Home, Care Centres, 45 Mins, Equipments, Bookings).
@@ -36,9 +37,13 @@ export function Header() {
   return (
     <header className={`header ${scrolled ? 'is-scrolled' : ''}`}>
       <div className="container header-inner">
-        <Link to="/" className="header-brand">
-          <span className="brand-wordmark">ALLCURO</span>
-        </Link>
+        {/* Brand with the care location under it, like the app header. */}
+        <div className="header-brand-wrap">
+          <Link to="/" className="header-brand">
+            <span className="brand-wordmark">ALLCURO</span>
+          </Link>
+          <LocationButton />
+        </div>
 
         <nav className={`header-nav ${open ? 'is-open' : ''}`} aria-label="Main">
           {NAV.filter((n) => isLoggedIn || !n.authOnly).map((n) => (

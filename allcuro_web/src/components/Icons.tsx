@@ -233,3 +233,9 @@ export const CartIcon = ({ size = 18 }: P) => (
     <path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 7H6" />
   </svg>
 )
+
+export const ChevronDownIcon = ({ size = 16 }: P) => (
+  <svg {...base(size)}>
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+)

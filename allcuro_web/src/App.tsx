@@ -1,7 +1,8 @@
-import { useEffect, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { ActiveVisitBar } from './components/ActiveVisitBar'
 import { Header } from './components/Header'
 import { Hero, TrustBand } from './components/Hero'
+import { CentresAndAdvice, ExpressBanner, NurseCareGrid } from './components/HomeSections'
 import { LoginDialog } from './components/LoginDialog'
 import { CallBand, Faq, Footer, HowItWorks, MoreCare } from './components/Sections'
 import { Toaster } from './components/ui'
@@ -20,12 +21,19 @@ import { ServicePage } from './pages/ServicePage'
 import { useReveal, useSpotlight } from './motion'
 import { usePath } from './router'
 
+// The partner portal is its own experience (no customer header/footer) and its own chunk.
+const PartnerApp = lazy(() => import('./partner/PartnerApp'))
+
 const HOME_TITLE = 'ALLCURO — Home Nursing & Elder Care'
 
 function Home() {
   return (
     <>
+      {/* Same order as the app's home screen. How it works is hidden on phones (home.css), as asked. */}
       <Hero />
+      <ExpressBanner />
+      <NurseCareGrid />
+      <CentresAndAdvice />
       <TrustBand />
       <HowItWorks />
       <MoreCare />
@@ -77,6 +85,16 @@ const routes: { pattern: RegExp; page: (id: string) => ReactNode; title: (id: st
 
 export default function App() {
   const path = usePath().replace(/(.)\/$/, '$1')
+  if (path === '/partner' || path.startsWith('/partner/'))
+    return (
+      <Suspense fallback={null}>
+        <PartnerApp />
+      </Suspense>
+    )
+  return <CustomerSite path={path} />
+}
+
+function CustomerSite({ path }: { path: string }) {
   useReveal(path)
   useSpotlight()
 

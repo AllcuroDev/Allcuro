@@ -1,0 +1,11 @@
+// Centre pages — the partner app's features/centre/presentation on the web.
+export { CentreHomePage } from './HomePage'
+export { CentreRequestsPage } from './RequestsPage'
+export { CentreRoomsPage } from './RoomsPage'
+export { CentreListingPage } from './ListingPage'
+export { CentreRevenuePage } from './RevenuePage'
+export { CentreReviewsPage } from './ReviewsPage'
+export { CentreCompliancePage } from './CompliancePage'
+export { CentreEquipmentPage } from './EquipmentPage'
+export { CentreStaffPage } from './StaffPage'
+export { CentrePromotionsPage } from './PromotionsPage'

@@ -50,7 +50,8 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 /** Search, category chips, medicine list and a prominent prescription upload. */
 export function MedicinesPage() {
-  const [query, setQuery] = useState('')
+  const initialQuery = useQuery('q') ?? ''
+  const [query, setQuery] = useState(initialQuery)
   const [category, setCategory] = useState<MedicineCategory | null>(null)
   const cart = useCart()
   const list = searchMedicines(query, category)

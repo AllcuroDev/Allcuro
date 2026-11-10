@@ -38,16 +38,34 @@ Routing is a tiny history-API router (`src/router.ts` + `src/components/Link.tsx
 
 Booking actions call `requireLogin()` (`state/auth.ts`), which opens `LoginDialog` for guests — the app's `QuickLoginSheet` — and continues the booking after sign-in. Routes are matched in the `routes` table in `App.tsx`.
 
-**Home page sections (top to bottom):**
+**Header (every customer page):** logo with the care location right under it (`LocationButton`: selected address + "Nurse in N mins", opens `AddressPicker` — saved addresses, GPS, add new; `state/location.ts`), then nav, call and sign in / account.
+
+**Home page sections (top to bottom) — same order as the app's `home_screen.dart`:**
 
 | Anchor | Component | Purpose |
 |---|---|---|
-| `#top` | `Hero` (`components/Hero.tsx`) | "Healthcare at your doorstep" plus a compact bordered box of 10 illustrated tiles (8 care types incl. Hospital Companion, Order Medicines → `/medicines`, All Services): 5 × 2 on wider screens, 3 × 3 on phones with All Services as a full-width row. Photo collage on the right with a "100% verified" card. Layout inspired by Urban Company. |
-| `#why-allcuro` | `TrustBand` (`components/Hero.tsx`) | Green gradient band: 100% Verified, Flexible Slots, Transparent Pricing, 24/7 Care Desk (same claims as the app home screen). |
-| `#how-it-works` | `HowItWorks` (`components/Sections.tsx`) | Three numbered step cards (same copy as the app) with decorative arrows between them (`StepArrow`): pointing right while the cards are in a row, down once they stack (both at the 880px breakpoint). Under `.motion` each arrow draws in (stroke-dashoffset + head slide) in sequence with the cards when the section is revealed. |
-| — | `MoreCare` (`components/Sections.tsx`) | Care centres, equipment rental and Order Medicines teaser cards (3 across on desktop, stacked below 1080px). |
-| `#faq` | `Faq` (`components/Sections.tsx`) | `<details>` accordion; content from the app's `faq_screen.dart`. |
-| — | `CallBand`, `Footer` (`components/Sections.tsx`) | Closing call/WhatsApp CTA, contact details, and the emergency note ("call 112"). |
+| `#top` | `Hero` (`components/Hero.tsx`) | "Healthcare at your doorstep", then `SearchBar` (`components/SearchBar.tsx`: matches services by name / category / subcategory / includes like the app, plus care types, medicines → `/medicines?q=` and nurses), then `MedicinesBanner` (the app's saffron `_MedicinesEntryBanner`), then the box of 10 illustrated tiles (5 × 2 wide, 3 × 3 + full-width All Services on phones). Photo collage with floating cards (`HeroVisual`) on wide screens only — **hidden ≤880px**. "Book in 45 mins" buttons are hidden on phones (the express banner covers it). |
+| — | `ExpressBanner` (`components/HomeSections.tsx`) | App's `_ExpressNurseBanner`: "Need a nurse in 45 mins?" → `/book-nurse`. |
+| — | `NurseCareGrid` | App's "Our Nurse Care": 7 nursing services + See All. |
+| — | `CentresAndAdvice` | App's centres banner + "Talk to Our Team" (opens the Clinical Advisory sheet: call / WhatsApp from `site.ts`). |
+| `#why-allcuro` | `TrustBand` (`components/Hero.tsx`) | 100% Verified, Flexible Slots, Transparent Pricing, 24/7 Care Desk. |
+| `#how-it-works` | `HowItWorks` (`components/Sections.tsx`) | Three step cards with arrows. **Desktop / tablet only — hidden ≤880px.** |
+| — | `MoreCare` (`components/Sections.tsx`) | Care centres, equipment rental and Order Medicines teaser cards. |
+| `#faq` | `Faq` (`components/Sections.tsx`) | `<details>`-style accordion; content from the app's `faq_screen.dart`. |
+| — | `CallBand`, `Footer` (`components/Sections.tsx`) | Closing call CTA; footer with Services, Contact and **For partners** (the only entry into the partner portal). |
+
+Home styles live in `src/home.css`.
+
+**Partner portal (`/partner/*`, `src/partner/`):** the partner app (`/allcuro_partner`) on the web, for nurses, doctors / physiotherapists and care centres. Reached **only from the footer's "For partners" links**; it renders without the customer header/footer and is lazy-loaded as its own chunk (`App.tsx` → `partner/PartnerApp.tsx`).
+- `session.ts` — partner session (separate from the customer sign-in): role, nurse / clinician / centre verification status, verified identity, bank, sign-up answers. Demo OTP `123456` (Aadhaar demo OTP also `123456`).
+- `PartnerApp.tsx` — route table + the same redirect rules as the app's go_router: welcome → phone OTP → role select → (nurse / clinician) identity verification → 3-step sign-up → home. `routes.ts` holds the paths (app paths under `/partner`).
+- `Shell.tsx` — wraps every signed-in page. Below 1024px it is the app: green role header + bottom tabs (Home / Requests / Schedule or Rooms) on tab pages, full-screen tool pages with a back header. From 1024px it is a desktop web app: left sidebar (brand, area, status, tabs, every tool, bank, profile, customer site, sign out) and a top bar (notifications, avatar).
+- Sign-in screens (welcome, phone OTP, role select) are a split screen on desktop (form + partner-app preview panel); the identity / sign-up wizards get a brand side panel with the step list (`auth/AuthUi.tsx`, desktop rules at the end of `auth/auth.css`).
+- `ui.tsx` + `partner.css` — shared `p-` building blocks (icons, page head, cards, tool tiles, fields, chips, upload tile, wizard).
+- `auth/` — welcome, sign-in, role select, identity, nurse / clinician / centre sign-up, bank account, profile (incl. demo "advance verification").
+- `nurse/` — home (setup hub → under review → live dashboard with duty toggle), requests + detail, schedule, visit execution (GPS / selfie check, timer, vitals, checklist, OTP check-out, SOS), availability + skills & rates, earnings, training, performance & ratings, documents, referral, support.
+- `centre/` — home (setup hub → review / site visit → live dashboard), placement requests (accept / waitlist / decline), rooms & beds, staff, equipment, compliance, listing, revenue, reviews, promotions.
+Mutable demo data lives in `persistedStore`s in each folder's `state.ts`; mock data in `data.ts`.
 
 **Category page:** breadcrumb, category header (icon, blurb, count), a sticky "Types of care" sidebar for switching categories (a horizontal pill strip on phones), and service rows (icon, name, badge, description, duration, professional, price, "View details"). A row opens `ServiceDialog` (`components/ServiceDialog.tsx`), a native `<dialog>` showing price, time, who comes, what's included and what's not, notes, and Call / WhatsApp booking buttons. Each category page ends with the `CallBand`.
 

@@ -258,6 +258,15 @@ export function Footer() {
             <li>{site.cities.join(' · ')}</li>
           </ul>
         </div>
+        <div>
+          <h3>For partners</h3>
+          <ul>
+            <li><Link to="/partner/welcome">Join as a nurse or caregiver</Link></li>
+            <li><Link to="/partner/welcome">Join as a doctor / physio</Link></li>
+            <li><Link to="/partner/welcome">List your care centre</Link></li>
+            <li><Link to="/partner/phone-auth">Partner sign in</Link></li>
+          </ul>
+        </div>
       </div>
       <div className="container footer-bottom">
         <span>© {new Date().getFullYear()} ALLCURO. All rights reserved.</span>

@@ -1958,13 +1958,6 @@ a.place-card:hover {
 }
 
 /* ---------- Home additions ---------- */
-.hero-quick {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 20px;
-}
-
 .visit-bar {
   position: fixed;
   right: 24px;
@@ -2155,9 +2148,6 @@ a.place-card:hover {
     right: 16px;
     bottom: 16px;
     max-width: none;
-  }
-  .hero-quick .btn {
-    width: 100%;
   }
   .coupon-row {
     flex-wrap: wrap;
@@ -2677,4 +2667,27 @@ a.place-card:hover {
     width: 48px;
     height: 48px;
   }
+}
+
+/* ---------- Supabase-loaded content: placeholders ---------- */
+.page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 40vh;
+  color: var(--muted-fg);
+}
+.place-photo-empty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+  background: var(--secondary);
+  color: var(--muted-fg);
+}
+.nurse-card-main > .avatar,
+.profile-hero > .avatar {
+  flex: none;
 }

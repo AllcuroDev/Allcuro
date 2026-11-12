@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { Link } from '../../components/Link'
 import { toast } from '../../lib/toast'
 import { PR } from '../routes'
 import { usePartnerSession } from '../session'
-import { ChipGroup, PBody, PCard, PField, PIcon, PPageHead, Toggle } from '../ui'
+import { ChipGroup, PBody, PCard, PIcon, PPageHead, Toggle } from '../ui'
 import { CLINICIAN_SKILL_OPTIONS, DAYS, DAY_SLOTS, NURSE_SKILL_OPTIONS, SHIFT_TIME_OPTIONS } from './data'
 import {
   addBlockedDate,
@@ -183,37 +184,28 @@ function SkillsCard() {
   const options = session.role === 'clinician' ? CLINICIAN_SKILL_OPTIONS : NURSE_SKILL_OPTIONS
   const allOptions = [...options, ...current.filter((s) => !options.includes(s))]
   const [skills, setSkills] = useState(current)
-  const [hourly, setHourly] = useState(String(a.hourlyRate))
-  const [daily, setDaily] = useState(String(a.dailyRate))
-  const hourlyN = parseInt(hourly, 10)
-  const dailyN = parseInt(daily, 10)
-  const valid = skills.length > 0 && hourlyN > 0 && dailyN > 0
+  const valid = skills.length > 0
 
   return (
     <PCard as="section" className="pn-stack">
       <div>
-        <h2 className="pn-h2">Skills, Specialisations &amp; Shift Rates</h2>
-        <p className="p-muted pn-small">Patients are matched to you by these skills. Rates are shown before they book.</p>
+        <h2 className="pn-h2">Skills &amp; Specialisations</h2>
+        <p className="p-muted pn-small">
+          Families are matched to you by these skills. Your rates are set by ALLCURO — see them on your{' '}
+          <Link to={PR.publicProfile}>public profile</Link>.
+        </p>
       </div>
       <ChipGroup options={allOptions} value={skills} onChange={setSkills} />
-      <div className="p-form-grid">
-        <PField label="Hourly rate (₹)">
-          <input inputMode="numeric" value={hourly} onChange={(e) => setHourly(e.target.value.replace(/\D/g, ''))} />
-        </PField>
-        <PField label="Daily / 12-hr shift rate (₹)">
-          <input inputMode="numeric" value={daily} onChange={(e) => setDaily(e.target.value.replace(/\D/g, ''))} />
-        </PField>
-      </div>
       <button
         type="button"
         className="p-btn p-btn-primary"
         disabled={!valid}
         onClick={() => {
-          saveSkillsAndRates(skills, hourlyN, dailyN)
-          toast(`${skills.length} skills saved · ₹${dailyN}/day`)
+          saveSkillsAndRates(skills, a.hourlyRate, a.dailyRate)
+          toast(`${skills.length} skills saved`)
         }}
       >
-        Save skills &amp; rates
+        Save skills
       </button>
       {skills.length === 0 && <span className="p-field-error">Select at least one skill.</span>}
     </PCard>

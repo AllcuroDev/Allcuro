@@ -95,3 +95,16 @@ export async function detectGpsLocation() {
   }
   store.set((s) => ({ currentId: gps.id, saved: [gps, ...s.saved.filter((a) => a.id !== gps.id)] }))
 }
+
+// ---- City for signed-out visitors ----
+// Before signing in a visitor only picks a city (from the admin's "Cities
+// served" list, site.cities); saved addresses are shown once they sign in.
+
+const cityStore = persistedStore<string>('city', '')
+
+/** The visitor's chosen city, or the first city served. */
+export function useCity(fallback: string) {
+  return cityStore.use() || fallback
+}
+
+export const selectCity = (city: string) => cityStore.set(city)

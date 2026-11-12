@@ -10,6 +10,7 @@ export const PR = {
   roleSelect: `${P}/role-select`,
   identityVerification: `${P}/verify-identity`,
   profile: `${P}/profile`,
+  publicProfile: `${P}/public-profile`,
   bankAccount: `${P}/bank-account`,
 
   nurseSignup: `${P}/nurse/signup`,

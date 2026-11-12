@@ -6,21 +6,12 @@ import { Link } from '../components/Link'
 import { PaymentDialog } from '../components/PaymentDialog'
 import { ActionBar, Avatar, Bill, Field, OptionCard, PageHead, Select, StepTitle, TextArea, Spinner } from '../components/ui'
 import { toast } from '../lib/toast'
-import {
-  billTotal,
-  coupons,
-  customShiftPrices,
-  INSTANT_SLOT,
-  quickServices,
-  timeSlots,
-  visitBill,
-  visitDurations,
-  type QuickService,
-} from '../data/booking'
-import { nurseById, nurses } from '../data/providers'
+import { billTotal, coupons, INSTANT_SLOT, servicePrice, timeSlots, visitBill, type QuickService } from '../data/booking'
+import { nurseById } from '../data/providers'
+import { site } from '../data/site'
 import { isCompanionService } from '../data/categories'
 import { useServices } from '../state/catalog'
-import { inr, priceFrom } from '../lib/format'
+import { inr, ratingText } from '../lib/format'
 import { navigate, useQuery } from '../router'
 import { requireLogin, useAuth } from '../state/auth'
 import { createBooking, type Payment } from '../state/bookings'
@@ -28,41 +19,54 @@ import { fullAddress, useLocation } from '../state/location'
 
 const GENDERS = ['Male', 'Female', 'Other']
 
-/** Price for the visit length picked in the "Book Slot" sheet, e.g. "1hr" or "8h". */
-function durationOption(key: string | null): { label: string; price: number } | null {
-  if (!key) return null
-  const preset = visitDurations.find((d) => d.id === key)
-  if (preset) return { label: preset.label, price: preset.price }
-  const hours = parseInt(key, 10)
-  if (!hours) return null
-  return { label: `${hours} Hours (Bedside Monitoring)`, price: customShiftPrices[hours] ?? hours * 450 }
-}
-
-/** Home nurse booking (the app's NurseQuickBookingScreen), reached from a service, a nurse, or the 45-min shortcut. */
+/** Home nurse booking (the app's NurseQuickBookingScreen), reached from a service or a nurse. */
 export function NurseBookingPage() {
   const serviceId = useQuery('service')
   const nurseId = useQuery('nurse')
-  const durationKey = useQuery('duration')
+  const optionParam = useQuery('option')
   const slotParam = useQuery('slot')
   const { profile } = useAuth()
   const { current } = useLocation()
   const services = useServices()
 
-  // The service picked on the site goes first; the app's four quick options follow.
+  const nurse = nurseById(nurseId) ?? null
+
+  // The service picked on the site goes first, then the chosen partner's other
+  // rates; with neither, the first few nursing services. All prices are the
+  // admin's (the partner's rate card, else the catalog price less discount).
   const options = useMemo<QuickService[]>(() => {
+    const out: QuickService[] = []
+    const fromService = (x: (typeof services)[number], price: number | null): QuickService | null =>
+      price == null
+        ? null
+        : { id: x.id, title: x.name, duration: x.duration, price, icon: x.icon, description: x.description }
     const s = services.find((x) => x.id === serviceId)
-    if (!s) return quickServices
-    const d = durationOption(durationKey)
-    const picked: QuickService = {
-      id: s.id,
-      title: s.name,
-      duration: d ? d.label : s.duration,
-      price: d ? d.price : priceFrom(s.price),
-      icon: s.icon,
-      description: s.description,
+    if (s) {
+      const own = nurse?.shifts.find((sh) => sh.serviceId === s.id)
+      const o = fromService(s, own?.price ?? servicePrice(s))
+      if (o) out.push(o)
     }
-    return [picked, ...quickServices]
-  }, [services, serviceId, durationKey])
+    nurse?.shifts.forEach((sh, i) => {
+      if (s && sh.serviceId === s.id) return
+      const svc = services.find((x) => x.id === sh.serviceId)
+      out.push({
+        id: `rate-${i}`,
+        title: sh.label,
+        duration: sh.unit,
+        price: sh.price,
+        icon: svc?.icon ?? 'home_nurse',
+        description: svc?.description ?? `With ${nurse.name}`,
+      })
+    })
+    if (!out.length)
+      services
+        .filter((x) => x.category === 'Nursing Care')
+        .forEach((x) => {
+          const o = out.length < 4 ? fromService(x, servicePrice(x)) : null
+          if (o) out.push(o)
+        })
+    return out
+  }, [services, serviceId, nurse])
 
   const slots = useMemo(() => {
     if (!slotParam || slotParam.startsWith('⚡')) return timeSlots
@@ -72,7 +76,7 @@ export function NurseBookingPage() {
   // Hospital Companion services are non-clinical: the desk assigns a companion, not a nurse.
   const pickedService = services.find((x) => x.id === serviceId)
 
-  const [optionId, setOptionId] = useState(options[serviceId ? 0 : 1]?.id ?? options[0].id)
+  const [optionId, setOptionId] = useState(optionParam ?? options[0]?.id ?? '')
   const [slot, setSlot] = useState(slotParam && !slotParam.startsWith('⚡') ? slotParam : INSTANT_SLOT)
   const [patient, setPatient] = useState({ name: profile?.name ?? '', age: '', gender: GENDERS[0], notes: '' })
   const [couponInput, setCouponInput] = useState('')
@@ -82,8 +86,20 @@ export function NurseBookingPage() {
   const [error, setError] = useState('')
 
   const option = options.find((o) => o.id === optionId) ?? options[0]
-  const companion = !!pickedService && isCompanionService(pickedService) && option.id === pickedService.id
-  const nurse = nurseById(nurseId) ?? nurses[0]
+  const companion = !!pickedService && !!option && isCompanionService(pickedService) && option.id === pickedService.id
+  if (!option)
+    return (
+      <div className="container page page-narrow">
+        <PageHead back="/" title="Book a Nurse" subtitle="Prices for this booking aren’t set yet" />
+        <div className="empty">
+          <p>Our care desk will confirm the price and assign a verified professional.</p>
+          <a className="btn btn-primary" href={site.phoneHref}>
+            Call {site.phoneDisplay}
+          </a>
+        </div>
+      </div>
+    )
+
   const discount = coupon ? coupons[coupon].off(option.price) : 0
   const lines = visitBill(option.title, option.price, discount)
   const total = billTotal(lines)
@@ -113,7 +129,11 @@ export function NurseBookingPage() {
     const instant = slot === INSTANT_SLOT
     const booking = await createBooking({
       type: 'nurse',
-      title: companion ? `Hospital Companion · ${option.title}` : `${nurse.name} (${nurse.level}) · ${option.title}`,
+      title: companion
+        ? `Hospital Companion · ${option.title}`
+        : nurse
+          ? `${nurse.name} (${nurse.level}) · ${option.title}`
+          : option.title,
       when: slot,
       amount: total,
       liveStatus: 'assigned',
@@ -126,16 +146,23 @@ export function NurseBookingPage() {
       ...(companion
         ? {
             providerName: 'ALLCURO Hospital Companion',
-            providerPhone: '+91 80 4120 5500',
-            providerRating: 4.8,
+            providerPhone: site.phoneDisplay,
+            providerRating: 0,
             providerQualifications: 'Police-verified companion · Non-clinical support',
           }
-        : {
-            providerName: nurse.name,
-            providerPhone: '+91 98450 12345',
-            providerRating: nurse.rating,
-            providerQualifications: `${nurse.level} · ${nurse.experience} yrs exp · HPR Verified`,
-          }),
+        : nurse
+          ? {
+              providerName: nurse.name,
+              providerPhone: site.phoneDisplay,
+              providerRating: nurse.rating ?? 0,
+              providerQualifications: `${nurse.level} · ${nurse.experience} yrs exp · HPR Verified`,
+            }
+          : {
+              providerName: 'ALLCURO verified nurse',
+              providerPhone: site.phoneDisplay,
+              providerRating: 0,
+              providerQualifications: 'Assigned by the care desk',
+            }),
       condition: patient.notes.trim() || option.title,
       formalities: [],
       payment,
@@ -153,7 +180,7 @@ export function NurseBookingPage() {
             subtitle="Non-clinical support during a hospital visit"
           />
         ) : (
-          <PageHead back="/" title="Quick Nurse Booking" subtitle="Verified home nursing delivered in 30–45 mins" />
+          <PageHead back="/" title="Book a Nurse" subtitle="Verified home nursing at your doorstep" />
         )}
 
         <p className="trust-note">
@@ -193,20 +220,30 @@ export function NurseBookingPage() {
                 <small>You’ll see their name, photo ID and a visit OTP in My Bookings.</small>
               </div>
             </div>
-          ) : (
-          <div className="panel nurse-pick">
-            <Avatar name={nurse.name} />
-            <div>
-              <strong>{nurse.name}</strong>
-              <span>
-                {nurse.level} · {nurse.experience} yrs · ★ {nurse.rating.toFixed(1)}
-              </span>
-              {!nurseId && <small>Best-matched verified nurse near you</small>}
+          ) : nurse ? (
+            <div className="panel nurse-pick">
+              <Avatar name={nurse.name} />
+              <div>
+                <strong>{nurse.name}</strong>
+                <span>
+                  {nurse.level} · {nurse.experience} yrs · {ratingText(nurse.rating, nurse.reviews)}
+                </span>
+              </div>
+              <Link to={serviceId ? `/service/${serviceId}` : '/nurses'} className="link-btn">
+                Change
+              </Link>
             </div>
-            <Link to={serviceId ? `/service/${serviceId}` : '/nurses'} className="link-btn">
-              Change
-            </Link>
-          </div>
+          ) : (
+            <div className="panel nurse-pick">
+              <Avatar name="ALLCURO" />
+              <div>
+                <strong>Best-matched verified nurse near you</strong>
+                <small>Our care desk assigns an approved nurse; you’ll see their details in My Bookings.</small>
+              </div>
+              <Link to="/nurses" className="link-btn">
+                Choose
+              </Link>
+            </div>
           )}
         </section>
 
@@ -303,7 +340,7 @@ export function NurseBookingPage() {
       {pickingAddress && <AddressPicker onClose={() => setPickingAddress(false)} />}
       {paying && (
         <PaymentDialog
-          title={companion ? `${option.title} · Hospital Companion` : `${option.title} · ${nurse.name}`}
+          title={companion ? `${option.title} · Hospital Companion` : nurse ? `${option.title} · ${nurse.name}` : option.title}
           lines={lines}
           allowPayLater
           onClose={() => setPaying(false)}

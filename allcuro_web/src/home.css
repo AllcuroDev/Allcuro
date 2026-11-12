@@ -1,40 +1,46 @@
 /* Customer home, laid out like the customer app's home screen:
-   location under the logo, hero search + Order Medicines entry, express
+   logo + care location on one line, hero search + Order Medicines entry, express
    nurse banner, "Our Nurse Care" grid, centres + advice.
    Breakpoints follow index.css: 1080 / 880 / 640. */
 
-/* ---------- Header: care location under the ALLCURO name (like the app) ---------- */
+/* ---------- Header: ALLCURO name and care location on one line ---------- */
 .header-inner {
-  height: auto;
-  min-height: 64px;
-  padding-block: 8px;
+  height: 64px;
 }
 .header-brand-wrap {
-  display: grid;
-  gap: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   min-width: 0;
-  flex: 0 1 300px;
+  flex: 0 1 auto;
 }
 .header-brand-wrap .header-brand {
-  justify-self: start;
+  flex: none;
+  line-height: 1;
+}
+.header-brand-wrap .brand-wordmark {
+  display: block;
+  line-height: 1;
 }
 
 .loc-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 30px;
-  padding: 0;
+  flex: 0 1 auto;
+  min-width: 150px;
+  max-width: 300px;
+  height: 36px;
+  padding: 0 10px 0 14px;
   border: 0;
+  border-left: 1px solid var(--border);
   background: transparent;
   font: inherit;
   color: var(--ink);
   text-align: left;
   cursor: pointer;
 }
-.loc-btn:hover .loc-top strong {
+.loc-btn:hover .loc-text strong {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -45,36 +51,18 @@
   color: var(--primary);
 }
 .loc-text {
-  display: grid;
   min-width: 0;
-  line-height: 1.2;
-}
-.loc-top {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.loc-top strong {
-  font-weight: 600;
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-.loc-eta {
-  font-size: 0.66rem;
-  font-weight: 600;
-  color: var(--primary);
-  background: var(--primary-soft);
-  padding: 0 6px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-.loc-line {
-  font-size: 0.72rem;
-  color: var(--muted-fg);
+  font-size: 0.82rem;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.loc-text strong {
+  font-weight: 600;
+}
+.loc-line {
+  color: var(--muted-fg);
 }
 .loc-btn > .icon,
 .loc-btn > svg {
@@ -212,9 +200,48 @@
   }
 }
 
+/* Keep the nav compact so the location keeps room beside the name. */
+@media (min-width: 881px) {
+  .header-inner {
+    gap: 20px;
+  }
+  /* Name + divider + the location's 150px floor; below that the location truncates. */
+  .header-brand-wrap {
+    min-width: 264px;
+  }
+  .header-nav {
+    flex: none;
+    gap: 2px;
+  }
+}
+@media (max-width: 1180px) and (min-width: 881px) {
+  .header-brand-wrap {
+    min-width: 210px;
+  }
+  .loc-btn {
+    min-width: 96px;
+    max-width: 170px;
+  }
+  .header-nav a {
+    padding-inline: 6px;
+  }
+  /* Room for the location: the number is in the hero, footer and call band. */
+  .header-actions .header-cta {
+    display: none;
+  }
+}
 @media (max-width: 640px) {
   .header-brand-wrap {
     flex: 1 1 auto;
+    gap: 10px;
+  }
+  .loc-btn {
+    min-width: 0;
+    padding-left: 10px;
+  }
+  /* The care-desk number is in the menu on phones; give the location the room. */
+  .header-actions .header-cta {
+    display: none;
   }
   .search-field input {
     font-size: 16px; /* stops iOS zooming in on focus */
@@ -401,78 +428,6 @@
   }
   .express-cta {
     padding: 0 16px;
-  }
-}
-
-/* ---------- Our Nurse Care grid ---------- */
-.mini-grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 12px;
-}
-.mini-tile {
-  display: grid;
-  justify-items: center;
-  align-content: start;
-  gap: 6px;
-  height: 100%;
-  padding: 14px 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  background: var(--card);
-  color: var(--ink);
-  text-align: center;
-  text-decoration: none;
-  transition: border-color 0.15s ease, transform 0.15s ease;
-}
-.mini-tile:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-}
-.mini-icon {
-  width: 52px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
-  background: var(--secondary);
-  color: var(--ink);
-}
-.mini-label {
-  font-size: 0.82rem;
-  font-weight: 500;
-  line-height: 1.25;
-}
-.mini-price {
-  font-size: 0.74rem;
-  color: var(--muted-fg);
-}
-@media (max-width: 1080px) {
-  .mini-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-@media (max-width: 640px) {
-  .mini-grid {
-    gap: 8px;
-  }
-  .mini-tile {
-    padding: 10px 4px;
-    border-color: transparent;
-    background: transparent;
-  }
-  .mini-icon {
-    width: 56px;
-    height: 56px;
-  }
-  .mini-label {
-    font-size: 0.74rem;
-  }
-  .mini-price {
-    display: none;
   }
 }
 
@@ -669,10 +624,6 @@
 
 /* ---------- Phone layout: app-like home ---------- */
 @media (max-width: 880px) {
-  /* No photo, orbiting icons or floating cards in the hero on phones / small tablets. */
-  .hv {
-    display: none;
-  }
   /* How it works is desktop-only. */
   #how-it-works {
     display: none;
@@ -680,15 +631,11 @@
 }
 @media (max-width: 640px) {
   .hero {
-    padding: 16px 0 8px;
+    padding: 16px 0 0;
   }
   .hero h1 {
     font-size: 1.45rem;
     margin-bottom: 14px;
-  }
-  .hero-quick,
-  .hero-note {
-    display: none; /* the express banner right below covers "book in 45 mins" */
   }
   .home-block {
     margin-top: 26px;
@@ -704,14 +651,6 @@
 @media (max-width: 1180px) and (min-width: 881px) {
   .header-nav {
     gap: 4px;
-  }
-}
-.loc-top {
-  overflow: hidden;
-}
-@media (max-width: 380px) {
-  .loc-eta {
-    display: none;
   }
 }
 

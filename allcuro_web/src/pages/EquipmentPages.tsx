@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { AddressPicker } from '../components/AddressPicker'
-import { PinIcon, ShieldIcon } from '../components/Icons'
+import { BoxIcon, PinIcon, ShieldIcon } from '../components/Icons'
 import { Link } from '../components/Link'
 import { PaymentDialog } from '../components/PaymentDialog'
 import { ActionBar, Bill, OptionCard, PageHead, StepList, StepTitle } from '../components/ui'
 import { toast } from '../lib/toast'
 import { billTotal, coupons, deliverySlots, GST_RATE, PLATFORM_FEE, type BillLine } from '../data/booking'
-import { equipment, equipmentById, equipmentCategories } from '../data/providers'
+import { equipment, equipmentById, equipmentCategories, type Equipment } from '../data/providers'
 import { inr } from '../lib/format'
 import { navigate } from '../router'
 import { requireLogin, useAuth } from '../state/auth'
@@ -47,25 +47,36 @@ export function EquipmentPage() {
         {list.map((e) => (
           <article key={e.id} className="place-card">
             <div className="place-photo">
-              <img src={e.photo} alt="" loading="lazy" />
+              <EquipmentPhoto e={e} />
               <span className="place-badge">{e.condition}</span>
+              {e.discountPercent > 0 && <span className="place-urgent">{Math.round(e.discountPercent)}% off</span>}
             </div>
             <div className="place-body">
               <span className="muted small">{e.category}</span>
               <h3>{e.name}</h3>
+              {e.description && <p className="muted small">{e.description}</p>}
               <p className="place-price">
-                <strong>{inr(e.perDay)}</strong> / day · {inr(e.perMonth)} / month
+                {e.discountPercent > 0 && <s className="muted">{inr(e.mrpPerDay)}</s>} <strong>{inr(e.perDay)}</strong> / day ·{' '}
+                {inr(e.perMonth)} / month
               </p>
               <div className="place-row">
                 <span className="muted small">Deposit {inr(e.deposit)} (refundable)</span>
-                <Link to={`/equipment/${e.id}/rent`} className="btn btn-primary btn-sm">
-                  Rent
-                </Link>
+                {e.inStock ? (
+                  <Link to={`/equipment/${e.id}/rent`} className="btn btn-primary btn-sm">
+                    Rent
+                  </Link>
+                ) : (
+                  <span className="muted small">Out of stock</span>
+                )}
               </div>
             </div>
           </article>
         ))}
-        {!list.length && <p className="empty">Nothing listed under {category} yet — call us and we’ll source it.</p>}
+        {!list.length && (
+          <p className="empty">
+            {category ? `Nothing listed under ${category} yet — call us and we’ll source it.` : 'No equipment is listed yet — call us and we’ll source it.'}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -152,7 +163,7 @@ export function EquipmentCheckoutPage({ id }: { id: string }) {
         <section className="form-section">
           <StepTitle n={1}>Rental plan</StepTitle>
           <div className="panel equip-summary">
-            <img src={item.photo} alt="" />
+            <EquipmentPhoto e={item} />
             <div>
               <strong>{item.name}</strong>
               <span className="muted small">
@@ -253,5 +264,14 @@ export function EquipmentCheckoutPage({ id }: { id: string }) {
         />
       )}
     </>
+  )
+}
+
+function EquipmentPhoto({ e }: { e: Equipment }) {
+  if (e.photo) return <img src={e.photo} alt="" loading="lazy" />
+  return (
+    <span className="place-photo-empty" aria-hidden="true">
+      <BoxIcon size={40} />
+    </span>
   )
 }

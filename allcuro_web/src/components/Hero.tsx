@@ -1,19 +1,16 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
-// Photo: Tima Miroshnichenko via Pexels (free license) — pexels.com/photo/8376281
-import heroPhoto from '../assets/images/nurse-1.jpg'
-import { ALL_SLUG, categories, categoryById, categoryHref } from '../data/categories'
+import type { CSSProperties } from 'react'
+import { ALL_SLUG, categories, categoryHref } from '../data/categories'
 import { site } from '../data/site'
 import { Link } from './Link'
 import { Artwork } from './CareIcon'
 import { MedicinesBanner } from './HomeSections'
 import { SearchBar } from './SearchBar'
 import { useCategoryImages } from '../state/catalog'
-import { motionOn } from '../motion'
-import { CheckIcon, ClockIcon, HeadsetIcon, PhoneIcon, RupeeIcon, ShieldIcon, BoltIcon } from './Icons'
+import { ClockIcon, HeadsetIcon, RupeeIcon, ShieldIcon } from './Icons'
 
-// Every care type, then medicine delivery, then the full list. Ten tiles:
-// 5 × 2 on wider screens; 3 × 3 on phones with "All Services" as a full-width row.
-const tiles: { id: string; slug: string; href?: string; label: string; icon: string }[] = [
+// Every care type, then medicine delivery, then the full list. One row on wide
+// screens, wrapping onto more rows as the screen narrows (index.css `.tiles`).
+const heroTiles = (): { id: string; slug: string; href?: string; label: string; icon: string }[] => [
   ...categories.map((c) => ({ id: c.id, slug: c.slug, href: c.href, label: c.label, icon: c.icon })),
   { id: 'medicines', slug: 'medicines', href: '/medicines', label: 'Order Medicines', icon: 'med_kit' },
   { id: ALL_SLUG, slug: ALL_SLUG, label: 'All Services', icon: 'see_all' },
@@ -21,12 +18,13 @@ const tiles: { id: string; slug: string; href?: string; label: string; icon: str
 
 export function Hero() {
   const images = useCategoryImages()
+  const tiles = heroTiles()
   return (
     <section className="hero" id="top">
-      <div className="container hero-grid">
+      <div className="container">
         <div className="hero-copy">
           <h1>
-            Healthcare <span className="hl">at your doorstep</span>
+            {site.heroHeadline} {site.heroHighlight && <span className="hl">{site.heroHighlight}</span>}
           </h1>
 
           {/* Same order as the app: search, then Order medicines, then the care tiles. */}
@@ -35,7 +33,7 @@ export function Hero() {
 
           <nav className="tile-box" aria-labelledby="tiles-title">
             <h2 id="tiles-title" className="tile-box-title">
-              What are you looking for?
+              {site.tilesTitle}
             </h2>
             <ul className="tiles">
               {tiles.map((t) => (
@@ -50,139 +48,9 @@ export function Hero() {
               ))}
             </ul>
           </nav>
-
-          <div className="hero-quick">
-            <Link to="/book-nurse" className="btn btn-primary btn-lg">
-              <BoltIcon /> Book a nurse in 45 mins
-            </Link>
-            <Link to="/nurses" className="btn btn-outline btn-lg">
-              Browse verified nurses
-            </Link>
-          </div>
-
-          <p className="hero-note">
-            Not sure what you need?{' '}
-            <a href={site.phoneHref}>
-              <PhoneIcon size={16} /> Call {site.phoneDisplay}
-            </a>
-          </p>
         </div>
-
-        {/* Photo + floating cards: wide screens only — hidden on phones (home.css). */}
-        <HeroVisual />
       </div>
     </section>
-  )
-}
-
-// Care types that circle the photo in the hero.
-const orbit = ['Nursing Care', 'Elder Care', 'Mother & Baby Care', 'Physiotherapy', 'Doctor Care', 'Caregivers']
-
-// The "on the way" card steps through a few kinds of visit.
-const visits = [
-  { who: 'Nurse', task: 'Injection at home' },
-  { who: 'Physiotherapist', task: 'Knee rehab session' },
-  { who: 'Caregiver', task: 'Day care for an elder' },
-  { who: 'Doctor', task: 'Home consultation' },
-]
-
-/**
- * Right-hand side of the hero: a doctor photo in an arch, care icons orbiting
- * it, and small floating cards that hint at what a visit looks like. The whole
- * scene leans gently toward the mouse.
- */
-function HeroVisual() {
-  const ref = useRef<HTMLDivElement>(null)
-  const [visit, setVisit] = useState(0)
-
-  useEffect(() => {
-    if (!motionOn()) return
-    const t = window.setInterval(() => setVisit((v) => (v + 1) % visits.length), 3800)
-    return () => window.clearInterval(t)
-  }, [])
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el || !motionOn()) return
-    const onMove = (e: PointerEvent) => {
-      if (e.pointerType !== 'mouse') return
-      const r = el.getBoundingClientRect()
-      el.style.setProperty('--px', ((e.clientX - r.left) / r.width - 0.5).toFixed(3))
-      el.style.setProperty('--py', ((e.clientY - r.top) / r.height - 0.5).toFixed(3))
-    }
-    const onLeave = () => {
-      el.style.setProperty('--px', '0')
-      el.style.setProperty('--py', '0')
-    }
-    el.addEventListener('pointermove', onMove)
-    el.addEventListener('pointerleave', onLeave)
-    return () => {
-      el.removeEventListener('pointermove', onMove)
-      el.removeEventListener('pointerleave', onLeave)
-    }
-  }, [])
-
-  const v = visits[visit]
-  const images = useCategoryImages()
-
-  return (
-    <div className="hv" ref={ref} aria-hidden="true">
-      <div className="hv-blob" />
-      <div className="hv-orbit">
-        {orbit.map((id, i) => (
-          <span key={id} className="hv-planet" style={{ '--a': `${(360 / orbit.length) * i}deg` } as CSSProperties}>
-            <span className="hv-planet-face">
-              <Artwork image={images[id]} icon={categoryById[id]?.icon ?? 'nursing'} size={40} />
-            </span>
-          </span>
-        ))}
-      </div>
-
-      <div className="hv-photo">
-        <img src={heroPhoto} alt="" />
-      </div>
-
-      <div className="hv-card hv-eta" style={{ '--d': 0 } as CSSProperties}>
-        <span className="hv-card-icon hv-pulse">
-          <ClockIcon size={18} />
-        </span>
-        <div key={visit} className="hv-swap">
-          <strong>{v.who} on the way</strong>
-          <span>{v.task}</span>
-          <span className="hv-progress" />
-        </div>
-      </div>
-
-      <div className="hv-card hv-vitals" style={{ '--d': 1 } as CSSProperties}>
-        <div className="hv-vitals-head">
-          <strong>Vitals recorded</strong>
-          <span className="hv-check">
-            <CheckIcon size={12} />
-          </span>
-        </div>
-        <svg className="hv-ecg" viewBox="0 0 160 36" preserveAspectRatio="none">
-          <path d="M0 20h34l6-10 7 20 8-28 7 26 5-8h32l5-6 6 12 5-6h45" pathLength={100} />
-        </svg>
-        <span className="hv-vitals-row">
-          <span>
-            BP <b>120/80</b>
-          </span>
-          <span>
-            SpO₂ <b>98%</b>
-          </span>
-        </span>
-      </div>
-
-      <div className="hv-card hv-verified" style={{ '--d': 2 } as CSSProperties}>
-        <span className="hv-card-icon">
-          <ShieldIcon size={18} />
-        </span>
-        <div>
-          <strong>100% verified</strong>
-          <span>Police &amp; Nursing Council checked</span>
-        </div>
-      </div>
-    </div>
   )
 }
 

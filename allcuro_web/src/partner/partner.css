@@ -998,3 +998,95 @@
   justify-content: flex-end;
   gap: 10px;
 }
+
+/* ---------- Public profile (PublicProfilePage) ---------- */
+.pp-section {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.pp-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.pp-photo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.pp-photo img,
+.pp-photo-empty {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: #f1f5f2;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.pp-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pp-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.pp-gallery figure {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.pp-gallery img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.pp-gallery-add {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #475569;
+  font-weight: 600;
+}
+.pp-services {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.pp-services li,
+.pp-services label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+.pp-services label {
+  flex: 1;
+  cursor: pointer;
+}
+.pp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+.pp-note {
+  margin-bottom: 16px;
+  border-left: 4px solid #d97706;
+}

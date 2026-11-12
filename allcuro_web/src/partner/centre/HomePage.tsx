@@ -1,7 +1,7 @@
 import { Link } from '../../components/Link'
 import { toast } from '../../lib/toast'
 import { PR } from '../routes'
-import { setCentreStatus, usePartnerSession } from '../session'
+import { usePartnerSession } from '../session'
 import { PBadge, PBody, PCard, PIcon, PSectionTitle, ToolTile, type PIconName } from '../ui'
 import { DEFAULT_CENTRE_NAME, SITE_VISIT } from './data'
 import { useBusy } from './hooks'
@@ -204,10 +204,8 @@ function SetupHub() {
 // ---------------------------------------------------------------- stage 2: under review
 
 function SiteVisitCard() {
-  const approve = () => {
-    setCentreStatus('verified')
-    toast('Physical audit cleared — your centre is now live!')
-  }
+  const s = usePartnerSession()
+  const visitBooked = s.centreStatus === 'siteVisitScheduled'
   return (
     <PCard as="section" className="pc-review">
       <div className="pc-card-head">
@@ -215,7 +213,7 @@ function SiteVisitCard() {
           <PIcon name="shield" size={18} />
         </span>
         <h2>Application Under Review</h2>
-        <PBadge tone="warn">Site Visit Scheduled</PBadge>
+        <PBadge tone="warn">{visitBooked ? 'Site Visit Scheduled' : 'Pending Review'}</PBadge>
       </div>
 
       <div className="pc-visit">
@@ -258,10 +256,10 @@ function SiteVisitCard() {
       </div>
 
       <div className="pc-demo">
-        <span>Simulate physical audit clearance to unlock live dashboard.</span>
-        <button type="button" className="p-btn p-btn-primary p-btn-sm pc-pill-btn" onClick={approve}>
-          Approve &amp; Go Live
-        </button>
+        <span>Your centre goes live once the ALLCURO team approves it after the site visit.</span>
+        <Link to={PR.publicProfile} className="p-btn p-btn-outline p-btn-sm pc-pill-btn">
+          Edit public profile
+        </Link>
       </div>
     </PCard>
   )

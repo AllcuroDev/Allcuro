@@ -310,8 +310,8 @@ function SetupHub() {
         <CheckTile
           n={5}
           to={PR.nurseAvailability}
-          title="Skills, Specialisations & Shift Rates"
-          subtitle={`${skills.length} skills selected · ₹${avail.dailyRate}/day`}
+          title="Skills & Specialisations"
+          subtitle={`${skills.length} skills selected`}
           done={p.skillsDone}
           status={p.skillsDone ? 'Configured' : 'Configure'}
         />
@@ -455,17 +455,12 @@ function UnderReviewCard() {
         })}
       </ul>
       <div className="pn-simulate">
-        <span className="p-muted pn-small">Simulate admin approval to unlock live shifts.</span>
-        <button
-          type="button"
-          className="p-btn p-btn-primary p-btn-sm"
-          onClick={() => {
-            setPractitionerStatus('verified')
-            toast('Profile approved — you are live!')
-          }}
-        >
-          Approve &amp; Go Live
-        </button>
+        <span className="p-muted pn-small">
+          The ALLCURO team approves your profile from the admin panel. Families can find and book you as soon as it’s approved.
+        </span>
+        <Link to={PR.publicProfile} className="p-btn p-btn-outline p-btn-sm">
+          Edit public profile
+        </Link>
       </div>
     </PCard>
   )

@@ -5,7 +5,6 @@ import { toast } from '../../lib/toast'
 import { goBack, navigate } from '../../router'
 import { PR } from '../routes'
 import {
-  PARTNER_OTP,
   clearRole,
   partnerLogout,
   partnerSendOtp,
@@ -278,7 +277,7 @@ export function PartnerPhoneAuthPage() {
           )}
           <div className="pa-auth-foot">
             <p className="pa-demo" id="pa-otp-demo">
-              Demo mode — use <strong>{PARTNER_OTP}</strong> as the code.
+              Enter the 6-digit code we sent by SMS.
             </p>
             <button type="submit" className="p-btn pa-cta" disabled={otp.length !== 6 || busy} aria-busy={busy}>
               {busy ? <ButtonSpinner /> : 'Verify'}
@@ -755,6 +754,8 @@ const NURSE_STATUS: Record<NurseVerificationStatus, [string, 'default' | 'warn' 
   onboarding: ['Setup in progress', 'warn'],
   underReview: ['Under review', 'warn'],
   verified: ['Verified', 'ok'],
+  rejected: ['Changes requested', 'warn'],
+  suspended: ['Suspended', 'warn'],
 }
 
 const CENTRE_STATUS: Record<CentreVerificationStatus, [string, 'default' | 'warn' | 'ok']> = {
@@ -763,6 +764,8 @@ const CENTRE_STATUS: Record<CentreVerificationStatus, [string, 'default' | 'warn
   pendingReview: ['Pending admin review', 'warn'],
   siteVisitScheduled: ['Site-visit scheduled', 'warn'],
   verified: ['Verified & live', 'ok'],
+  rejected: ['Changes requested', 'warn'],
+  suspended: ['Suspended', 'warn'],
 }
 
 /** profile_screen.dart — identity, verification status + demo advance, setup links, account actions. */
@@ -805,17 +808,10 @@ export function PartnerProfilePage() {
         { icon: 'star', title: 'Skills & Specialisations', subtitle: 'ICU, Tracheostomy, Palliative Care tags', done: true, to: PR.nurseAvailability },
       ]
 
-  // Demo-only control standing in for the admin review (no backend).
-  let advance: { label: string; run: () => void } | null = null
-  if (isCentre) {
-    if (s.centreStatus === 'onboarding' || s.centreStatus === 'pendingReview')
-      advance = { label: 'Demo: submit & schedule site visit', run: () => setCentreStatus('siteVisitScheduled') }
-    else if (s.centreStatus === 'siteVisitScheduled') advance = { label: 'Demo: mark as verified & live', run: () => setCentreStatus('verified') }
-  } else {
-    const st = practitionerStatus(s)
-    if (st === 'onboarding') advance = { label: 'Demo: submit for review', run: () => setPractitionerStatus('underReview') }
-    else if (st === 'underReview') advance = { label: 'Demo: mark as verified', run: () => setPractitionerStatus('verified') }
-  }
+  // Submit for the admin's review. Approval itself happens in the admin panel.
+  const st = isCentre ? s.centreStatus : practitionerStatus(s)
+  const canSubmit = st === 'onboarding' || st === 'rejected'
+  const submitForReview = () => (isCentre ? setCentreStatus('pendingReview') : setPractitionerStatus('underReview'))
 
   return (
     <>
@@ -876,14 +872,33 @@ export function PartnerProfilePage() {
               </li>
             ))}
           </ul>
-          {advance && (
-            <div className="pa-demo-advance">
-              <span className="p-muted">Demo mode — no real review team.</span>
-              <button type="button" className="p-btn p-btn-outline p-btn-sm" onClick={advance.run}>
-                {advance.label}
-              </button>
+          {s.adminNote && (st === 'rejected' || st === 'suspended') && (
+            <div className="p-note pa-warn-note" role="status">
+              <PIcon name="shield" size={18} />
+              <span>
+                <strong>Note from ALLCURO:</strong> {s.adminNote}
+              </span>
             </div>
           )}
+          <div className="pa-demo-advance">
+            <span className="p-muted">
+              {st === 'verified'
+                ? 'Approved — families can see and book you.'
+                : st === 'underReview' || st === 'pendingReview' || st === 'siteVisitScheduled'
+                  ? 'Submitted. Our team reviews profiles within 2–4 working days.'
+                  : st === 'suspended'
+                    ? 'Your profile is hidden from families. Contact support.'
+                    : 'Complete your public profile, then submit it for approval.'}
+            </span>
+            <Link to={PR.publicProfile} className="p-btn p-btn-outline p-btn-sm">
+              Edit public profile
+            </Link>
+            {canSubmit && (
+              <button type="button" className="p-btn p-btn-sm" onClick={() => void submitForReview()}>
+                Submit for approval
+              </button>
+            )}
+          </div>
         </PCard>
 
         <PCard as="section" className="pa-account">

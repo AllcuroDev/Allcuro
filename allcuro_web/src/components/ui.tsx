@@ -216,13 +216,36 @@ export function Avatar({ name, size = 48 }: { name: string; size?: number }) {
   )
 }
 
-export function Rating({ value, count }: { value: number; count?: number }) {
+/** Star rating; a partner with no reviews yet shows "New". */
+export function Rating({ value, count }: { value: number | null; count?: number }) {
+  if (value == null || !count)
+    return (
+      <span className="rating">
+        <StarIcon size={15} />
+        <strong>New</strong>
+      </span>
+    )
   return (
     <span className="rating">
       <StarIcon size={15} />
       <strong>{value.toFixed(1)}</strong>
-      {count != null && <span>({count})</span>}
+      <span>({count})</span>
     </span>
+  )
+}
+
+/** A partner's uploaded photo, or their initials until they add one. */
+export function PartnerPhoto({ src, name, className, size = 72 }: { src: string; name: string; className?: string; size?: number }) {
+  if (src) return <img src={src} alt="" className={className} loading="lazy" />
+  return <Avatar name={name} size={size} />
+}
+
+/** Shown while the catalog loads from Supabase. */
+export function PageLoading() {
+  return (
+    <div className="container page page-loading" role="status">
+      <span className="spinner" aria-hidden="true" /> Loading…
+    </div>
   )
 }
 

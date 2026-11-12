@@ -19,6 +19,10 @@ export interface Service {
   duration: string
   professional: string
   price: string
+  /** Lowest numeric price (₹), before any discount. */
+  priceFrom?: number
+  /** Admin-set discount, 0–100. */
+  discountPercent?: number
   notes: string
   badge: string
   icon: string
@@ -42,4 +46,6 @@ export interface Category {
   /** Mirrors `CareTone` in the app: deep glyph colour + soft tile wash. */
   ink: string
   wash: string
+  /** Supabase Storage artwork uploaded from the admin. */
+  imageUrl?: string
 }

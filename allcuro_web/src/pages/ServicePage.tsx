@@ -17,22 +17,28 @@ const split = (text: string) =>
     .map((t) => t.trim().replace(/\.$/, ''))
     .filter(Boolean)
 
-/** Which professionals can do a category's services. Categories without home nurses (doctor visits, labs) list none. */
-const canServe: Record<string, (n: Nurse) => boolean> = {
-  'Nursing Care': (n) => !/Physio|Attendant/.test(n.level),
-  'Elder Care': (n) => /Attendant|GNM|ANM/.test(n.level),
-  'Mother & Baby Care': (n) => /ANM|B\.Sc/.test(n.level),
-  Physiotherapy: (n) => /Physio/.test(n.level),
-  Caregivers: (n) => /Attendant/.test(n.level),
+/** Partner kinds that can do a category's services when they haven't picked services explicitly. */
+const kindsFor: Record<string, Nurse['kind'][]> = {
+  'Nursing Care': ['nurse'],
+  'Elder Care': ['nurse', 'caregiver'],
+  'Mother & Baby Care': ['nurse', 'caregiver'],
+  Physiotherapy: ['physiotherapist'],
+  'Doctor Care': ['doctor'],
+  Caregivers: ['caregiver'],
 }
+
+/** Approved partners who offer this service: picked it on their profile, or are the right kind and haven't narrowed their list. */
+const canServe = (n: Nurse, s: { id: string; category: string }) =>
+  n.serviceIds.includes(s.id) || (n.serviceIds.length === 0 && (kindsFor[s.category] ?? []).includes(n.kind))
 
 /** One service: what's included, who can come, and the way into booking (the app's ServiceDetailScreen). */
 export function ServicePage({ id }: { id: string }) {
   const s = useServices().find((x) => x.id === id)
   if (!s) return <NotFound />
   const cat = categoryById[s.category] ?? categories[0]
+  if (!cat) return <NotFound />
   const companion = isCompanionService(s)
-  const pros = companion ? [] : nurses.filter(canServe[s.category] ?? (() => false))
+  const pros = companion ? [] : nurses.filter((n) => canServe(n, s))
 
   const book = () => requireLogin(() => navigate(bookingPath({ service: s.id })))
 

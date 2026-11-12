@@ -19,6 +19,7 @@ import {
   RoleSelectPage,
 } from './auth/AuthPages'
 import { CentreSignupPage, ClinicianSignupPage, NurseSignupPage } from './auth/SignupPages'
+import { PublicProfilePage } from './PublicProfilePage'
 import * as Nurse from './nurse'
 import * as Centre from './centre'
 import './partner.css'
@@ -35,6 +36,7 @@ const routes: Route[] = [
   { pattern: /^\/partner\/role-select$/, page: () => <RoleSelectPage />, title: 'Choose your role' },
   { pattern: /^\/partner\/verify-identity$/, page: () => <IdentityVerificationPage />, title: 'Verify identity' },
   { pattern: /^\/partner\/profile$/, page: () => <PartnerProfilePage />, title: 'Partner profile' },
+  { pattern: /^\/partner\/public-profile$/, page: () => <PublicProfilePage />, title: 'Public profile' },
   { pattern: /^\/partner\/bank-account$/, page: () => <BankAccountPage />, title: 'Bank account' },
 
   { pattern: /^\/partner\/nurse\/signup$/, page: () => <NurseSignupPage />, title: 'Nurse sign-up' },
@@ -81,13 +83,14 @@ function redirectFor(s: PartnerSession, path: string): string | null {
   if (signupIncomplete(s)) return path === signupRoute ? null : signupRoute
 
   if (([PR.root, PR.welcome, PR.phoneAuth, PR.roleSelect, PR.identityVerification, signupRoute] as string[]).includes(path)) return home
-  if (!path.startsWith(ownPrefix) && path !== PR.profile && path !== PR.bankAccount) return home
+  if (!path.startsWith(ownPrefix) && path !== PR.profile && path !== PR.publicProfile && path !== PR.bankAccount) return home
   return null
 }
 
 /** Signed-in pages (everything after sign-up) live inside the shell; welcome, sign-in, role select, identity and sign-up don't. */
 const inApp = (path: string) =>
   path === PR.profile ||
+  path === PR.publicProfile ||
   path === PR.bankAccount ||
   (/^\/partner\/(nurse|centre)\//.test(path) && !path.endsWith('/signup'))
 

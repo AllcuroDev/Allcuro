@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { BuildingIcon, CheckIcon, ShieldIcon } from '../components/Icons'
 import { Link } from '../components/Link'
 import { PaymentDialog } from '../components/PaymentDialog'
-import { ActionBar, Bill, Field, OptionCard, PageHead, Rating, Select, StepTitle, TextArea } from '../components/ui'
-import { CENTRE_DEPOSIT, billTotal, centreFormalities, roomOptions, stayDurations } from '../data/booking'
-import { centreById, centres } from '../data/providers'
+import { ActionBar, Bill, Field, OptionCard, PageHead, PageLoading, Rating, Select, StepTitle, TextArea } from '../components/ui'
+import { CENTRE_DEPOSIT, billTotal, centreFormalities, stayDurations } from '../data/booking'
+import { centreById, centres, type Centre } from '../data/providers'
+import { site } from '../data/site'
 import { inr } from '../lib/format'
 import { navigate } from '../router'
 import { requireLogin, useAuth } from '../state/auth'
 import { createBooking, type Payment } from '../state/bookings'
+import { contentReady } from '../state/content'
 import { NotFound } from './CategoryPage'
 
 const CENTRE_FILTERS = ['All Centres', 'Elderly', 'Rehab', 'Physiotherapy', 'Palliative']
@@ -41,11 +43,11 @@ export function CentresPage() {
         {list.map((c) => (
           <Link key={c.id} to={`/centres/${c.id}`} className="place-card">
             <div className="place-photo">
-              <img src={c.photo} alt="" loading="lazy" />
+              <CentrePhoto c={c} />
               <span className="place-badge">
                 <ShieldIcon size={14} /> ALLCURO VERIFIED
               </span>
-              {c.bedsLeft <= 3 && <span className="place-urgent">Only {c.bedsLeft} beds left</span>}
+              {c.bedsLeft > 0 && c.bedsLeft <= 3 && <span className="place-urgent">Only {c.bedsLeft} beds left</span>}
             </div>
             <div className="place-body">
               <div className="place-row">
@@ -55,16 +57,22 @@ export function CentresPage() {
               <p className="muted">
                 {c.type} · {c.locality}, {c.city}
               </p>
-              <p className="place-price">
-                <strong>{inr(c.pricePerDay)}</strong> / day · {inr(c.pricePerMonth)} / month
-              </p>
+              <CentrePrice c={c} />
               <span className="muted small">
-                Staff ratio {c.staffRatio} · Est. {c.since}
+                {[c.staffRatio && `Staff ratio ${c.staffRatio}`, c.since && `Est. ${c.since}`].filter(Boolean).join(' · ')}
               </span>
             </div>
           </Link>
         ))}
-        {!list.length && <p className="empty">No centres match “{filter}” yet.</p>}
+        {!list.length && (
+          <p className="empty">
+            {!contentReady()
+              ? 'Loading centres…'
+              : centres.length
+                ? `No centres match “${filter}” yet.`
+                : 'No verified care centres are listed yet. Call our care desk and we’ll help you find one.'}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -73,7 +81,7 @@ export function CentresPage() {
 /** One centre with its licence, sub-scores, services and prices (the app's CentreDetailScreen). */
 export function CentrePage({ id }: { id: string }) {
   const c = centreById(id)
-  if (!c) return <NotFound />
+  if (!c) return contentReady() ? <NotFound /> : <PageLoading />
 
   return (
     <>
@@ -82,37 +90,33 @@ export function CentrePage({ id }: { id: string }) {
         <div className="detail-grid">
           <div className="stack">
             <div className="place-photo place-photo-lg">
-              <img src={c.photo} alt={c.name} />
+              <CentrePhoto c={c} />
               <span className="place-badge">
-                <ShieldIcon size={14} /> VERIFIED · {c.photoCount} photos
+                <ShieldIcon size={14} /> VERIFIED{c.photoCount > 1 ? ` · ${c.photoCount} photos` : ''}
               </span>
             </div>
             <section className="panel">
               <Rating value={c.rating} count={c.reviews} />
-              <p className="licence">LICENCE NO. {c.licence}</p>
-              <p className="muted small">Registered under the Clinical Establishments Act</p>
+              {c.licence && (
+                <>
+                  <p className="licence">LICENCE NO. {c.licence}</p>
+                  <p className="muted small">Registered under the Clinical Establishments Act</p>
+                </>
+              )}
               <p className="muted small">
-                Operating since {c.since} · Staff-to-patient {c.staffRatio}
+                {[c.since && `Operating since ${c.since}`, c.staffRatio && `Staff-to-patient ${c.staffRatio}`].filter(Boolean).join(' · ')}
               </p>
-              {c.bedsLeft <= 5 && <p className="warn-note">Only {c.bedsLeft} beds left this week</p>}
+              {c.bedsLeft > 0 && c.bedsLeft <= 5 && <p className="warn-note">Only {c.bedsLeft} beds left this week</p>}
             </section>
           </div>
 
           <div className="stack">
-            <section className="panel">
-              <h3 className="panel-title">Quality sub-scores</h3>
-              <ul className="score-list">
-                {c.scores.map((s) => (
-                  <li key={s.label}>
-                    <span>{s.label}</span>
-                    <span className="score-bar" aria-hidden="true">
-                      <span style={{ width: `${(s.value / 5) * 100}%` }} />
-                    </span>
-                    <strong>{s.value.toFixed(1)}</strong>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            {c.about && (
+              <section className="panel">
+                <h3 className="panel-title">About the centre</h3>
+                <p>{c.about}</p>
+              </section>
+            )}
             <section className="panel">
               <h3 className="panel-title">Services included</h3>
               <ul className="list-yes two-col">
@@ -123,37 +127,48 @@ export function CentrePage({ id }: { id: string }) {
                 ))}
               </ul>
             </section>
-            <section className="panel price-split">
-              <div>
-                <span className="muted small">Per day</span>
-                <strong>{inr(c.pricePerDay)}</strong>
-              </div>
-              <div>
-                <span className="muted small">Per month</span>
-                <strong>{inr(c.pricePerMonth)}</strong>
-              </div>
-            </section>
-            <section className="panel">
-              <h3 className="panel-title">Verified reviews</h3>
-              <ul className="quote-list">
-                <li>
-                  “Rooms were spotless and the nurses updated us daily. My father recovered faster than we expected.”
-                  <small>Meera K. · Verified stay</small>
-                </li>
-                <li>
-                  “Physio team is excellent. Food could have more variety.”
-                  <small>Anand R. · Verified stay</small>
-                </li>
-              </ul>
-            </section>
+            {c.roomTypes.length > 0 && (
+              <section className="panel">
+                <h3 className="panel-title">Room types</h3>
+                <div className="tag-row">
+                  {c.roomTypes.map((r) => (
+                    <span key={r} className="tag">
+                      {r}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+            {c.pricePerDay != null && (
+              <section className="panel price-split">
+                <div>
+                  <span className="muted small">Per day</span>
+                  <strong>{inr(c.pricePerDay)}</strong>
+                </div>
+                {c.pricePerMonth != null && (
+                  <div>
+                    <span className="muted small">Per month</span>
+                    <strong>{inr(c.pricePerMonth)}</strong>
+                  </div>
+                )}
+              </section>
+            )}
           </div>
         </div>
       </div>
-      <ActionBar label="Starting from" amount={`${inr(c.pricePerDay)} / day`}>
-        <Link to={`/centres/${c.id}/book`} className="btn btn-primary btn-lg">
-          Check Availability
-        </Link>
-      </ActionBar>
+      {c.pricePerDay != null ? (
+        <ActionBar label="Starting from" amount={`${inr(c.pricePerDay)} / day`}>
+          <Link to={`/centres/${c.id}/book`} className="btn btn-primary btn-lg">
+            Check Availability
+          </Link>
+        </ActionBar>
+      ) : (
+        <ActionBar label="Pricing" amount="On request">
+          <a href={site.phoneHref} className="btn btn-primary btn-lg">
+            Call {site.phoneDisplay}
+          </a>
+        </ActionBar>
+      )}
     </>
   )
 }
@@ -164,14 +179,16 @@ const GENDERS = ['Female', 'Male', 'Other']
 export function CentreBookingPage({ id }: { id: string }) {
   const c = centreById(id)
   const { profile } = useAuth()
-  const [room, setRoom] = useState(2)
+  const [room, setRoom] = useState(0)
   const [stay, setStay] = useState(2)
   const [patient, setPatient] = useState({ name: profile?.name ?? '', age: '', gender: GENDERS[0], notes: '' })
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
-  if (!c) return <NotFound />
+  if (!c) return contentReady() ? <NotFound /> : <PageLoading />
+  if (c.pricePerDay == null) return <NotFound />
 
-  const r = roomOptions[room]
+  const roomOptions = centreRooms(c)
+  const r = roomOptions[room] ?? roomOptions[0]
   const d = stayDurations[stay]
   const lines = [
     { label: `${r.title} (${d.days} days)`, amount: r.pricePerDay * d.days },
@@ -202,7 +219,7 @@ export function CentreBookingPage({ id }: { id: string }) {
       locality: `${c.locality}, ${c.city}`,
       providerName: c.name,
       providerPhone: c.phone,
-      providerRating: c.rating,
+      providerRating: c.rating ?? 0,
       providerQualifications: `Field Audited · ${c.staffRatio} Staff Ratio · Licence ${c.licence}`,
       roomType: r.title,
       condition: patient.notes.trim() || undefined,
@@ -329,5 +346,31 @@ export function CentreBookingPage({ id }: { id: string }) {
         />
       )}
     </>
+  )
+}
+
+/** The centre's room types, each at its admin-set daily price. */
+function centreRooms(c: Centre) {
+  const price = c.pricePerDay ?? 0
+  const titles = c.roomTypes.length ? c.roomTypes : ['Standard bed']
+  return titles.map((title) => ({ title, description: c.services.slice(0, 3).join(' · '), pricePerDay: price }))
+}
+
+function CentrePhoto({ c }: { c: Centre }) {
+  if (c.photo) return <img src={c.photo} alt="" loading="lazy" />
+  return (
+    <span className="place-photo-empty" aria-hidden="true">
+      <BuildingIcon size={40} />
+    </span>
+  )
+}
+
+function CentrePrice({ c }: { c: Centre }) {
+  if (c.pricePerDay == null) return <p className="place-price muted">Price on request</p>
+  return (
+    <p className="place-price">
+      {c.discountPercent > 0 && c.mrpPerDay != null && <s className="muted">{inr(c.mrpPerDay)}</s>} <strong>{inr(c.pricePerDay)}</strong> / day
+      {c.pricePerMonth != null && <> · {inr(c.pricePerMonth)} / month</>}
+    </p>
   )
 }

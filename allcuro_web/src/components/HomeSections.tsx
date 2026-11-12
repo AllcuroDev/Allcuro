@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
 import centrePhoto from '../assets/images/centre-1.jpg'
-import { categoryById } from '../data/categories'
+import { nurses } from '../data/providers'
 import { site } from '../data/site'
 import { motionOn } from '../motion'
-import { useServices } from '../state/catalog'
-import { CareIcon } from './CareIcon'
 import { ArrowIcon, BoltIcon, HeadsetIcon, PhoneIcon, PillIcon, ShieldIcon, WhatsAppIcon } from './Icons'
 import { Link } from './Link'
 import { Modal } from './ui'
@@ -31,14 +29,18 @@ export function MedicinesBanner() {
   )
 }
 
-const expressLines = ['12 nurses available near you', 'Avg. arrival today · 32 mins', 'GNM / ANM verified · HPR registered']
-
-/** `_ExpressNurseBanner` — "Need a nurse in 45 mins?" */
+/** `_ExpressNurseBanner` — "Need a nurse at home?" with live counts of approved partners. */
 export function ExpressBanner() {
+  const available = nurses.filter((n) => n.kind === 'nurse' && n.available).length
+  const expressLines = [
+    available ? `${available} verified nurse${available === 1 ? '' : 's'} available` : 'Verified nurses, booked through our care desk',
+    'Every partner approved by ALLCURO',
+    'GNM / ANM verified · HPR registered',
+  ]
   const [line, setLine] = useState(0)
   useEffect(() => {
     if (!motionOn()) return
-    const t = window.setInterval(() => setLine((l) => (l + 1) % expressLines.length), 3000)
+    const t = window.setInterval(() => setLine((l) => (l + 1) % 3), 3000)
     return () => window.clearInterval(t)
   }, [])
   return (
@@ -46,67 +48,17 @@ export function ExpressBanner() {
       <Link to="/book-nurse" className="express">
         <span className="express-body">
           <span className="express-tag">
-            <BoltIcon size={14} /> EXPRESS CARE
+            <BoltIcon size={14} /> HOME NURSING
           </span>
-          <strong className="express-title">Need a nurse in 45 mins?</strong>
+          <strong className="express-title">Need a nurse at home?</strong>
           <span key={line} className="express-line">
-            <span className="express-dot" aria-hidden="true" /> {expressLines[line]}
+            <span className="express-dot" aria-hidden="true" /> {expressLines[line % expressLines.length]}
           </span>
         </span>
         <span className="express-cta">
           Book <ArrowIcon size={16} />
         </span>
       </Link>
-    </section>
-  )
-}
-
-// The app's "Our Nurse Care" grid: 7 clinical services + See All.
-const nurseCare: { id: string; label: string; icon: string }[] = [
-  { id: 'catheter-care', label: 'Catheter Care', icon: 'urine_bag' },
-  { id: 'ryle-s-tube-care', label: 'Ryles Tube', icon: 'nasal_tube' },
-  { id: 'wound-dressing', label: 'Wound Dressing', icon: 'bandage' },
-  { id: 'injection-administration', label: 'Injection', icon: 'injection' },
-  { id: 'iv-medication-administration', label: 'IV Care', icon: 'iv_drip' },
-  { id: 'tracheostomy-care', label: 'Tracheostomy', icon: 'lungs' },
-  { id: 'vital-signs-check', label: 'Vital Monitoring', icon: 'vitals' },
-]
-
-export function NurseCareGrid() {
-  const services = useServices()
-  const tone = categoryById['Nursing Care']
-  return (
-    <section className="container home-block" aria-labelledby="nurse-care-title">
-      <div className="home-head">
-        <h2 id="nurse-care-title">Our Nurse Care</h2>
-        <Link to="/services/nursing" className="home-more">
-          View all <ArrowIcon size={14} />
-        </Link>
-      </div>
-      <ul className="mini-grid">
-        {nurseCare.map((n) => {
-          const s = services.find((x) => x.id === n.id)
-          return (
-            <li key={n.id}>
-              <Link to={`/service/${n.id}`} className="mini-tile">
-                <span className="mini-icon" style={{ background: tone?.wash, color: tone?.ink }}>
-                  <CareIcon name={n.icon} size={28} />
-                </span>
-                <span className="mini-label">{n.label}</span>
-                {s && <span className="mini-price">{s.price}</span>}
-              </Link>
-            </li>
-          )
-        })}
-        <li>
-          <Link to="/services/nursing" className="mini-tile is-all">
-            <span className="mini-icon">
-              <CareIcon name="see_all" size={28} />
-            </span>
-            <span className="mini-label">See All</span>
-          </Link>
-        </li>
-      </ul>
     </section>
   )
 }

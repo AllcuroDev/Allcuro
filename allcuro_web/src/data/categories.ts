@@ -1,8 +1,8 @@
 import type { Category, Service } from './types'
 
-// Labels, icons and tones follow the home-screen grid and `CareTone`
-// in allcuro/lib/core/ui/care_icon.dart. Slugs match the app's
-// `/category-services/:slug` routes.
+// The home-care categories. This built-in list always shows (hero tiles,
+// footer, service pages); when public.service_categories loads, state/content.ts
+// replaces it in place with the admin's version (labels, order, logos).
 export const categories: Category[] = [
   {
     id: 'Nursing Care',
@@ -88,10 +88,7 @@ export const categories: Category[] = [
   },
 ]
 
-export const categoryById = Object.fromEntries(categories.map((c) => [c.id, c])) as Record<
-  string,
-  Category
->
+export const categoryById: Record<string, Category> = Object.fromEntries(categories.map((c) => [c.id, c]))
 
 /** Slug of the page that lists every service across all categories. */
 export const ALL_SLUG = 'all'

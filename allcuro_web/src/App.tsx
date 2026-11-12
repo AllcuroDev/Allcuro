@@ -2,13 +2,15 @@ import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { ActiveVisitBar } from './components/ActiveVisitBar'
 import { Header } from './components/Header'
 import { Hero, TrustBand } from './components/Hero'
-import { CentresAndAdvice, ExpressBanner, NurseCareGrid } from './components/HomeSections'
+import { CentresAndAdvice, ExpressBanner } from './components/HomeSections'
 import { LoginDialog } from './components/LoginDialog'
 import { CallBand, Faq, Footer, HowItWorks, MoreCare } from './components/Sections'
 import { Toaster } from './components/ui'
 import { ALL_SLUG, categories } from './data/categories'
 import { centreById, equipmentById, nurseById } from './data/providers'
 import { getServices } from './state/catalog'
+import { useContentStatus } from './state/content'
+import { PageLoading } from './components/ui'
 import { LoginPage, ProfilePage } from './pages/AccountPages'
 import { BookingDetailPage, BookingsPage } from './pages/BookingsPages'
 import { CategoryPage, NotFound } from './pages/CategoryPage'
@@ -32,7 +34,6 @@ function Home() {
       {/* Same order as the app's home screen. How it works is hidden on phones (home.css), as asked. */}
       <Hero />
       <ExpressBanner />
-      <NurseCareGrid />
       <CentresAndAdvice />
       <TrustBand />
       <HowItWorks />
@@ -97,6 +98,8 @@ export default function App() {
 function CustomerSite({ path }: { path: string }) {
   useReveal(path)
   useSpotlight()
+  // Every page reads data loaded from Supabase; re-render them all once it arrives.
+  const status = useContentStatus()
 
   const route = routes.find((r) => r.pattern.test(path))
   const param = route ? (path.match(route.pattern)?.[1] ?? '') : ''
@@ -109,10 +112,11 @@ function CustomerSite({ path }: { path: string }) {
 
     const label = route?.title(param)
     document.title = label ? `${label} — ALLCURO` : HOME_TITLE
-  }, [path, route, param])
+  }, [path, route, param, status])
 
   let page
-  if (route) page = route.page(param)
+  if (status === 'loading') page = path === '/' ? <Home /> : <PageLoading />
+  else if (route) page = route.page(param)
   else if (path === '/') page = <Home />
   else page = <NotFound />
 

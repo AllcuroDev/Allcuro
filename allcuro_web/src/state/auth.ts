@@ -1,11 +1,11 @@
+import { confirmOtp, requestOtp, signOut } from '../lib/phoneAuth'
 import { digitsOnly } from '../lib/format'
-import { delay, memoryStore, persistedStore } from '../lib/store'
+import { memoryStore, persistedStore } from '../lib/store'
+import { supabase } from '../lib/supabase'
 
-// Phone + OTP sign-in and light-touch KYC, mirroring the app's AuthService /
-// AuthViewModel (allcuro/lib/features/auth). Demo mode: there is no SMS
-// gateway yet, so the code is always DEMO_OTP — same as the app.
-
-export const DEMO_OTP = '123456'
+// Customer phone + OTP sign-in through Supabase Auth (lib/phoneAuth.ts), with
+// the profile kept in public.profiles. The local store is only a cache so the
+// header renders instantly; the Supabase session is the source of truth.
 
 export type AuthStatus = 'unauthenticated' | 'authenticated' | 'onboarded'
 
@@ -35,25 +35,67 @@ export const currentPhone = () => auth.get().profile?.phone ?? ''
 
 export class AuthError extends Error {}
 
+interface ProfileRow {
+  full_name: string | null
+  phone: string | null
+  email: string | null
+  city: string | null
+  emergency_contact: string | null
+  kyc_status: string | null
+}
+
+/** Reads public.profiles for the signed-in user into the local cache. */
+async function loadProfile(userId: string, phoneFallback = '') {
+  if (!supabase) return 'authenticated' as const
+  const { data } = await supabase
+    .from('profiles')
+    .select('full_name, phone, email, city, emergency_contact, kyc_status')
+    .eq('id', userId)
+    .maybeSingle<ProfileRow>()
+  const name = data?.full_name && data.full_name !== 'Member' ? data.full_name : ''
+  const profile: Profile = {
+    name,
+    phone: digitsOnly(data?.phone ?? phoneFallback).slice(-10),
+    email: data?.email ?? '',
+    // profiles.city defaults to 'Bengaluru'; only a named profile counts as set up.
+    city: name ? (data?.city ?? '') : '',
+    emergencyContact: data?.emergency_contact ?? '',
+    kycTier: data?.kyc_status === 'verified' ? 'id_verified' : 'light',
+  }
+  const status: AuthStatus = profile.name && profile.city ? 'onboarded' : 'authenticated'
+  auth.set({ status, profile })
+  return status
+}
+
+// Keep the cache in step with the real session (expired, signed out in another tab…).
+if (supabase) {
+  const db = supabase
+  void db.auth.getSession().then(({ data }) => {
+    const user = data.session?.user
+    if (!user) auth.set((s) => ({ ...s, status: 'unauthenticated' }))
+    else void loadProfile(user.id, user.phone ?? '')
+  })
+  db.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') auth.set((s) => ({ ...s, status: 'unauthenticated' }))
+  })
+}
+
 export async function sendOtp(phone: string) {
-  await delay(600)
-  if (digitsOnly(phone).length !== 10) throw new AuthError('Enter a valid 10-digit phone number.')
+  try {
+    await requestOtp(phone)
+  } catch (e) {
+    throw new AuthError(e instanceof Error ? e.message : 'Could not send the code.')
+  }
 }
 
 export async function verifyOtp(phone: string, otp: string) {
-  await delay(600)
-  if (otp.trim() !== DEMO_OTP) throw new AuthError(`Incorrect code. Use demo code ${DEMO_OTP}.`)
-  const digits = digitsOnly(phone)
-  const previous = auth.get().profile
-  // Signing back in with the same number keeps the profile set up last time.
-  const returning = previous?.phone === digits && previous.name
-  auth.set({
-    status: returning ? 'onboarded' : 'authenticated',
-    profile: returning
-      ? previous
-      : { name: '', phone: digits, email: '', city: '', emergencyContact: '', kycTier: 'light' },
-  })
-  return returning ? 'onboarded' : 'authenticated'
+  let userId: string
+  try {
+    userId = await confirmOtp(phone, otp)
+  } catch (e) {
+    throw new AuthError(e instanceof Error ? e.message : 'Could not verify the code.')
+  }
+  return loadProfile(userId, phone)
 }
 
 export const onboardingCities = [
@@ -70,7 +112,20 @@ export const onboardingCities = [
 export async function completeOnboarding(details: Pick<Profile, 'name' | 'email' | 'city' | 'emergencyContact'>) {
   if (!details.name.trim()) throw new AuthError('Please enter your full name.')
   if (!details.city.trim()) throw new AuthError('Please select your city / area.')
-  await delay(500)
+  if (!supabase) throw new AuthError('Sign-in is unavailable right now.')
+  const { data: session } = await supabase.auth.getSession()
+  const userId = session.session?.user.id
+  if (!userId) throw new AuthError('Your session has expired. Please sign in again.')
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: details.name.trim(),
+      email: details.email.trim() || null,
+      city: details.city.trim(),
+      emergency_contact: details.emergencyContact.trim() || null,
+    })
+    .eq('id', userId)
+  if (error) throw new AuthError('Could not save your profile. Please try again.')
   auth.set((s) => ({
     status: 'onboarded',
     profile: {
@@ -86,8 +141,10 @@ export async function completeOnboarding(details: Pick<Profile, 'name' | 'email'
 export const setKycTier = (kycTier: Profile['kycTier']) =>
   auth.set((s) => (s.profile ? { ...s, profile: { ...s.profile, kycTier } } : s))
 
-/** Keeps the profile so the same number signs straight back in, like the app's logout. */
-export const logout = () => auth.set((s) => ({ ...s, status: 'unauthenticated' }))
+export const logout = () => {
+  auth.set({ status: 'unauthenticated', profile: null })
+  void signOut()
+}
 
 // ---- "Login to book" prompt (the app's QuickLoginSheet) ----
 

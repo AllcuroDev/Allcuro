@@ -1,5 +1,5 @@
 import { delay, persistedStore } from '../../lib/store'
-import type { PartnerSession } from '../session'
+import { saveSignup, type PartnerSession } from '../session'
 import {
   CERTIFICATE_DOC_IDS,
   DEMO_VISIT_OTP,
@@ -175,8 +175,11 @@ export const addBlockedDate = (iso: string) =>
 export const removeBlockedDate = (iso: string) =>
   availabilityStore.set((a) => ({ ...a, blockedDates: a.blockedDates.filter((d) => d !== iso) }))
 
-export const saveSkillsAndRates = (skills: string[], hourlyRate: number, dailyRate: number) =>
+/** Saves skills locally and to public.partners (via the sign-up bag). Rates are admin-set; the args are kept for the app's API. */
+export const saveSkillsAndRates = (skills: string[], hourlyRate: number, dailyRate: number) => {
   availabilityStore.set((a) => ({ ...a, skills, hourlyRate, dailyRate }))
+  saveSignup({ skills })
+}
 
 /** Skills chosen here, else the sign-up wizard's, else the app's demo set (nurses only). */
 export function effectiveSkills(a: AvailabilityState, s: PartnerSession): string[] {

@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { digitsOnly, formatPhone } from '../lib/format'
 import {
   AuthError,
-  DEMO_OTP,
   completeOnboarding,
   onboardingCities,
   sendOtp,
@@ -203,9 +202,7 @@ function OtpStep({
       {error && <p className="form-error">{error}</p>}
 
       <div className="otp-row">
-        <button type="button" className="link-btn" onClick={() => setCode(DEMO_OTP)}>
-          Demo mode: use {DEMO_OTP}
-        </button>
+        <span className="muted small">Didn’t get it? Check the number above.</span>
         <button type="button" className="link-btn" disabled={cooldown > 0} onClick={resend}>
           {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
         </button>

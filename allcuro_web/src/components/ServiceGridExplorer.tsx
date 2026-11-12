@@ -13,8 +13,8 @@ interface Props {
   id?: string
 }
 
-// "All Services" leads the dock, then each care type.
-const dockItems = [
+// "All Services" leads the dock, then each care type (built per render: categories load from Supabase).
+const dockItems = () => [
   { id: ALL_SLUG, slug: ALL_SLUG, label: 'All Services', icon: 'see_all' } as { id: string; slug: string; label: string; icon: string; href?: string },
   ...categories.map((c) => ({ id: c.id, slug: c.slug, label: c.label, icon: c.icon, href: c.href })),
 ]
@@ -42,7 +42,7 @@ export function ServiceGridExplorer({
 
   const handleCategorySelect = (slug: string) => {
     // Care Centres has no service list of its own — it opens the centres page.
-    const href = dockItems.find((c) => c.slug === slug)?.href
+    const href = dockItems().find((c) => c.slug === slug)?.href
     if (href) return navigate(href)
     setActiveSlug(slug)
     setActiveSubcat('all')
@@ -95,7 +95,7 @@ export function ServiceGridExplorer({
       <div className="container">
         <div className="category-dock-wrapper" ref={dockRef}>
           <nav className="category-dock" aria-label="Care categories">
-            {dockItems.map((c) => {
+            {dockItems().map((c) => {
               const isActive = c.slug === activeSlug
               return (
                 <button

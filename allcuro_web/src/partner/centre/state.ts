@@ -263,8 +263,7 @@ export function setupProgress(s: PartnerSession, rooms: Room[], staff: StaffMemb
   }
 }
 
-/** submitCentreForReview — the app jumps straight to "site visit scheduled". */
+/** submitCentreForReview — goes to the admin's queue; the admin schedules the site visit and approves. */
 export async function submitCentreForReview() {
-  await delay(500)
-  setCentreStatus('siteVisitScheduled')
+  await setCentreStatus('pendingReview')
 }

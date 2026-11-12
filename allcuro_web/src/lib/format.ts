@@ -32,3 +32,6 @@ export function useNow(ms = 1000) {
   }, [ms])
   return now
 }
+
+/** "★ 4.9" or "New" for one-line summaries. */
+export const ratingText = (value: number | null, count?: number) => (value == null || !count ? 'New' : `★ ${value.toFixed(1)}`)

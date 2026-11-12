@@ -5,8 +5,11 @@ import { uploadCatalogImage } from '../../lib/catalog';
 interface ImageFieldProps {
   label: string;
   hint: string;
-  folder: 'services' | 'categories';
+  folder: string;
   name: string;
+  /** Storage bucket; defaults to the services catalog's. */
+  bucket?: string;
+  maxKb?: number;
   value: string | null;
   onChange: (url: string | null) => void;
   onBusy: (busy: boolean) => void;
@@ -18,6 +21,8 @@ export const ImageField: React.FC<ImageFieldProps> = ({
   hint,
   folder,
   name,
+  bucket,
+  maxKb = 512,
   value,
   onChange,
   onBusy,
@@ -26,15 +31,15 @@ export const ImageField: React.FC<ImageFieldProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const upload = async (file: File) => {
-    if (file.size > 512 * 1024) {
-      setError('Image is over 512 KB — export it smaller (256×256 WebP is ideal).');
+    if (file.size > maxKb * 1024) {
+      setError(`Image is over ${maxKb} KB — export it smaller.`);
       return;
     }
     setUploading(true);
     onBusy(true);
     setError(null);
     try {
-      onChange(await uploadCatalogImage(folder, name, file));
+      onChange(await uploadCatalogImage(folder, name, file, bucket));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed');
     }

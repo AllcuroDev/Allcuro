@@ -13,6 +13,23 @@ This guide details how Supabase powers **Auth**, **PostgreSQL Database**, **Row-
    - `anon public key`
    - `service_role secret` (for backend/admin operations)
 4. Run [`supabase/services.sql`](supabase/services.sql) the same way. It creates the public services catalog (`service_categories`, `services`) and seeds all 48 services across 7 categories. Anyone can read active rows without logging in; only admins can edit. Re-running it re-applies the seed.
+5. Run [`supabase/marketplace.sql`](supabase/marketplace.sql). It adds partner profiles and approval (`partners`, `partner_offerings`), the public views customers read (`partners_public`, `partner_offerings_public`), equipment/medicines/FAQs/site settings, discounts, and storage policies for partner photos. Safe to re-run. **It also fixes a security hole in `schema.sql`:** the old sign-up trigger let anyone register as `admin` by putting `role: 'admin'` in their sign-up metadata.
+6. **Turn on phone sign-in.** Authentication → Sign In / Providers → **Phone** → enable, then connect an SMS provider (Twilio, MessageBird, Vonage or Textlocal). Customers and partners both sign in with an SMS code; nothing works until this is on. For testing without sending SMS, add numbers under **Test phone numbers & OTPs** on the same page.
+
+### How a partner goes live
+1. A nurse, doctor/physio or care centre signs up in the partner portal (`/partner` on the website) with their phone number. Their answers are saved to `public.partners` as they go.
+2. They fill in their **Public profile** (photo, bio, skills, languages, services they offer; for centres: rooms, beds, photos) and press **Submit for approval**. Status → `under_review`.
+3. In the admin panel, **Partners & Approvals** shows the queue. The admin reviews their details, sets **prices and discounts** (per service or custom shift rate; centres get a daily/monthly price), then **Approve & go live**, **Request changes** (with a note the partner sees), schedules a **site visit** (centres) or later **Suspend**s.
+4. Only `approved` partners appear on the website and customer app (`partners_public` view). Partners can never set their own price, discount, rating or approval: the `partners_guard` and `partner_offerings_guard` triggers reset those fields unless the editor is an admin.
+
+### Everything the admin edits
+| Admin section | Table(s) | Shown on |
+|---|---|---|
+| Partners & Approvals | `partners`, `partner_offerings` | Nurses / centres pages, service pages, booking |
+| Services Catalog | `service_categories`, `services` (incl. `discount_percent`) | Home tiles, category & service pages |
+| Equipment | `equipment` | /equipment |
+| Medicines | `medicines` | /medicines |
+| Site Content & FAQs | `site_settings`, `faqs` | Phone/WhatsApp/email, home headline, FAQ |
 
 ---
 
@@ -54,7 +71,7 @@ SUPABASE_ANON_KEY=<your-anon-key>
 SUPABASE_URL=https://<your-project-id>.supabase.co
 SUPABASE_ANON_KEY=<your-anon-key>
 ```
-The website loads services from Supabase, falling back to the bundled catalog if these are unset or the request fails.
+The website loads **all** of its content from Supabase — there is no bundled fallback any more, so without these keys the pages are empty.
 
 ### In `allcuro/` and `allcuro_partner/` (Flutter):
 Both apps already depend on `supabase_flutter` and call `SupabaseConfig.init()` in `main()` (`lib/core/network/supabase_config.dart`). Keys are passed at build time, not stored in code:

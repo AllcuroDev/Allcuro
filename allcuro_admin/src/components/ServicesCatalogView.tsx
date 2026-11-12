@@ -39,6 +39,7 @@ const newService = (categoryId: string, sortOrder: number): ServiceRecord => ({
   professional: '',
   price: '',
   price_from: null,
+  discount_percent: 0,
   notes: '',
   badge: '',
   icon: '',
@@ -340,7 +341,10 @@ export const ServicesCatalogView: React.FC = () => {
                     <td>{s.professional}</td>
                     <td>
                       <div className="txn-id-bold">{s.price}</div>
-                      <div className="date-sub">{s.duration}</div>
+                      <div className="date-sub">
+                        {Number(s.discount_percent) > 0 && <>{Number(s.discount_percent)}% off · </>}
+                        {s.duration}
+                      </div>
                     </td>
                     <td>
                       <span className={`catalog-status ${s.is_active ? 'is-live' : 'is-hidden'}`}>

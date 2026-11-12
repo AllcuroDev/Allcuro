@@ -13,6 +13,9 @@ import {
   FolderKanban,
   PanelLeftClose,
   PanelLeftOpen,
+  Package,
+  Pill,
+  FileText,
 } from 'lucide-react';
 import type { NavSection } from '../types/admin';
 
@@ -65,10 +68,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             className={`nav-menu-item ${currentSection === 'verification' ? 'active' : ''}`}
             onClick={() => onSelectSection('verification')}
-            title={isCollapsed ? `KYC Verification (${pendingVerifications})` : undefined}
+            title={isCollapsed ? `Partners & Approvals (${pendingVerifications})` : undefined}
           >
             <ShieldCheck size={18} className="item-icon" />
-            {!isCollapsed && <span className="item-label">Verification Queue</span>}
+            {!isCollapsed && <span className="item-label">Partners &amp; Approvals</span>}
             {pendingVerifications > 0 && (
               <span className={`pill-badge ${isCollapsed ? 'dot-badge' : ''}`}>
                 {isCollapsed ? '' : pendingVerifications}
@@ -133,6 +136,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <ClipboardList size={18} className="item-icon" />
             {!isCollapsed && <span className="item-label">Services Catalog</span>}
+          </button>
+
+          <button
+            className={`nav-menu-item ${currentSection === 'equipment' ? 'active' : ''}`}
+            onClick={() => onSelectSection('equipment')}
+            title={isCollapsed ? 'Equipment' : undefined}
+          >
+            <Package size={18} className="item-icon" />
+            {!isCollapsed && <span className="item-label">Equipment</span>}
+          </button>
+
+          <button
+            className={`nav-menu-item ${currentSection === 'medicines' ? 'active' : ''}`}
+            onClick={() => onSelectSection('medicines')}
+            title={isCollapsed ? 'Medicines' : undefined}
+          >
+            <Pill size={18} className="item-icon" />
+            {!isCollapsed && <span className="item-label">Medicines</span>}
+          </button>
+
+          <button
+            className={`nav-menu-item ${currentSection === 'content' ? 'active' : ''}`}
+            onClick={() => onSelectSection('content')}
+            title={isCollapsed ? 'Site Content' : undefined}
+          >
+            <FileText size={18} className="item-icon" />
+            {!isCollapsed && <span className="item-label">Site Content &amp; FAQs</span>}
           </button>
         </nav>
 

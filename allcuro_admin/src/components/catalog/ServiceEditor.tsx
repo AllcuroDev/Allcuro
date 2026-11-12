@@ -52,7 +52,7 @@ export const ServiceEditor: React.FC<ServiceEditorProps> = ({
 
   type TextKey = Exclude<
     keyof ServiceRecord,
-    'price_from' | 'image_url' | 'sort_order' | 'is_active' | 'extra_category_ids'
+    'price_from' | 'discount_percent' | 'image_url' | 'sort_order' | 'is_active' | 'extra_category_ids'
   >;
 
   const text = (key: TextKey, label: string, placeholder = '') => (
@@ -150,6 +150,21 @@ export const ServiceEditor: React.FC<ServiceEditorProps> = ({
               onChange={(e) => set('price', e.target.value)}
             />
             <small>Sorts as ₹{priceFrom(s.price) ?? '—'}</small>
+          </label>
+          <label className="catalog-field">
+            <span>Discount %</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step="0.5"
+              value={s.discount_percent ?? 0}
+              onChange={(e) => set('discount_percent', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+            />
+            <small>
+              Customers pay ₹{priceFrom(s.price) != null ? Math.round((priceFrom(s.price) ?? 0) * (1 - (s.discount_percent ?? 0) / 100)) : '—'}
+              {' '}from
+            </small>
           </label>
           {text('duration', 'Duration', '30–45 min')}
           {area('description', 'Description')}

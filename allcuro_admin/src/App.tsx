@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { OverviewView } from './components/OverviewView';
-import { VerificationQueueView } from './components/VerificationQueueView';
+import { PartnersView } from './components/PartnersView';
+import { EquipmentView } from './components/EquipmentView';
+import { MedicinesView } from './components/MedicinesView';
+import { SiteContentView } from './components/SiteContentView';
+import { countPendingPartners } from './lib/partners';
 import { LiveOperationsView } from './components/LiveOperationsView';
 import { BedOccupancyView } from './components/BedOccupancyView';
 import { PayoutsLedgerView } from './components/PayoutsLedgerView';
@@ -20,13 +24,25 @@ export function App() {
   const [currentSection, setCurrentSection] = useState<NavSection>('overview');
   const [timeframe, setTimeframe] = useState<string>('Sep 1 – Nov 30, 2026');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [pendingPartners, setPendingPartners] = useState(0);
+
+  // Real count of partners waiting for approval (public.partners).
+  useEffect(() => {
+    if (status === 'admin') void countPendingPartners().then(setPendingPartners);
+  }, [status]);
 
   const renderCurrentView = () => {
     switch (currentSection) {
       case 'overview':
         return <OverviewView />;
       case 'verification':
-        return <VerificationQueueView />;
+        return <PartnersView onCountChange={setPendingPartners} />;
+      case 'equipment':
+        return <EquipmentView />;
+      case 'medicines':
+        return <MedicinesView />;
+      case 'content':
+        return <SiteContentView />;
       case 'live_ops':
         return <LiveOperationsView />;
       case 'centres_beds':
@@ -56,7 +72,7 @@ export function App() {
       <Sidebar
         currentSection={currentSection}
         onSelectSection={(sec) => setCurrentSection(sec)}
-        pendingVerifications={mockStats.pendingVerifications}
+        pendingVerifications={pendingPartners}
         sosAlertsCount={mockStats.sosAlertsCount}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}

@@ -2482,3 +2482,145 @@
 }
 
 .catalog-field small.is-error { color: var(--accent-pink); }
+
+/* ---------- Partners, equipment, medicines, site content ---------- */
+.catalog-modal.is-xl {
+  width: min(1100px, calc(100vw - 32px));
+}
+.catalog-status.is-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+.partner-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.catalog-thumb.is-round {
+  border-radius: 50%;
+  object-fit: cover;
+}
+.partner-initials {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e7f4eb;
+  color: #26593b;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+.partner-review {
+  display: grid;
+  gap: 18px;
+  padding: 4px 0;
+}
+.partner-review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.partner-review-grid section {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.partner-review-grid h3,
+.content-section h3 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.partner-dl {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 0.82rem;
+}
+.partner-dl dt {
+  color: #6b7280;
+}
+.partner-dl dd {
+  margin: 0;
+  word-break: break-word;
+}
+.partner-visit-row,
+.partner-add-row,
+.partner-actions,
+.content-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.content-section-head {
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.partner-add-row {
+  margin-top: 12px;
+  align-items: center;
+}
+.partner-add-row select {
+  min-width: 280px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+.btn-sm-outline.is-danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.partner-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.partner-photos figure {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+.partner-photos img {
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.partner-pricing {
+  overflow-x: auto;
+}
+.catalog-inline-input {
+  width: 100%;
+  min-width: 120px;
+  padding: 5px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.82rem;
+}
+.catalog-inline-input.is-num {
+  min-width: 80px;
+  width: 96px;
+}
+.content-section {
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.faq-editor {
+  list-style: decimal;
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 14px;
+}
+.faq-editor li {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}

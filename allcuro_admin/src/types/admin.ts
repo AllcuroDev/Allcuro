@@ -7,6 +7,9 @@ export type NavSection =
   | 'compliance'
   | 'analytics'
   | 'services'
+  | 'equipment'
+  | 'medicines'
+  | 'content'
   | 'support';
 
 export interface VerificationItem {

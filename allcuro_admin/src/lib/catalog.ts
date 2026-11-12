@@ -18,15 +18,23 @@ export const priceFrom = (price: string) => {
  * and returns its public URL. A new name per upload means CDNs and the apps
  * never serve a stale cached image.
  */
-export async function uploadCatalogImage(folder: 'services' | 'categories', name: string, file: File) {
+export async function uploadCatalogImage(folder: string, name: string, file: File, bucket = IMAGE_BUCKET) {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png';
   const path = `${folder}/${name || 'new'}-${Date.now()}.${ext}`;
   const { error } = await supabase.storage
-    .from(IMAGE_BUCKET)
+    .from(bucket)
     .upload(path, file, { cacheControl: '31536000', contentType: file.type });
   if (error) throw error;
-  return supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 }
+
+/** ₹ with Indian digit grouping. */
+export const inr = (n: number | null | undefined) =>
+  n == null ? '—' : `₹${Math.round(Number(n)).toLocaleString('en-IN')}`;
+
+/** Price after a percentage discount, rounded to the rupee. */
+export const afterDiscount = (price: number | null | undefined, pct: number | null | undefined) =>
+  price == null ? null : Math.round(Number(price) * (1 - (Number(pct) || 0) / 100));
 
 /**
  * Best-effort delete of a logo uploaded from this panel. Ignores URLs from

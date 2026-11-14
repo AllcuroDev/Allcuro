@@ -496,7 +496,9 @@ class _OtpStepState extends State<_OtpStep> {
               borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
             child: Text(
-              'Demo mode: use ${AuthService.demoOtp} as verification code',
+              AuthService.isDemo
+                  ? 'Demo mode: use ${AuthService.demoOtp} as verification code'
+                  : 'Enter the 6-digit code we sent by SMS',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

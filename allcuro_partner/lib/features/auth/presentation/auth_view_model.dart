@@ -22,7 +22,7 @@ class AuthViewModel extends AsyncNotifier<AuthSession> {
   AuthRepository get _repository => ref.read(authRepositoryProvider);
 
   @override
-  Future<AuthSession> build() => _repository.loadSession();
+  Future<AuthSession> build() => _repository.loadSession(syncFromServer: true);
 
   /// Called by `PhoneAuthViewModel` once OTP verification succeeds — the
   /// session was already persisted by the repository, this just makes the

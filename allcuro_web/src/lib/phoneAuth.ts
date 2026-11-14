@@ -13,14 +13,28 @@ export const toE164 = (phone: string) => `+91${digitsOnly(phone).slice(-10)}`
 
 export class PhoneAuthError extends Error {}
 
-function friendly(message: string) {
-  const m = message.toLowerCase()
-  if (m.includes('expired') || m.includes('invalid')) return 'That code is incorrect or has expired. Request a new one.'
-  if (m.includes('rate') || m.includes('too many') || m.includes('security purposes'))
+type Stage = 'send' | 'verify'
+
+/**
+ * Turns a Supabase/Twilio error into something a user can act on. Anything we
+ * don't recognise is shown as-is (never hidden behind a generic message) and
+ * the raw error is logged so sign-in problems can be diagnosed from the console.
+ */
+function friendly(stage: Stage, error: { message: string; status?: number; code?: string }) {
+  console.warn(`[phone auth] ${stage} failed:`, error)
+  const m = error.message.toLowerCase()
+  if (m.includes('rate limit') || m.includes('too many') || m.includes('security purposes'))
     return 'Too many attempts. Please wait a minute and try again.'
-  if (m.includes('provider') || m.includes('sms') || m.includes('unsupported phone'))
-    return 'SMS sign-in isn’t set up yet. Please contact ALLCURO support.'
-  return message
+  if (stage === 'verify' && (m.includes('expired') || m.includes('invalid') || m.includes('token')))
+    return 'That code is incorrect or has expired. Request a new one.'
+  if (m.includes('phone') && m.includes('disabled'))
+    return 'Phone sign-in is turned off in Supabase (Authentication → Providers → Phone).'
+  if (m.includes('signups not allowed') || m.includes('signup is disabled'))
+    return 'New sign-ups are turned off in Supabase (Authentication → Sign In / Providers).'
+  if (m.includes('database error'))
+    return 'Your account could not be created (database trigger error). Please contact ALLCURO support.'
+  if (stage === 'send') return `Could not send the code: ${error.message}`
+  return error.message
 }
 
 const client = () => {
@@ -32,7 +46,7 @@ const client = () => {
 export async function requestOtp(phone: string) {
   if (digitsOnly(phone).length !== 10) throw new PhoneAuthError('Enter a valid 10-digit mobile number.')
   const { error } = await client().auth.signInWithOtp({ phone: toE164(phone) })
-  if (error) throw new PhoneAuthError(friendly(error.message))
+  if (error) throw new PhoneAuthError(friendly('send', error))
 }
 
 /** Checks the code and signs in. Returns the signed-in user's id. */
@@ -40,7 +54,8 @@ export async function confirmOtp(phone: string, code: string) {
   const token = code.trim()
   if (!/^\d{6}$/.test(token)) throw new PhoneAuthError('Enter the 6-digit code we sent you.')
   const { data, error } = await client().auth.verifyOtp({ phone: toE164(phone), token, type: 'sms' })
-  if (error || !data.user) throw new PhoneAuthError(friendly(error?.message ?? 'Could not sign in.'))
+  if (error) throw new PhoneAuthError(friendly('verify', error))
+  if (!data.user) throw new PhoneAuthError('Could not sign in. Please try again.')
   return data.user.id
 }
 

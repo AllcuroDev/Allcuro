@@ -84,9 +84,12 @@ class AuthRepository {
 
   AuthRepository(this._service);
 
-  Future<AuthSession> loadSession() async {
+  /// [syncFromServer] pulls admin-set statuses from `public.partners` first —
+  /// done on app start and right after sign-in, not after every local change.
+  Future<AuthSession> loadSession({bool syncFromServer = false}) async {
     final loggedIn = await _service.isLoggedIn();
     if (!loggedIn) return AuthSession.initial;
+    if (syncFromServer) await _service.syncStatusesFromServer();
     return AuthSession(
       isLoggedIn: true,
       role: await _service.getPersistedRole(),
@@ -105,7 +108,7 @@ class AuthRepository {
     required String otp,
   }) async {
     await _service.verifyOtp(phone: phone, otp: otp);
-    return loadSession();
+    return loadSession(syncFromServer: true);
   }
 
   Future<AuthSession> selectRole(ProviderRole role) async {

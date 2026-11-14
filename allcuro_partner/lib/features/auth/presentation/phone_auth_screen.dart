@@ -459,7 +459,9 @@ class _OtpStepState extends State<_OtpStep> {
         ],
         const Spacer(),
         Text(
-          'Demo mode — use ${AuthService.demoOtp} as the code.',
+          AuthService.isDemo
+              ? 'Demo mode — use ${AuthService.demoOtp} as the code.'
+              : 'Enter the 6-digit code we sent by SMS.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 12,

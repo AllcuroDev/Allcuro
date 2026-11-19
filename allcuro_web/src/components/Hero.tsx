@@ -10,11 +10,24 @@ import { ClockIcon, HeadsetIcon, RupeeIcon, ShieldIcon } from './Icons'
 
 // Every care type, then medicine delivery, then the full list. One row on wide
 // screens, wrapping onto more rows as the screen narrows (index.css `.tiles`).
-const heroTiles = (): { id: string; slug: string; href?: string; label: string; icon: string }[] => [
-  ...categories.map((c) => ({ id: c.id, slug: c.slug, href: c.href, label: c.label, icon: c.icon })),
-  { id: 'medicines', slug: 'medicines', href: '/medicines', label: 'Order Medicines', icon: 'med_kit' },
-  { id: ALL_SLUG, slug: ALL_SLUG, label: 'All Services', icon: 'see_all' },
-]
+const heroTiles = (): { id: string; slug: string; href?: string; label: string; icon: string }[] => {
+  const list: { id: string; slug: string; href?: string; label: string; icon: string }[] = categories.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    href: c.href,
+    label: c.label,
+    icon: c.icon,
+  }))
+  // Only append Order Medicines if it isn't already coming dynamically from service_categories
+  const hasMedicines = list.some(
+    (c) => c.slug === 'medicines' || c.id === 'medicines' || (c.id as string).toLowerCase().includes('medicine'),
+  )
+  if (!hasMedicines) {
+    list.push({ id: 'medicines', slug: 'medicines', href: '/medicines', label: 'Order Medicines', icon: 'order_medicine' })
+  }
+  list.push({ id: ALL_SLUG, slug: ALL_SLUG, label: 'All Services', icon: 'see_all' })
+  return list
+}
 
 export function Hero() {
   const images = useCategoryImages()
@@ -36,16 +49,25 @@ export function Hero() {
               {site.tilesTitle}
             </h2>
             <ul className="tiles">
-              {tiles.map((t) => (
-                <li key={t.slug}>
-                  <Link to={categoryHref(t)} className="tile">
-                    <span className="tile-art">
-                      <Artwork image={images[t.id]} icon={t.icon} size={60} />
-                    </span>
-                    <span className="tile-label">{t.label}</span>
-                  </Link>
-                </li>
-              ))}
+              {tiles.map((t) => {
+                // Look up image by id, or common medicine keys if it's the medicines tile
+                const tileImage =
+                  images[t.id] ??
+                  (t.slug === 'medicines' || t.id === 'medicines'
+                    ? images['Order Medicine'] ?? images['Order Medicines'] ?? images['medicines'] ?? images['order_medicine']
+                    : undefined)
+
+                return (
+                  <li key={t.slug}>
+                    <Link to={categoryHref(t)} className="tile">
+                      <span className="tile-art">
+                        <Artwork image={tileImage} icon={t.icon} size={60} />
+                      </span>
+                      <span className="tile-label">{t.label}</span>
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           </nav>
         </div>

@@ -1,163 +1,45 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import centre from '../assets/images/centre-1.jpg'
-import wheelchair from '../assets/images/eq-wheelchair.jpg'
+import { useState, type CSSProperties } from 'react'
 import { categories, categoryHref } from '../data/categories'
 import { faqs } from '../data/faqs'
 import { site } from '../data/site'
 import { Link } from './Link'
-import { ArrowIcon, PhoneIcon } from './Icons'
-import { CareIcon } from './CareIcon'
+import { PhoneIcon } from './Icons'
 import { Logo } from './Logo'
-import { motionOn } from '../motion'
 
 const steps = [
   {
-    title: 'Choose a service',
-    text: 'Pick what you need — a 30-minute visit, a few hours of help, or a full 12 or 24-hour shift.',
+    title: 'Tell us what you need',
+    text: 'A short visit, a few hours, or a full-day shift. Booking takes a minute.',
   },
   {
-    title: 'We send a verified professional',
-    text: 'A qualified, police-verified nurse, caregiver or therapist comes to your door.',
+    title: 'We send someone you can trust',
+    text: 'A trained, background-checked nurse or caregiver comes to your home.',
   },
   {
-    title: 'Care, with support behind it',
-    text: 'Vitals are recorded at every visit, and a senior medical supervisor is always on call.',
+    title: 'We stay with you',
+    text: 'We keep track of every visit, and a medical supervisor is always a call away.',
   },
 ]
 
 export function HowItWorks() {
-  const [active, setActive] = useState(0)
-  const [paused, setPaused] = useState(false)
-  const [inView, setInView] = useState(false)
-  const ref = useRef<HTMLOListElement>(null)
-
-  // Walk through the steps on their own while the section is on screen,
-  // unless the visitor is pointing at or focused on one.
-  useEffect(() => {
-    const el = ref.current
-    if (!el || !motionOn()) return
-    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.4 })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
-
-  useEffect(() => {
-    if (!inView || paused) return
-    const t = window.setInterval(() => setActive((a) => (a + 1) % steps.length), 3600)
-    return () => window.clearInterval(t)
-  }, [inView, paused])
-
   return (
     <section className="section" id="how-it-works" aria-labelledby="how-title">
       <div className="container">
-        <div className="section-head reveal">
-          <p className="eyebrow">How it works</p>
-          <h2 id="how-title">Care at home in three simple steps</h2>
+        <div className="section-head how-head reveal">
+          <h2 id="how-title">How it works</h2>
+          <p className="section-sub">Care at home in three simple steps</p>
         </div>
-        <ol
-          ref={ref}
-          className="steps reveal"
-          style={{ '--progress': (active + 1) / steps.length } as CSSProperties}
-          onPointerLeave={() => setPaused(false)}
-          onBlur={() => setPaused(false)}
-        >
+        <ol className="how-steps reveal">
           {steps.map((s, i) => (
-            <li
-              key={s.title}
-              className={`spotlight ${i === active ? 'is-active' : ''} ${i < active ? 'is-done' : ''}`}
-              style={{ '--d': i * 2 } as CSSProperties}
-              tabIndex={0}
-              onPointerEnter={() => {
-                setPaused(true)
-                setActive(i)
-              }}
-              onFocus={() => {
-                setPaused(true)
-                setActive(i)
-              }}
-            >
-              <span className="step-num">{String(i + 1).padStart(2, '0')}</span>
+            <li key={s.title}>
+              <span className="how-num" aria-hidden="true">
+                {i + 1}
+              </span>
               <h3>{s.title}</h3>
               <p>{s.text}</p>
-              {i < steps.length - 1 && <StepArrow order={i * 2 + 1} />}
             </li>
           ))}
         </ol>
-      </div>
-    </section>
-  )
-}
-
-/**
- * Decorative arrow in the gap after a step card: points right while the cards
- * sit in a row, and down (rotated in CSS) once they stack. Under `.motion` it
- * draws itself in after the card before it (`--d` continues the cards' stagger).
- */
-function StepArrow({ order }: { order: number }) {
-  return (
-    <span className="step-arrow" aria-hidden="true" style={{ '--d': order } as CSSProperties}>
-      <svg viewBox="0 0 44 20" width="44" height="20" focusable="false">
-        <path className="step-arrow-line" d="M3 10H37" pathLength={100} />
-        <path className="step-arrow-head" d="M30 3l8 7-8 7" />
-      </svg>
-    </span>
-  )
-}
-
-export function MoreCare() {
-  const cards = [
-    {
-      img: centre,
-      alt: 'A bright, clean room at a care centre',
-      title: 'Verified care centres',
-      text: 'Field-audited elder care homes, rehabilitation and recovery centres with clear bed availability.',
-      to: '/centres',
-      cta: 'See centres & book a bed',
-    },
-    {
-      img: wheelchair,
-      alt: 'A wheelchair available on rent',
-      title: 'Medical equipment on rent',
-      text: 'Wheelchairs, hospital beds and oxygen concentrators delivered home, with a refundable deposit.',
-      to: '/equipment',
-      cta: 'Rent equipment',
-    },
-    {
-      img: null,
-      alt: '',
-      title: 'Order medicines',
-      text: 'Search medicines or upload a prescription. A licensed pharmacist checks it, and we deliver within 3 hours.',
-      to: '/medicines',
-      cta: 'Order medicines',
-    },
-  ]
-  return (
-    <section className="section section-tint" aria-labelledby="more-title">
-      <div className="container">
-        <div className="section-head reveal">
-          <p className="eyebrow">Also on ALLCURO</p>
-          <h2 id="more-title">Need a stay, equipment or medicines?</h2>
-        </div>
-        <div className="more-grid">
-          {cards.map((c, i) => (
-            <article className="more-card spotlight reveal" key={c.title} style={{ '--d': i } as CSSProperties}>
-              <div className={`more-img ${c.img ? '' : 'more-img-art'}`}>
-                {c.img ? (
-                  <img src={c.img} alt={c.alt} loading="lazy" />
-                ) : (
-                  <CareIcon name="med_kit" size={72} />
-                )}
-              </div>
-              <div>
-                <h3>{c.title}</h3>
-                <p>{c.text}</p>
-                <Link className="text-link" to={c.to}>
-                  {c.cta} <ArrowIcon size={16} />
-                </Link>
-              </div>
-            </article>
-          ))}
-        </div>
       </div>
     </section>
   )

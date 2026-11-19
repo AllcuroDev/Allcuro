@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../core/network/supabase_config.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/app_shell.dart';
 
-const _faqs = [
+const List<Faq> _faqs = [
   (
     question: 'Can I book a nurse for just 30 minutes?',
     answer:
@@ -27,11 +30,30 @@ const _faqs = [
   ),
 ];
 
-class FaqScreen extends StatelessWidget {
+typedef Faq = ({String question, String answer});
+
+/// FAQs from Supabase `public.faqs` (is_active, sort_order); the bundled list
+/// above is used when Supabase isn't configured or returns nothing.
+final faqsProvider = FutureProvider<List<Faq>>((ref) async {
+  final client = supabaseOrNull;
+  if (client == null) return _faqs;
+  try {
+    final rows = await client.from('faqs').select('question, answer').eq('is_active', true).order('sort_order');
+    final live = [
+      for (final r in rows) (question: (r['question'] ?? '').toString(), answer: (r['answer'] ?? '').toString()),
+    ];
+    return live.isEmpty ? _faqs : live;
+  } catch (e) {
+    debugPrint('FAQs: using bundled list — $e');
+    return _faqs;
+  }
+});
+
+class FaqScreen extends ConsumerWidget {
   const FaqScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return AppShell(
       currentPath: '/faq',
       child: ListView(
@@ -83,7 +105,7 @@ class FaqScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          for (final faq in _faqs) ...[
+          for (final faq in ref.watch(faqsProvider).valueOrNull ?? _faqs) ...[
             _FaqTile(question: faq.question, answer: faq.answer),
             const SizedBox(height: 8),
           ],

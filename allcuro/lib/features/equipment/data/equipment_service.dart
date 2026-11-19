@@ -1,60 +1,46 @@
+import 'package:flutter/foundation.dart';
+
+import '../../../core/network/supabase_config.dart';
+import '../../partners/data/partners_source.dart';
 import 'models/equipment.dart';
 
-const _eqWheelchairImage = 'assets/images/eq-wheelchair.jpg';
-const _eqOxygenImage = 'assets/images/eq-oxygen.jpg';
-const _eqBedImage = 'assets/images/eq-bed.jpg';
-
-/// Local data source for rentable equipment. Stands in for a future call
-/// through [ApiClient] — the repository above it doesn't care whether the
-/// list comes from here or from the network.
+/// Rentable equipment from `public.equipment` (is_active rows, admin-set
+/// rates and discount). Empty without Supabase or when nothing is listed.
 class EquipmentService {
   const EquipmentService();
 
-  Future<List<Equipment>> fetchAll() async => _equipment;
+  Future<List<Equipment>> fetchAll() async {
+    final client = supabaseOrNull;
+    if (client == null) return const [];
+    try {
+      final rows = await client.from('equipment').select('*').eq('is_active', true).order('sort_order');
+      return rows.map(equipmentFromRow).toList();
+    } catch (e) {
+      debugPrint('Equipment: not loaded — $e');
+      return const [];
+    }
+  }
 
-  Future<List<String>> fetchCategories() async => _categories;
+  /// Categories present in [items], in first-seen order.
+  static List<String> categoriesOf(List<Equipment> items) =>
+      {for (final e in items) if (e.category.isNotEmpty) e.category}.toList();
 }
 
-const List<String> _categories = [
-  'Mobility',
-  'Respiratory',
-  'Hospital furniture',
-  'Monitoring',
-  'ICU-grade',
-];
-
-const List<Equipment> _equipment = [
-  Equipment(
-    id: 'wheelchair',
-    name: 'Foldable wheelchair',
-    category: 'Mobility',
-    photo: _eqWheelchairImage,
-    perDay: 120,
-    perMonth: 1800,
-    deposit: 2000,
-    condition: 'Refurbished · Grade A',
-    availableIn: '560076',
-  ),
-  Equipment(
-    id: 'oxygen',
-    name: 'Oxygen concentrator 5L',
-    category: 'Respiratory',
-    photo: _eqOxygenImage,
-    perDay: 450,
-    perMonth: 8500,
-    deposit: 10000,
-    condition: 'New',
-    availableIn: '560076',
-  ),
-  Equipment(
-    id: 'bed',
-    name: 'Electric hospital bed',
-    category: 'Hospital furniture',
-    photo: _eqBedImage,
-    perDay: 380,
-    perMonth: 6900,
-    deposit: 8000,
-    condition: 'Refurbished · Grade A',
-    availableIn: '560076',
-  ),
-];
+Equipment equipmentFromRow(Map<String, dynamic> r) {
+  final discount = r['discount_percent'] as num?;
+  final stock = r['stock_quantity'] as num?;
+  return Equipment(
+    id: rowText(r, 'slug').isNotEmpty ? rowText(r, 'slug') : rowText(r, 'id'),
+    name: rowText(r, 'title'),
+    category: rowText(r, 'category'),
+    photo: rowText(r, 'photo_url'),
+    description: rowText(r, 'description'),
+    features: rowList(r, 'features'),
+    perDay: discounted((r['daily_rate'] as num?) ?? 0, discount),
+    perMonth: discounted((r['monthly_rate'] as num?) ?? 0, discount),
+    deposit: rowInt(r, 'deposit_amount'),
+    condition: rowText(r, 'condition'),
+    availableIn: rowText(r, 'available_pincodes'),
+    inStock: (r['is_available'] as bool? ?? true) && (stock ?? 1) > 0,
+  );
+}

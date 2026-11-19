@@ -3,15 +3,14 @@ import {
   MAX_QTY,
   medicineById,
   medicineTotals,
-  PRESCRIPTION_DEMO_ITEMS,
   type Medicine,
 } from '../data/medicines'
-import { delay, memoryStore, persistedStore } from '../lib/store'
+import { memoryStore, persistedStore } from '../lib/store'
 
 // Medicine cart + attached prescription. Kept on this device in localStorage
 // (it survives reloads and sign-in) and cleared once the order is paid.
-// Until a pharmacy backend exists, prescription review is simulated: after a
-// short "pharmacist is reading" pause the demo items are added to the cart.
+// The prescription travels with the order; a licensed pharmacist checks it
+// before dispatch. Nothing is added to the cart automatically.
 
 export interface CartLine {
   id: string
@@ -31,13 +30,11 @@ export interface PrescriptionFile {
 
 const PREVIEW_MAX_BYTES = 1.5 * 1024 * 1024
 const PREVIEW_MAX_SIDE = 240
-const REVIEW_MS = 2500
-
 // persistedStore already wraps every localStorage write in try/catch, so a full
 // quota only means the value lives in memory for this visit.
 const items = persistedStore<CartLine[]>('cart', [])
 const prescription = persistedStore<PrescriptionFile | null>('cart.prescription', null)
-/** The file being "read" by the pharmacist right now (not persisted). */
+/** The file being attached right now (not persisted). */
 const reviewing = memoryStore<Omit<PrescriptionFile, 'uploadedAt'> | null>(null)
 
 export interface CartItem extends CartLine {
@@ -118,9 +115,8 @@ async function thumbnail(file: File): Promise<string | undefined> {
 }
 
 /**
- * Attaches a prescription and simulates the pharmacist reading it: after a
- * short pause the medicines on it are added to the cart, tagged "From your
- * prescription". Call `prescriptionProblem` first.
+ * Attaches a prescription to the order (the pharmacist checks it before
+ * dispatch). Call `prescriptionProblem` first.
  */
 export async function attachPrescription(file: File) {
   if (reviewing.get()) return
@@ -129,17 +125,7 @@ export async function attachPrescription(file: File) {
   try {
     const preview = await thumbnail(file)
     reviewing.set({ ...meta, preview })
-    await delay(REVIEW_MS)
     prescription.set({ ...meta, preview, uploadedAt: Date.now() })
-    items.set((lines) => {
-      const next = [...lines]
-      for (const p of PRESCRIPTION_DEMO_ITEMS) {
-        const i = next.findIndex((l) => l.id === p.id)
-        if (i === -1) next.push({ id: p.id, qty: p.qty, fromPrescription: true })
-        else next[i] = { ...next[i], qty: Math.max(next[i].qty, p.qty), fromPrescription: true }
-      }
-      return next
-    })
   } finally {
     reviewing.set(null)
   }

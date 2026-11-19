@@ -2,8 +2,10 @@ import '../../auth/data/auth_service.dart';
 import 'verified_identity.dart';
 
 /// Local mock of the registry and Aadhaar e-KYC lookups. Nothing leaves the
-/// device: each call validates the input's format, waits briefly, and
-/// returns fixed demo records. Swap the bodies for the real verification
+/// device: each call validates the input's format, waits briefly, and echoes
+/// back what the partner entered (their registered name) — it never invents
+/// a person. Date of birth, gender and address aren't returned, so the
+/// sign-up wizard asks for them. Swap the bodies for the real verification
 /// partner's API (NRTS / NMC-IMR lookup, UIDAI-licensed e-KYC via a KUA)
 /// once there's a backend — callers only depend on the return types.
 class IdentityService {
@@ -13,33 +15,40 @@ class IdentityService {
 
   static final _registrationPattern = RegExp(r'^[A-Za-z0-9/\-]{4,20}$');
 
-  Future<RegistryRecord> verifyNuid(String nuid) async {
+  Future<RegistryRecord> verifyNuid(String nuid, {required String registeredName}) async {
     await Future.delayed(const Duration(milliseconds: 900));
     if (!RegExp(r'^[A-Za-z0-9]{6,20}$').hasMatch(nuid.trim())) {
       throw const AuthException('Enter the NUID exactly as shown on your NRTS registration.');
     }
-    return const RegistryRecord(
-      registeredName: 'Priya Sharma',
+    return RegistryRecord(
+      registeredName: _requireName(registeredName),
       council: 'Karnataka State Nursing Council',
       qualification: 'GNM',
-      registeredSince: 2017,
     );
+  }
+
+  static String _requireName(String name) {
+    final clean = name.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (clean.length < 2) {
+      throw const AuthException('Enter your full name exactly as registered.');
+    }
+    return clean;
   }
 
   Future<RegistryRecord> verifyCouncilRegistration({
     required bool isPhysiotherapist,
     required String registrationNumber,
     required String council,
+    required String registeredName,
   }) async {
     await Future.delayed(const Duration(milliseconds: 900));
     if (!_registrationPattern.hasMatch(registrationNumber.trim())) {
       throw const AuthException('Enter a valid registration number (letters, digits, / or -).');
     }
     return RegistryRecord(
-      registeredName: 'Arjun Rao',
+      registeredName: _requireName(registeredName),
       council: council,
       qualification: isPhysiotherapist ? 'BPT' : 'MBBS',
-      registeredSince: 2013,
     );
   }
 
@@ -51,27 +60,18 @@ class IdentityService {
     }
   }
 
+  /// [registeredName] is the name from the registry step — the mock returns
+  /// it as the Aadhaar name (a real e-KYC returns the name on Aadhaar, which
+  /// the caller then matches against the registry).
   Future<AadhaarProfile> verifyAadhaarOtp({
     required String aadhaar,
     required String otp,
-    required bool isClinician,
+    required String registeredName,
   }) async {
     await Future.delayed(const Duration(milliseconds: 800));
     if (otp != demoOtp) {
       throw const AuthException('Incorrect OTP. Please try again.');
     }
-    return isClinician
-        ? AadhaarProfile(
-            name: 'Arjun Rao',
-            dob: DateTime(1988, 11, 2),
-            gender: 'Male',
-            address: '221, 27th Main, HSR Layout Sector 2, Bengaluru, Karnataka 560102',
-          )
-        : AadhaarProfile(
-            name: 'Priya Sharma',
-            dob: DateTime(1996, 5, 14),
-            gender: 'Female',
-            address: '12, 4th Cross, Indiranagar, Bengaluru, Karnataka 560038',
-          );
+    return AadhaarProfile(name: registeredName);
   }
 }

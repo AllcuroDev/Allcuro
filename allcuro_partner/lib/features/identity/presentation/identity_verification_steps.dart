@@ -38,12 +38,16 @@ class RegistrationStep extends ConsumerStatefulWidget {
 }
 
 class _RegistrationStepState extends ConsumerState<RegistrationStep> {
+  late final _name = TextEditingController(
+    text: ref.read(identityVerificationViewModelProvider).data.registeredName,
+  );
   late final _number = TextEditingController(
     text: ref.read(identityVerificationViewModelProvider).data.registrationNumber,
   );
 
   @override
   void dispose() {
+    _name.dispose();
     _number.dispose();
     super.dispose();
   }
@@ -104,6 +108,15 @@ class _RegistrationStepState extends ConsumerState<RegistrationStep> {
           const SizedBox(height: 16),
         ],
         WizardTextField(
+          key: const ValueKey('registered-name'),
+          controller: _name,
+          label: 'Full name (as registered)',
+          hint: 'Exactly as on your council registration',
+          onChanged: (v) => vm.editRegistration((d) => d.registeredName = v),
+        ),
+        const SizedBox(height: 14),
+        WizardTextField(
+          key: const ValueKey('registration-number'),
           controller: _number,
           label: isClinician
               ? (isPhysio ? 'Physiotherapy registration number' : 'Doctor registration number')
@@ -124,7 +137,7 @@ class _RegistrationStepState extends ConsumerState<RegistrationStep> {
               ('Name', registry.registeredName),
               ('Council', registry.council),
               ('Qualification', registry.qualification),
-              ('Registered since', '${registry.registeredSince}'),
+              if (registry.registeredSince != null) ('Registered since', '${registry.registeredSince}'),
             ],
           ),
         ],
@@ -171,8 +184,8 @@ class _AadhaarStepState extends ConsumerState<AadhaarStep> {
         const WizardStepHeader(
           title: 'Aadhaar verification',
           subtitle:
-              'We confirm your identity with Aadhaar e-KYC. Your name, date of birth, '
-              'gender and address are taken from Aadhaar and can\'t be edited later.',
+              'We confirm your identity with Aadhaar e-KYC. Details taken from Aadhaar '
+              'can\'t be edited later.',
         ),
         WizardTextField(
           controller: _aadhaar,
@@ -239,9 +252,9 @@ class _AadhaarStepState extends ConsumerState<AadhaarStep> {
             title: 'Aadhaar verified',
             rows: [
               ('Name', profile.name),
-              ('Date of birth', _formatDate(profile.dob)),
-              ('Gender', profile.gender),
-              ('Address', profile.address),
+              if (profile.dob != null) ('Date of birth', _formatDate(profile.dob!)),
+              if (profile.gender != null) ('Gender', profile.gender!),
+              if (profile.address.isNotEmpty) ('Address', profile.address),
               ('Aadhaar', 'XXXX XXXX $last4'),
             ],
           ),

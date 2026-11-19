@@ -25,6 +25,14 @@ class AuthSession {
   final VerifiedIdentity? nurseIdentity;
   final VerifiedIdentity? clinicianIdentity;
 
+  /// The centre's name from its sign-up (or `public.partners`). Null until
+  /// the centre wizard has been submitted.
+  final String? centreName;
+
+  /// When ALLCURO scheduled the centre's site visit — null until an admin
+  /// has actually set one.
+  final DateTime? centreSiteVisitAt;
+
   const AuthSession({
     required this.isLoggedIn,
     this.role,
@@ -33,6 +41,8 @@ class AuthSession {
     this.centreVerificationStatus = CentreVerificationStatus.incomplete,
     this.nurseIdentity,
     this.clinicianIdentity,
+    this.centreName,
+    this.centreSiteVisitAt,
   });
 
   static const initial = AuthSession(isLoggedIn: false);
@@ -45,6 +55,25 @@ class AuthSession {
   /// Verified identity for whichever visit-based role is active.
   VerifiedIdentity? get practitionerIdentity =>
       role == ProviderRole.clinician ? clinicianIdentity : nurseIdentity;
+
+  /// The active partner's own name — never a placeholder person. Falls back
+  /// to a neutral label when sign-up hasn't captured a name yet.
+  /// Up to two initials of [displayName], for the header avatar.
+  String get initials {
+    final letters = displayName
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .take(2)
+        .map((w) => w[0].toUpperCase())
+        .join();
+    return letters.isEmpty ? 'P' : letters;
+  }
+
+  String get displayName {
+    if (role == ProviderRole.centre) return centreName ?? 'Your centre';
+    final name = practitionerIdentity?.fullName.trim() ?? '';
+    return name.isEmpty ? 'Partner' : name;
+  }
 
   /// Whether the active role must still verify registration + Aadhaar. This
   /// comes before the sign-up wizard, which prefills from the result.
@@ -73,6 +102,8 @@ class AuthSession {
       centreVerificationStatus: centreVerificationStatus ?? this.centreVerificationStatus,
       nurseIdentity: nurseIdentity ?? this.nurseIdentity,
       clinicianIdentity: clinicianIdentity ?? this.clinicianIdentity,
+      centreName: centreName,
+      centreSiteVisitAt: centreSiteVisitAt,
     );
   }
 }
@@ -98,6 +129,8 @@ class AuthRepository {
       centreVerificationStatus: await _service.getCentreVerificationStatus(),
       nurseIdentity: await _service.getNurseIdentity(),
       clinicianIdentity: await _service.getClinicianIdentity(),
+      centreName: await _service.getCentreName(),
+      centreSiteVisitAt: await _service.getCentreSiteVisitAt(),
     );
   }
 
@@ -128,6 +161,11 @@ class AuthRepository {
 
   Future<AuthSession> setCentreVerificationStatus(CentreVerificationStatus status) async {
     await _service.setCentreVerificationStatus(status);
+    return loadSession();
+  }
+
+  Future<AuthSession> saveCentreName(String name) async {
+    await _service.setCentreName(name);
     return loadSession();
   }
 

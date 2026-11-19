@@ -6,7 +6,7 @@ import { PR } from '../routes'
 import { EmptyState, PBody, PCard, PIcon, PPageHead, type PIconName } from '../ui'
 import type { JobRequestSummary } from './data'
 import { PageIntro } from './parts'
-import { acceptRequest, declineRequest, requestDetail, requestsStore, restoreDemoRequests } from './state'
+import { acceptRequest, declineRequest, requestDetail, requestsStore } from './state'
 
 // Shift requests — requests/job_requests_screen.dart (tab) and
 // requests/job_detail_screen.dart (full-screen detail).
@@ -20,13 +20,8 @@ export function NurseRequestsPage() {
         <PCard>
           <EmptyState
             icon="clipboard"
-            title="No pending requests right now"
-            text="New patient requests in your service area will show up here."
-            action={
-              <button type="button" className="p-btn p-btn-outline p-btn-sm" onClick={restoreDemoRequests}>
-                Reload demo requests
-              </button>
-            }
+            title="No visit requests yet"
+            text="You’ll see them here once families start booking. Keep your availability and skills up to date so the right requests reach you."
           />
         </PCard>
       ) : (

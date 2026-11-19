@@ -162,6 +162,67 @@ class CareIcons {
 
   /// Icon for a `MasterServiceItem.id`; falls back to the nursing glyph.
   static String forService(String serviceId) => _byService[serviceId] ?? nursing;
+
+  static const _bundledKeys = {
+    'airflow',
+    'baby',
+    'baby_bath',
+    'bandage',
+    'bath',
+    'bed',
+    'blood_drop',
+    'bottle',
+    'bp_sugar',
+    'brain',
+    'brush',
+    'care_centre',
+    'caregiver',
+    'catheter',
+    'clean',
+    'clipboard',
+    'companionship',
+    'diagnostics',
+    'diaper',
+    'doctor',
+    'dumbbell',
+    'ecg',
+    'elder_care',
+    'feeding',
+    'grooming',
+    'heartbeat',
+    'home_nurse',
+    'injection',
+    'iv_drip',
+    'lungs',
+    'med_kit',
+    'med_reminder',
+    'memory',
+    'mother',
+    'mother_baby',
+    'nasal_tube',
+    'nebulizer',
+    'nursing',
+    'nutrition',
+    'onesie',
+    'patch',
+    'physio',
+    'pouch',
+    'pregnancy',
+    'quick',
+    'scissors',
+    'see_all',
+    'sponge_bath',
+    'toilet',
+    'urine_bag',
+    'vitals',
+    'walker',
+    'wheelchair',
+  };
+
+  /// Icon for a service: the admin's `icon` key when it names a bundled
+  /// glyph, else the per-service mapping.
+  static String forItem(String serviceId, String iconKey) =>
+      _bundledKeys.contains(iconKey) ? '$_dir/$iconKey.svg' : forService(serviceId);
 }
 
 /// A single care glyph tinted with [color].

@@ -30,6 +30,8 @@ export interface Service {
   alsoIn?: string[]
   /** Supabase Storage artwork uploaded from the admin; overrides `icon` when set. */
   imageUrl?: string
+  /** Admin-set Quick Book Nurse position, 1–5. */
+  quickBookRank?: number
 }
 
 export interface Category {

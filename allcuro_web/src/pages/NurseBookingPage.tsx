@@ -2,16 +2,15 @@ import { useMemo, useState } from 'react'
 import { AddressPicker } from '../components/AddressPicker'
 import { CareIcon } from '../components/CareIcon'
 import { PinIcon, ShieldIcon } from '../components/Icons'
-import { Link } from '../components/Link'
 import { PaymentDialog } from '../components/PaymentDialog'
-import { ActionBar, Avatar, Bill, Field, OptionCard, PageHead, Select, StepTitle, TextArea, Spinner } from '../components/ui'
+import { ActionBar, Bill, Field, OptionCard, PageHead, Select, StepTitle, TextArea, Spinner } from '../components/ui'
 import { toast } from '../lib/toast'
 import { billTotal, coupons, INSTANT_SLOT, servicePrice, timeSlots, visitBill, type QuickService } from '../data/booking'
 import { nurseById } from '../data/providers'
 import { site } from '../data/site'
 import { isCompanionService } from '../data/categories'
 import { useServices } from '../state/catalog'
-import { inr, ratingText } from '../lib/format'
+import { inr } from '../lib/format'
 import { navigate, useQuery } from '../router'
 import { requireLogin, useAuth } from '../state/auth'
 import { createBooking, type Payment } from '../state/bookings'
@@ -31,42 +30,31 @@ export function NurseBookingPage() {
 
   const nurse = nurseById(nurseId) ?? null
 
-  // The service picked on the site goes first, then the chosen partner's other
-  // rates; with neither, the first few nursing services. All prices are the
-  // admin's (the partner's rate card, else the catalog price less discount).
+  // Every nursing service with a price (plus the one picked on the site, e.g. a
+  // companion service). A chosen nurse's own rate wins over the catalog price.
   const options = useMemo<QuickService[]>(() => {
+    const isNursing = (x: (typeof services)[number]) =>
+      x.category === 'Nursing Care' || (x.alsoIn ?? []).includes('Nursing Care') || x.id === serviceId
     const out: QuickService[] = []
-    const fromService = (x: (typeof services)[number], price: number | null): QuickService | null =>
-      price == null
-        ? null
-        : { id: x.id, title: x.name, duration: x.duration, price, icon: x.icon, description: x.description }
-    const s = services.find((x) => x.id === serviceId)
-    if (s) {
-      const own = nurse?.shifts.find((sh) => sh.serviceId === s.id)
-      const o = fromService(s, own?.price ?? servicePrice(s))
-      if (o) out.push(o)
+    for (const x of services) {
+      if (!isNursing(x)) continue
+      const price = nurse?.shifts.find((sh) => sh.serviceId === x.id)?.price ?? servicePrice(x)
+      if (price == null) continue
+      out.push({ id: x.id, title: x.name, duration: x.duration, price, icon: x.icon, description: x.description })
     }
-    nurse?.shifts.forEach((sh, i) => {
-      if (s && sh.serviceId === s.id) return
-      const svc = services.find((x) => x.id === sh.serviceId)
-      out.push({
-        id: `rate-${i}`,
-        title: sh.label,
-        duration: sh.unit,
-        price: sh.price,
-        icon: svc?.icon ?? 'home_nurse',
-        description: svc?.description ?? `With ${nurse.name}`,
-      })
-    })
-    if (!out.length)
-      services
-        .filter((x) => x.category === 'Nursing Care')
-        .forEach((x) => {
-          const o = out.length < 4 ? fromService(x, servicePrice(x)) : null
-          if (o) out.push(o)
-        })
     return out
   }, [services, serviceId, nurse])
+
+  // The admin's top five (Services catalog → "Quick Book Nurse"), topped up in
+  // catalog order if fewer than five are set.
+  const quick = useMemo(() => {
+    const rank = new Map(services.map((x) => [x.id, x.quickBookRank]))
+    const ranked = options
+      .filter((o) => rank.get(o.id) != null)
+      .sort((x, y) => (rank.get(x.id) ?? 0) - (rank.get(y.id) ?? 0))
+    const rest = options.filter((o) => rank.get(o.id) == null)
+    return [...ranked, ...rest].slice(0, 5)
+  }, [options, services])
 
   const slots = useMemo(() => {
     if (!slotParam || slotParam.startsWith('⚡')) return timeSlots
@@ -76,7 +64,7 @@ export function NurseBookingPage() {
   // Hospital Companion services are non-clinical: the desk assigns a companion, not a nurse.
   const pickedService = services.find((x) => x.id === serviceId)
 
-  const [optionId, setOptionId] = useState(optionParam ?? options[0]?.id ?? '')
+  const [optionId, setOptionId] = useState(optionParam ?? serviceId ?? quick[0]?.id ?? '')
   const [slot, setSlot] = useState(slotParam && !slotParam.startsWith('⚡') ? slotParam : INSTANT_SLOT)
   const [patient, setPatient] = useState({ name: profile?.name ?? '', age: '', gender: GENDERS[0], notes: '' })
   const [couponInput, setCouponInput] = useState('')
@@ -85,7 +73,9 @@ export function NurseBookingPage() {
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
 
-  const option = options.find((o) => o.id === optionId) ?? options[0]
+  const option = options.find((o) => o.id === optionId) ?? quick[0]
+  const inQuick = quick.some((o) => o.id === option?.id)
+  const [showAll, setShowAll] = useState(false)
   const companion = !!pickedService && !!option && isCompanionService(pickedService) && option.id === pickedService.id
   if (!option)
     return (
@@ -191,64 +181,71 @@ export function NurseBookingPage() {
         </p>
 
         <section className="form-section">
-          <StepTitle n={1}>{companion ? 'Select service' : 'Select nursing service'}</StepTitle>
-          <div className="stack-sm">
-            {options.map((o) => (
-              <OptionCard key={o.id} name="service" checked={o.id === option.id} onSelect={() => setOptionId(o.id)}>
-                <span className="option-icon">
-                  <CareIcon name={o.icon} size={22} />
+          <StepTitle n={1}>{companion ? 'Select service' : 'What do you need?'}</StepTitle>
+          <div className="quick-nurse" role="radiogroup" aria-label="Nursing service">
+            {quick.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                role="radio"
+                aria-checked={o.id === option.id}
+                className={`quick-nurse-tile ${o.id === option.id ? 'is-on' : ''}`}
+                onClick={() => {
+                  setOptionId(o.id)
+                  setShowAll(false)
+                }}
+              >
+                <span className="quick-nurse-icon">
+                  <CareIcon name={o.icon} size={24} />
                 </span>
-                <span className="option-text">
-                  <strong>{o.title}</strong>
-                  <small>
-                    {o.duration} · {o.description}
-                  </small>
-                </span>
-                <strong className="option-price">{inr(o.price)}</strong>
-              </OptionCard>
+                <span className="quick-nurse-name">{o.title}</span>
+                <small>{inr(o.price)}</small>
+              </button>
             ))}
-          </div>
-        </section>
-
-        <section className="form-section">
-          <StepTitle n={2}>{companion ? 'Your companion' : 'Your nurse'}</StepTitle>
-          {companion ? (
-            <div className="panel nurse-pick">
-              <Avatar name="Hospital Companion" />
-              <div>
-                <strong>A verified ALLCURO companion will be assigned</strong>
-                <small>You’ll see their name, photo ID and a visit OTP in My Bookings.</small>
-              </div>
-            </div>
-          ) : nurse ? (
-            <div className="panel nurse-pick">
-              <Avatar name={nurse.name} />
-              <div>
-                <strong>{nurse.name}</strong>
-                <span>
-                  {nurse.level} · {nurse.experience} yrs · {ratingText(nurse.rating, nurse.reviews)}
+            {options.length > quick.length && (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!inQuick}
+                aria-expanded={showAll || !inQuick}
+                className={`quick-nurse-tile ${!inQuick ? 'is-on' : ''}`}
+                onClick={() => setShowAll((v) => !v)}
+              >
+                <span className="quick-nurse-icon">
+                  <CareIcon name="see_all" size={24} />
                 </span>
-              </div>
-              <Link to={serviceId ? `/service/${serviceId}` : '/nurses'} className="link-btn">
-                Change
-              </Link>
-            </div>
-          ) : (
-            <div className="panel nurse-pick">
-              <Avatar name="ALLCURO" />
-              <div>
-                <strong>Best-matched verified nurse near you</strong>
-                <small>Our care desk assigns an approved nurse; you’ll see their details in My Bookings.</small>
-              </div>
-              <Link to="/nurses" className="link-btn">
-                Choose
-              </Link>
-            </div>
+                <span className="quick-nurse-name">{inQuick ? 'Other' : option.title}</span>
+                <small>{inQuick ? `${options.length - quick.length} more` : inr(option.price)}</small>
+              </button>
+            )}
+          </div>
+          {(showAll || !inQuick) && (
+            <label className="quick-nurse-all">
+              <span className="sr-only">All nursing services</span>
+              <select
+                className="input"
+                value={inQuick ? '' : option.id}
+                onChange={(e) => {
+                  if (e.target.value) setOptionId(e.target.value)
+                }}
+              >
+                <option value="" disabled>
+                  Choose from all nursing services
+                </option>
+                {options
+                  .filter((o) => !quick.some((q) => q.id === o.id))
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.title} · {inr(o.price)}
+                    </option>
+                  ))}
+              </select>
+            </label>
           )}
         </section>
 
         <section className="form-section">
-          <StepTitle n={3}>Timing & shift slot</StepTitle>
+          <StepTitle n={2}>Timing & shift slot</StepTitle>
           <div className="stack-sm">
             {slots.map((s) => (
               <OptionCard key={s} name="slot" compact checked={s === slot} onSelect={() => setSlot(s)}>
@@ -261,7 +258,7 @@ export function NurseBookingPage() {
         </section>
 
         <section className="form-section">
-          <StepTitle n={4}>Patient information</StepTitle>
+          <StepTitle n={3}>Patient information</StepTitle>
           <div className="panel form-grid">
             <Field
               label="Patient full name"
@@ -307,7 +304,7 @@ export function NurseBookingPage() {
         </section>
 
         <section className="form-section">
-          <StepTitle n={5}>Bill summary</StepTitle>
+          <StepTitle n={4}>Bill summary</StepTitle>
           <div className="panel">
             <div className="coupon-row">
               <input

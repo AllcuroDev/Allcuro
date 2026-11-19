@@ -17,13 +17,13 @@ class BankAccountInfo {
   final bool isVerified;
 
   const BankAccountInfo({
-    this.bankName = 'HDFC Bank',
-    this.accountNumber = '50100482910482',
-    this.ifscCode = 'HDFC0001234',
-    this.accountHolderName = 'Sanjeevani Elder Care LLP',
+    this.bankName = '',
+    this.accountNumber = '',
+    this.ifscCode = '',
+    this.accountHolderName = '',
     this.accountType = 'Current Account',
-    this.panNumber = 'AAECS1234F',
-    this.isVerified = true,
+    this.panNumber = '',
+    this.isVerified = false,
   });
 
   static const empty = BankAccountInfo(
@@ -51,16 +51,43 @@ class ComplianceDocItem {
   final bool isUploaded;
   final bool isVerified;
 
+  /// A required document type the partner hasn't uploaded yet. The titles
+  /// are reference content; upload / verification state starts false.
   const ComplianceDocItem({
     required this.id,
     required this.title,
     required this.docType,
-    required this.fileName,
-    required this.expiry,
-    this.isUploaded = true,
-    this.isVerified = true,
+    this.fileName = '',
+    this.expiry = 'Not uploaded yet',
+    this.isUploaded = false,
+    this.isVerified = false,
   });
 }
+
+/// Nurse document ids — [PartnerOnboardingState] derives setup progress from them.
+const nurseHprDocId = 'nd-hpr';
+const nurseDegreeDocId = 'nd-degree';
+const nurseMedicalDocId = 'nd-medical';
+
+/// Required document types (reference content) — all start not uploaded.
+const _centreRequiredDocs = [
+  ComplianceDocItem(id: 'cd-1', title: 'Clinical Establishment Act Licence (CEA)', docType: 'cea_license'),
+  ComplianceDocItem(id: 'cd-2', title: 'Fire Safety NOC Certificate', docType: 'fire_noc'),
+  ComplianceDocItem(id: 'cd-3', title: 'Biomedical Waste Authorisation', docType: 'biowaste_noc'),
+  ComplianceDocItem(id: 'cd-4', title: 'Building & Ward Inspection Photos', docType: 'facility_photos'),
+];
+
+// Aadhaar and NUID / council registration are verified electronically at
+// sign-up, so they aren't uploads here.
+const _nurseRequiredDocs = [
+  ComplianceDocItem(
+    id: nurseHprDocId,
+    title: 'Healthcare Professionals Registry (HPR / ABHA ID)',
+    docType: 'hpr_registry',
+  ),
+  ComplianceDocItem(id: nurseDegreeDocId, title: 'Nursing Degree / GNM Diploma Certificate', docType: 'degree_certificate'),
+  ComplianceDocItem(id: nurseMedicalDocId, title: 'Medical Fitness & TB Screening Report', docType: 'medical_fitness'),
+];
 
 class PartnerOnboardingState {
   final BankAccountInfo bankAccount;
@@ -72,7 +99,6 @@ class PartnerOnboardingState {
   final List<String> nurseSkills;
   final double nurseHourlyRate;
   final double nurseDailyRate;
-  final bool nurseMedicalFitnessDone;
   final bool nursePoliceConsentDone;
 
   const PartnerOnboardingState({
@@ -85,9 +111,24 @@ class PartnerOnboardingState {
     required this.nurseSkills,
     required this.nurseHourlyRate,
     required this.nurseDailyRate,
-    required this.nurseMedicalFitnessDone,
     required this.nursePoliceConsentDone,
   });
+
+  /// A partner who hasn't added anything yet.
+  static const initial = PartnerOnboardingState(
+    bankAccount: BankAccountInfo.empty,
+    rooms: [],
+    staffMembers: [],
+    equipmentList: [],
+    centreComplianceDocs: _centreRequiredDocs,
+    nurseDocs: _nurseRequiredDocs,
+    nurseSkills: [],
+    nurseHourlyRate: 0,
+    nurseDailyRate: 0,
+    nursePoliceConsentDone: false,
+  );
+
+  bool _nurseDocUploaded(String id) => nurseDocs.any((d) => d.id == id && d.isUploaded);
 
   // Calculate Centre Steps
   bool get centreEntityDone => true; // Finished at initial 3-step signup
@@ -115,8 +156,8 @@ class PartnerOnboardingState {
 
   // Calculate Nurse Steps
   bool get nurseProfileDone => true; // Finished at initial 3-step signup
-  bool get nurseDocsDone => nurseDocs.where((d) => d.isUploaded).length >= 2;
-  bool get nurseMedicalFitnessComplete => nurseMedicalFitnessDone;
+  bool get nurseDocsDone => _nurseDocUploaded(nurseHprDocId) && _nurseDocUploaded(nurseDegreeDocId);
+  bool get nurseMedicalFitnessComplete => _nurseDocUploaded(nurseMedicalDocId);
   bool get nurseBankDone => bankAccount.isConfigured;
   bool get nurseSkillsDone => nurseSkills.isNotEmpty;
   bool get nursePoliceDone => nursePoliceConsentDone;
@@ -147,7 +188,6 @@ class PartnerOnboardingState {
     List<String>? nurseSkills,
     double? nurseHourlyRate,
     double? nurseDailyRate,
-    bool? nurseMedicalFitnessDone,
     bool? nursePoliceConsentDone,
   }) {
     return PartnerOnboardingState(
@@ -160,7 +200,6 @@ class PartnerOnboardingState {
       nurseSkills: nurseSkills ?? this.nurseSkills,
       nurseHourlyRate: nurseHourlyRate ?? this.nurseHourlyRate,
       nurseDailyRate: nurseDailyRate ?? this.nurseDailyRate,
-      nurseMedicalFitnessDone: nurseMedicalFitnessDone ?? this.nurseMedicalFitnessDone,
       nursePoliceConsentDone: nursePoliceConsentDone ?? this.nursePoliceConsentDone,
     );
   }
@@ -174,190 +213,21 @@ final partnerOnboardingProvider =
 class PartnerOnboardingNotifier extends StateNotifier<PartnerOnboardingState> {
   final Ref ref;
 
-  PartnerOnboardingNotifier(this.ref)
-      : super(
-          PartnerOnboardingState(
-            bankAccount: const BankAccountInfo(),
-            rooms: const [
-              Room(
-                id: 'r-101',
-                ward: 'Care Wing A',
-                roomNumber: 'Room 101 · Semi-Private',
-                ratePerDay: '₹2,200/day',
-                beds: [
-                  BedSlot(id: 'b-101-1', label: 'Bed 101-A', occupied: true),
-                  BedSlot(id: 'b-101-2', label: 'Bed 101-B', occupied: false),
-                ],
-              ),
-              Room(
-                id: 'r-102',
-                ward: 'Care Wing A',
-                roomNumber: 'Room 102 · Deluxe Single Suite',
-                ratePerDay: '₹3,500/day',
-                beds: [
-                  BedSlot(id: 'b-102-1', label: 'Bed 102-A', occupied: false),
-                ],
-              ),
-              Room(
-                id: 'r-icu-1',
-                ward: 'ICU & High Dependency',
-                roomNumber: 'ICU Unit 01',
-                ratePerDay: '₹4,800/day',
-                beds: [
-                  BedSlot(id: 'b-icu-1', label: 'ICU Bed 1', occupied: true),
-                  BedSlot(id: 'b-icu-2', label: 'ICU Bed 2', occupied: false),
-                ],
-              ),
-            ],
-            staffMembers: const [
-              StaffMember(
-                id: 's-1',
-                name: 'Rekha Menon',
-                roleType: StaffRoleType.gnmNurse,
-                qualification: 'GNM · 5 yrs exp',
-                experienceYears: 5,
-                ratio: '1:4',
-                shiftRate: 1800.0,
-              ),
-              StaffMember(
-                id: 's-2',
-                name: 'Joseph Thomas',
-                roleType: StaffRoleType.bscNursing,
-                qualification: 'B.Sc Nursing · 8 yrs exp',
-                experienceYears: 8,
-                ratio: '1:2',
-                shiftRate: 2400.0,
-              ),
-              StaffMember(
-                id: 's-3',
-                name: 'Farida Sheikh',
-                roleType: StaffRoleType.careAttendant,
-                qualification: 'Certified Attendant · 3 yrs exp',
-                experienceYears: 3,
-                ratio: '1:4',
-                shiftRate: 1200.0,
-                certificateExpiring: true,
-              ),
-            ],
-            equipmentList: const [
-              EquipmentItem(
-                id: 'eq-1',
-                title: 'Philips EverFlo 5L Oxygen Concentrator',
-                category: EquipmentCategory.respiratory,
-                condition: EquipmentCondition.brandNew,
-                dailyRate: 250.0,
-                monthlyRate: 4500.0,
-                depositAmount: 5000.0,
-                stockQuantity: 6,
-                specifications: '0.5 to 5 LPM continuous oxygen, 93% ± 3% purity, quiet operation.',
-              ),
-              EquipmentItem(
-                id: 'eq-2',
-                title: 'Motorized 5-Function ICU Hospital Bed with Mattress',
-                category: EquipmentCategory.hospitalBeds,
-                condition: EquipmentCondition.brandNew,
-                dailyRate: 350.0,
-                monthlyRate: 6500.0,
-                depositAmount: 8000.0,
-                stockQuantity: 4,
-                specifications: 'Remote-controlled backrest, leg elevation, Trendelenburg, and height adjust.',
-              ),
-              EquipmentItem(
-                id: 'eq-3',
-                title: 'ResMed AirSense 10 AutoSet BiPAP/CPAP Machine',
-                category: EquipmentCategory.respiratory,
-                condition: EquipmentCondition.refurbishedGradeA,
-                dailyRate: 300.0,
-                monthlyRate: 5500.0,
-                depositAmount: 6000.0,
-                stockQuantity: 3,
-                specifications: 'Auto-adjusting pressure, integrated heated humidifier, cellular connectivity.',
-              ),
-              EquipmentItem(
-                id: 'eq-4',
-                title: 'Karma Champion Deluxe Folding Wheelchair',
-                category: EquipmentCategory.mobility,
-                condition: EquipmentCondition.brandNew,
-                dailyRate: 100.0,
-                monthlyRate: 1800.0,
-                depositAmount: 2000.0,
-                stockQuantity: 8,
-                specifications: 'Lightweight aluminum frame, ergonomic armrests, puncture-proof wheels.',
-              ),
-            ],
-            centreComplianceDocs: const [
-              ComplianceDocItem(
-                id: 'cd-1',
-                title: 'Clinical Establishment Act Licence (CEA)',
-                docType: 'cea_license',
-                fileName: 'karnataka_cea_reg_2026.pdf',
-                expiry: 'Expires 14 Mar 2027',
-                isUploaded: true,
-                isVerified: true,
-              ),
-              ComplianceDocItem(
-                id: 'cd-2',
-                title: 'Fire Safety NOC Certificate',
-                docType: 'fire_noc',
-                fileName: 'fire_safety_clearance.pdf',
-                expiry: 'Valid till 30 Nov 2026',
-                isUploaded: true,
-                isVerified: true,
-              ),
-              ComplianceDocItem(
-                id: 'cd-3',
-                title: 'Biomedical Waste Authorisation',
-                docType: 'biowaste_noc',
-                fileName: 'kspcb_biowaste_mou.pdf',
-                expiry: 'Valid till 18 Jan 2027',
-                isUploaded: true,
-                isVerified: true,
-              ),
-              ComplianceDocItem(
-                id: 'cd-4',
-                title: 'Building & Ward Inspection Photos',
-                docType: 'facility_photos',
-                fileName: 'facility_photos_batch_6.zip',
-                expiry: 'Uploaded 16 Aug 2026',
-                isUploaded: true,
-                isVerified: true,
-              ),
-            ],
-            // Aadhaar and NUID / council registration are verified
-            // electronically at sign-up, so they aren't uploads here.
-            nurseDocs: const [
-              ComplianceDocItem(
-                id: 'nd-hpr',
-                title: 'Healthcare Professionals Registry (HPR / ABHA ID)',
-                docType: 'hpr_registry',
-                fileName: 'hpr_council_enrollment.pdf',
-                expiry: 'ABHA-HPR: 91-4820-9921-1209 (Verified)',
-                isUploaded: true,
-                isVerified: true,
-              ),
-              ComplianceDocItem(
-                id: 'nd-3',
-                title: 'Nursing Degree / GNM Diploma Certificate',
-                docType: 'degree_certificate',
-                fileName: 'gnm_diploma_certificate.pdf',
-                expiry: 'Verified',
-                isUploaded: true,
-                isVerified: true,
-              ),
-            ],
-            nurseSkills: const [
-              'Post-Surgical Care',
-              'ICU & Tracheostomy Care',
-              'IV Infusion & Injections',
-              'Wound & Bed Sore Dressing',
-              'Elderly Mobility & Vitals',
-            ],
-            nurseHourlyRate: 250.0,
-            nurseDailyRate: 2200.0,
-            nurseMedicalFitnessDone: true,
-            nursePoliceConsentDone: true,
-          ),
-        );
+  /// Everything partner-entered (rooms, staff, equipment, documents, bank,
+  /// skills) starts empty / not uploaded — the partner adds it.
+  PartnerOnboardingNotifier(this.ref) : super(PartnerOnboardingState.initial);
+
+  void setNurseSkills(List<String> skills) {
+    state = state.copyWith(nurseSkills: List.unmodifiable(skills));
+  }
+
+  void setNurseDailyRate(double rate) {
+    state = state.copyWith(nurseDailyRate: rate);
+  }
+
+  void setNursePoliceConsent(bool consented) {
+    state = state.copyWith(nursePoliceConsentDone: consented);
+  }
 
   // Bank update
   void updateBankAccount(BankAccountInfo bank) {
@@ -448,11 +318,11 @@ class PartnerOnboardingNotifier extends StateNotifier<PartnerOnboardingState> {
     }
   }
 
-  // Submit Centre for review & schedule site visit
+  // Submit Centre for review — ALLCURO schedules the site visit afterwards.
   Future<void> submitCentreForReview() async {
     await ref
         .read(authViewModelProvider.notifier)
-        .setCentreVerificationStatus(CentreVerificationStatus.siteVisitScheduled);
+        .setCentreVerificationStatus(CentreVerificationStatus.pendingReview);
   }
 
   // Submit Nurse for review

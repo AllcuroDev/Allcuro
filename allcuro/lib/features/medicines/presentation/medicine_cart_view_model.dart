@@ -8,7 +8,8 @@ class CartLine {
   final Medicine medicine;
   final int qty;
 
-  /// Added by the pharmacist from the uploaded prescription.
+  /// Marked by the pharmacist as coming from the prescription (set by the
+  /// pharmacy once a backend exists; the app itself never adds lines).
   final bool fromPrescription;
 
   const CartLine({required this.medicine, required this.qty, this.fromPrescription = false});
@@ -45,7 +46,9 @@ class PrescriptionFile {
   }
 }
 
-enum PrescriptionStatus { none, reviewing, reviewed }
+/// [attached]: the file goes with the order; a licensed pharmacist reviews it
+/// and calls the customer to confirm the medicines.
+enum PrescriptionStatus { none, attached }
 
 @immutable
 class MedicineCartState {
@@ -76,8 +79,10 @@ class MedicineCartState {
   /// Rx medicines can only be ordered against a prescription.
   bool get needsPrescription => hasRxItems && prescription == null;
 
-  bool get canCheckout =>
-      lines.isNotEmpty && !needsPrescription && prescriptionStatus != PrescriptionStatus.reviewing;
+  /// A prescription alone is a valid order: the pharmacist prices it and calls.
+  bool get isPrescriptionOnly => lines.isEmpty && prescription != null;
+
+  bool get canCheckout => (lines.isNotEmpty || prescription != null) && !needsPrescription;
 
   int qtyOf(String medicineId) {
     for (final l in lines) {
@@ -100,12 +105,10 @@ class MedicineCartState {
   }
 }
 
-/// Medicine cart for the session. Demo mode: the pharmacist's prescription
-/// review is simulated; with a backend, [attachPrescription] would upload the
-/// file and the review result would come back from the pharmacy partner.
+/// Medicine cart for the session. A prescription is only attached here — it
+/// never adds medicines on its own; the pharmacist reviews it after the order
+/// is placed and calls the customer.
 class MedicineCartViewModel extends Notifier<MedicineCartState> {
-  static const reviewDuration = Duration(milliseconds: 2500);
-
   @override
   MedicineCartState build() => const MedicineCartState();
 
@@ -126,30 +129,9 @@ class MedicineCartViewModel extends Notifier<MedicineCartState> {
   void add(Medicine medicine) => setQty(medicine, state.qtyOf(medicine.id) + 1);
   void remove(Medicine medicine) => setQty(medicine, state.qtyOf(medicine.id) - 1);
 
-  /// Attaches a prescription and runs the (simulated) pharmacist review,
-  /// which adds the prescribed medicines to the cart.
-  Future<void> attachPrescription(PrescriptionFile file) async {
-    state = state.copyWith(prescription: file, prescriptionStatus: PrescriptionStatus.reviewing);
-    await Future.delayed(reviewDuration);
-    // The user may have removed or replaced the file while it was reviewed.
-    if (!identical(state.prescription, file)) return;
-
-    final lines = [...state.lines];
-    MedicineCatalog.prescriptionDemoItems.forEach((id, qty) {
-      final medicine = MedicineCatalog.byId(id);
-      if (medicine == null) return;
-      final i = lines.indexWhere((l) => l.medicine.id == id);
-      if (i >= 0) {
-        final current = lines[i];
-        lines[i] = current.copyWith(
-          qty: current.qty < qty ? qty : current.qty,
-          fromPrescription: true,
-        );
-      } else {
-        lines.add(CartLine(medicine: medicine, qty: qty, fromPrescription: true));
-      }
-    });
-    state = state.copyWith(lines: lines, prescriptionStatus: PrescriptionStatus.reviewed);
+  /// Attaches (or replaces) the prescription sent with the order.
+  void attachPrescription(PrescriptionFile file) {
+    state = state.copyWith(prescription: file, prescriptionStatus: PrescriptionStatus.attached);
   }
 
   void removePrescription() {

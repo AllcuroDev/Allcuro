@@ -4,7 +4,7 @@ part 'pricing_breakdown.freezed.dart';
 part 'pricing_breakdown.g.dart';
 
 @freezed
-class PricingBreakdown with _$PricingBreakdown {
+abstract class PricingBreakdown with _$PricingBreakdown {
   const factory PricingBreakdown({
     required int base,
     required int discount,

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/surface.dart';
+import '../../../auth/presentation/onboarding_view_model.dart';
+import '../signup/nurse_signup_steps_b.dart' show skillTags;
 import '../home/nurse_home_view_model.dart';
 import '../nurse_providers.dart';
 
@@ -29,19 +31,10 @@ class _AvailabilityScreenState extends ConsumerState<AvailabilityScreen> {
   late bool _isOnDuty;
   late String _selectedTiming;
 
-  final Set<String> _activeDaySlots = {
-    'Mon-Morning (08:00 AM – 02:00 PM)',
-    'Tue-12-Hr Day (08:00 AM – 08:00 PM)',
-    'Wed-12-Hr Day (08:00 AM – 08:00 PM)',
-    'Thu-Night Shift (08:00 PM – 08:00 AM)',
-    'Fri-12-Hr Day (08:00 AM – 08:00 PM)',
-    'Sat-Morning (08:00 AM – 02:00 PM)',
-  };
-
-  final List<DateTime> _blockedDates = [
-    DateTime(2026, 8, 30),
-    DateTime(2026, 8, 31),
-  ];
+  // Partner-entered: nothing is selected or blocked until the nurse sets it.
+  final Set<String> _activeDaySlots = {};
+  final List<DateTime> _blockedDates = [];
+  late final TextEditingController _rateController;
 
   @override
   void initState() {
@@ -49,6 +42,24 @@ class _AvailabilityScreenState extends ConsumerState<AvailabilityScreen> {
     final repo = ref.read(nurseRepositoryProvider);
     _isOnDuty = repo.isOnDuty;
     _selectedTiming = repo.currentShiftTiming;
+    final rate = ref.read(partnerOnboardingProvider).nurseDailyRate;
+    _rateController = TextEditingController(text: rate > 0 ? rate.toInt().toString() : '');
+  }
+
+  @override
+  void dispose() {
+    _rateController.dispose();
+    super.dispose();
+  }
+
+  void _toggleSkill(String skill) {
+    final current = [...ref.read(partnerOnboardingProvider).nurseSkills];
+    if (current.contains(skill)) {
+      current.remove(skill);
+    } else {
+      current.add(skill);
+    }
+    ref.read(partnerOnboardingProvider.notifier).setNurseSkills(current);
   }
 
   void _toggleDuty(bool value) async {
@@ -124,6 +135,8 @@ class _AvailabilityScreenState extends ConsumerState<AvailabilityScreen> {
                 children: [
                   _buildDutyToggleCard(),
                   const SizedBox(height: 14),
+                  _buildSkillsCard(),
+                  const SizedBox(height: 14),
                   _buildDefaultShiftTimingCard(),
                   const SizedBox(height: 14),
                   _buildWeeklySlotGrid(),
@@ -189,6 +202,48 @@ class _AvailabilityScreenState extends ConsumerState<AvailabilityScreen> {
             value: _isOnDuty,
             onChanged: _toggleDuty,
             activeTrackColor: AppColors.success,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkillsCard() {
+    final skills = ref.watch(partnerOnboardingProvider).nurseSkills;
+    return Surface(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Skills & Daily Rate',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Pick what you are experienced in — this decides which requests you are matched with.',
+            style: TextStyle(fontSize: 11.5, color: AppColors.mutedForeground),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: skillTags
+                .map((tag) => _SlotChip(label: tag, selected: skills.contains(tag), onTap: () => _toggleSkill(tag)))
+                .toList(),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _rateController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Expected rate per day (₹)',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (v) => ref
+                .read(partnerOnboardingProvider.notifier)
+                .setNurseDailyRate(double.tryParse(v.trim()) ?? 0),
           ),
         ],
       ),

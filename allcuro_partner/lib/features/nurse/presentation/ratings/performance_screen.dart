@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/ui/empty_state.dart';
 import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/surface.dart';
 import '../../data/models/nurse_performance_model.dart';
@@ -30,7 +31,19 @@ class PerformanceScreen extends ConsumerWidget {
               child: performanceAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
                 error: (err, _) => Center(child: Text('Error: $err')),
-                data: (perf) => ListView(
+                data: (perf) => !perf.hasActivity
+                    ? ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                        children: const [
+                          EmptyState(
+                            icon: Icons.analytics_outlined,
+                            title: 'No performance data yet',
+                            message:
+                                'Your attendance, ratings and reviews will appear here after your first completed visit.',
+                          ),
+                        ],
+                      )
+                    : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                   children: [
                     _buildOverviewGrid(perf),
@@ -46,7 +59,10 @@ class PerformanceScreen extends ConsumerWidget {
                       style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5, color: AppColors.ink),
                     ),
                     const SizedBox(height: 10),
-                    ...perf.feedbacks.map((f) => _FeedbackTile(feedback: f)),
+                    if (perf.feedbacks.isEmpty)
+                      const EmptyState(message: 'No reviews yet.')
+                    else
+                      ...perf.feedbacks.map((f) => _FeedbackTile(feedback: f)),
                   ],
                 ),
               ),
@@ -67,9 +83,9 @@ class PerformanceScreen extends ConsumerWidget {
                 icon: Icons.star_rounded,
                 iconColor: AppColors.amber,
                 iconBg: AppColors.amberSoft,
-                value: '${perf.averageRating} ★',
+                value: perf.hasRatings ? '${perf.averageRating.toStringAsFixed(1)} ★' : '—',
                 label: 'Average Rating',
-                sublabel: 'from ${perf.totalRatingsCount} reviews',
+                sublabel: perf.hasRatings ? 'from ${perf.totalRatingsCount} reviews' : 'No reviews yet',
               ),
             ),
             const SizedBox(width: 10),
@@ -95,7 +111,7 @@ class PerformanceScreen extends ConsumerWidget {
                 iconBg: AppColors.successSoft,
                 value: '${perf.attendanceRate}%',
                 label: 'Attendance Rate',
-                sublabel: '96.8% on-time arrival',
+                sublabel: '${perf.onTimeArrivalRate}% on-time arrival',
               ),
             ),
             const SizedBox(width: 10),
@@ -104,9 +120,9 @@ class PerformanceScreen extends ConsumerWidget {
                 icon: Icons.verified_user_outlined,
                 iconColor: AppColors.coral,
                 iconBg: AppColors.coralSoft,
-                value: '0 Active',
+                value: '${perf.totalComplaints - perf.resolvedComplaints} Open',
                 label: 'Complaints',
-                sublabel: '100% resolution rate',
+                sublabel: '${perf.resolvedComplaints} of ${perf.totalComplaints} resolved',
               ),
             ),
           ],
@@ -125,15 +141,15 @@ class PerformanceScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Rating Distribution', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink)),
-              Text('Top 5% Partner in Bengaluru', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.success)),
+              Text('${perf.totalRatingsCount} ratings', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.mutedForeground)),
             ],
           ),
           const SizedBox(height: 14),
-          _RatingBarRow(stars: 5, count: 108, total: perf.totalRatingsCount),
-          _RatingBarRow(stars: 4, count: 8, total: perf.totalRatingsCount),
-          _RatingBarRow(stars: 3, count: 2, total: perf.totalRatingsCount),
-          _RatingBarRow(stars: 2, count: 0, total: perf.totalRatingsCount),
-          _RatingBarRow(stars: 1, count: 0, total: perf.totalRatingsCount),
+          _RatingBarRow(stars: 5, count: perf.ratingDistribution[5] ?? 0, total: perf.totalRatingsCount),
+          _RatingBarRow(stars: 4, count: perf.ratingDistribution[4] ?? 0, total: perf.totalRatingsCount),
+          _RatingBarRow(stars: 3, count: perf.ratingDistribution[3] ?? 0, total: perf.totalRatingsCount),
+          _RatingBarRow(stars: 2, count: perf.ratingDistribution[2] ?? 0, total: perf.totalRatingsCount),
+          _RatingBarRow(stars: 1, count: perf.ratingDistribution[1] ?? 0, total: perf.totalRatingsCount),
         ],
       ),
     );
@@ -171,7 +187,10 @@ class PerformanceScreen extends ConsumerWidget {
               color: AppColors.successSoft,
               borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
-            child: const Text('Payout Active', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.success)),
+            child: Text(
+              '₹${perf.pendingPayout.toInt()} pending',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.success),
+            ),
           ),
         ],
       ),
@@ -185,10 +204,12 @@ class PerformanceScreen extends ConsumerWidget {
         children: [
           const Icon(Icons.shield_outlined, color: AppColors.success, size: 20),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Zero disciplinary strikes. 100% compliance with ALLCURO clinical guidelines.',
-              style: TextStyle(fontSize: 11.5, color: AppColors.ink, height: 1.3),
+              perf.totalComplaints == 0
+                  ? 'No complaints on record.'
+                  : '${perf.totalComplaints} complaint(s) on record, ${perf.resolvedComplaints} resolved.',
+              style: const TextStyle(fontSize: 11.5, color: AppColors.ink, height: 1.3),
             ),
           ),
         ],

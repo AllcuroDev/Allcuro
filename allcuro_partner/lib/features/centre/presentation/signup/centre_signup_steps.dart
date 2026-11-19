@@ -20,9 +20,9 @@ const legalDocumentLabels = {
 };
 
 const siteVisitSlots = [
-  'Thu, 21 Aug · Morning (10 AM – 1 PM)',
-  'Fri, 22 Aug · Afternoon (2 PM – 5 PM)',
-  'Mon, 25 Aug · Morning (10 AM – 1 PM)',
+  'Weekday morning (10 AM – 1 PM)',
+  'Weekday afternoon (2 PM – 5 PM)',
+  'Saturday morning (10 AM – 1 PM)',
 ];
 
 const roomTypeOptions = ['General Ward', 'Private Room', 'ICU'];
@@ -696,7 +696,7 @@ class CentreReviewSubmitStep extends ConsumerWidget {
               _SummaryRow(label: 'Centre name', value: data.centreName),
               _SummaryRow(label: 'Type', value: data.centreType ?? '—'),
               _SummaryRow(label: 'Ownership', value: data.ownershipType ?? '—'),
-              _SummaryRow(label: 'Staff on payroll', value: '${data.staff.length}'),
+              _SummaryRow(label: 'Staff on payroll', value: '${data.staff.where((m) => m.isComplete).length}'),
               _SummaryRow(label: 'Site visit', value: data.siteVisitSlot ?? '—'),
               _SummaryRow(label: 'Photos', value: '${data.photoCount}'),
             ],

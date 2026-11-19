@@ -10,9 +10,9 @@ import { addStaff, updateStaff } from './state'
 export function StaffDialog({ member, onClose }: { member?: StaffMember; onClose: () => void }) {
   const [name, setName] = useState(member?.name ?? '')
   const [roleType, setRoleType] = useState<StaffRoleType>(member?.roleType ?? 'gnmNurse')
-  const [experienceYears, setExp] = useState(member ? String(member.experienceYears) : '4')
+  const [experienceYears, setExp] = useState(member ? String(member.experienceYears) : '')
   const [ratio, setRatio] = useState(member?.ratio ?? '1:4')
-  const [shiftRate, setRate] = useState(member ? String(member.shiftRate) : '1800')
+  const [shiftRate, setRate] = useState(member ? String(member.shiftRate) : '')
   const [tried, setTried] = useState(false)
 
   const errs = {
@@ -43,7 +43,7 @@ export function StaffDialog({ member, onClose }: { member?: StaffMember; onClose
       submitLabel={member ? 'Save Changes' : 'Add Staff to Roster'}
     >
       <PField label="Staff Full Name" error={tried ? errs.name : null}>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Deepa Nair, Ramesh Bhat" autoComplete="off" autoFocus />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name as on their certificate" autoComplete="off" autoFocus />
       </PField>
       <PField label="Role & Qualification">
         <select value={roleType} onChange={(e) => setRoleType(e.target.value as StaffRoleType)}>

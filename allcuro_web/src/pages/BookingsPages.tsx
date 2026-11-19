@@ -237,9 +237,11 @@ function NurseTracker({ booking: b }: { booking: Booking }) {
                 {b.providerName} <ShieldIcon size={16} />
               </strong>
               <span>{b.providerQualifications}</span>
-              <span className="rating">
-                <StarIcon size={15} /> {b.providerRating} · verified visits
-              </span>
+              {b.providerRating > 0 && (
+                <span className="rating">
+                  <StarIcon size={15} /> {b.providerRating}
+                </span>
+              )}
             </div>
           </div>
           <div className="row-actions">

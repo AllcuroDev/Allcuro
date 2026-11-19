@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/content/site_contact.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/app_shell.dart';
 import '../../../core/ui/care_icon.dart';
@@ -11,6 +12,7 @@ import '../../auth/presentation/auth_view_model.dart';
 import '../../auth/presentation/quick_login_sheet.dart';
 
 import '../../services/data/master_services_catalog.dart';
+import 'home_view_model.dart';
 import '../../services/data/services_repository.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -142,9 +144,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               borderRadius: BorderRadius.circular(AppRadius.lg),
               onTap: () {
                 Navigator.pop(ctx);
+                final phone = ref.read(careDeskPhoneProvider);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Connecting to ALLCURO Clinical Helpline (+91 1800-ALLCURO)...'),
+                  SnackBar(
+                    content: Text(phone.isEmpty
+                        ? 'Our care desk will call you back shortly.'
+                        : 'ALLCURO care desk: $phone'),
                     backgroundColor: AppColors.primary,
                   ),
                 );
@@ -491,6 +496,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _ExpressNurseBanner(
+                // Live count of approved nurses/caregivers; 0 → neutral copy.
+                nurseCount: ref.watch(homeViewModelProvider).valueOrNull?.nurses.length ?? 0,
                 onTap: () => _handleBookingGuard(() => context.push('/nurse-quick-booking')),
               ),
             ),
@@ -1106,8 +1113,9 @@ class _HomeGridItem extends StatelessWidget {
 // ---------------------------------------------------------------------------
 class _ExpressNurseBanner extends StatefulWidget {
   final VoidCallback onTap;
+  final int nurseCount;
 
-  const _ExpressNurseBanner({required this.onTap});
+  const _ExpressNurseBanner({required this.onTap, this.nurseCount = 0});
 
   @override
   State<_ExpressNurseBanner> createState() => _ExpressNurseBannerState();
@@ -1118,11 +1126,12 @@ class _ExpressNurseBannerState extends State<_ExpressNurseBanner> with TickerPro
   static const _saffronLight = Color(0xFFFF9A3C);
   static const _saffronDeep = Color(0xFFC85A00);
 
-  static const _tickerLines = [
-    '12 nurses available near you',
-    'Avg. arrival today · 32 mins',
-    'GNM / ANM verified · HPR registered',
-  ];
+  List<String> get _tickerLines => [
+        widget.nurseCount > 0
+            ? '${widget.nurseCount} verified ${widget.nurseCount == 1 ? 'professional' : 'professionals'} on ALLCURO'
+            : 'Our care desk assigns a verified nurse',
+        'Qualified GNM / ANM / B.Sc nurses only',
+      ];
 
   late final AnimationController _pulse = AnimationController(
     vsync: this,

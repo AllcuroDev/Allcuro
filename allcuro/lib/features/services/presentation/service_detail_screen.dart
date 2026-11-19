@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/app_shell.dart';
+import '../../../core/ui/empty_state.dart';
+import '../../../core/ui/partner_avatar.dart';
 import '../../../core/ui/surface.dart';
 import '../../../core/utils/currency.dart';
 import '../../auth/presentation/auth_view_model.dart';
@@ -154,7 +156,9 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
                 n.level.toLowerCase().contains(f.toLowerCase()) ||
                 n.tags.any((t) => t.toLowerCase().contains(f.toLowerCase())));
           }).toList();
-          final nurses = filtered.isNotEmpty ? filtered : all;
+          // Partners who list this exact service among their rates come first.
+          final offering = all.where((n) => n.shifts.any((s) => s.serviceId == widget.serviceId)).toList();
+          final nurses = offering.isNotEmpty ? offering : (filtered.isNotEmpty ? filtered : all);
 
           return ListView(
             padding: const EdgeInsets.only(bottom: 24),
@@ -287,6 +291,13 @@ class _ServiceDetailScreenState extends ConsumerState<ServiceDetailScreen> {
                   padding: EdgeInsets.symmetric(vertical: 40),
                   child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
                 )
+              else if (nurses.isEmpty)
+                const EmptyState(
+                  icon: Icons.medical_services_outlined,
+                  title: 'No nurses available yet',
+                  message: 'You can still book this service — our care desk will assign '
+                      'a verified ALLCURO nurse and call you to confirm.',
+                )
               else
                 for (final nurse in nurses)
                   Padding(
@@ -409,7 +420,7 @@ class _NurseCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Text(
-                  nurse.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join(),
+                  PartnerAvatar.initialsOf(nurse.name),
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
@@ -445,6 +456,7 @@ class _NurseCard extends StatelessWidget {
                             ],
                           ),
                         ),
+                        if (nurse.reviews > 0)
                         Row(
                           children: [
                             const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 14),
@@ -463,7 +475,11 @@ class _NurseCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${nurse.level} · ${nurse.experience} yrs exp · ${nurse.city}',
+                      [
+                        if (nurse.level.isNotEmpty) nurse.level,
+                        if (nurse.experience > 0) '${nurse.experience} yrs exp',
+                        if (nurse.city.isNotEmpty) nurse.city,
+                      ].join(' · '),
                       style: const TextStyle(fontSize: 11.5, color: AppColors.mutedForeground),
                     ),
                   ],
@@ -483,21 +499,21 @@ class _NurseCard extends StatelessWidget {
                     Container(
                       width: 7,
                       height: 7,
-                      decoration: const BoxDecoration(
-                        color: AppColors.success,
+                      decoration: BoxDecoration(
+                        color: nurse.available ? AppColors.success : AppColors.mutedForeground,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 5),
-                    const Flexible(
+                    Flexible(
                       child: Text(
-                        'Available today',
+                        nurse.available ? 'Available' : 'Currently unavailable',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.success,
+                          color: nurse.available ? AppColors.success : AppColors.mutedForeground,
                         ),
                       ),
                     ),
@@ -658,12 +674,7 @@ class _NurseSlotBookingSheetState extends State<_NurseSlotBookingSheet> {
                         shape: BoxShape.circle,
                       ),
                       child: Text(
-                        widget.nurse.name
-                            .trim()
-                            .split(' ')
-                            .map((e) => e.isNotEmpty ? e[0] : '')
-                            .take(2)
-                            .join(),
+                        PartnerAvatar.initialsOf(widget.nurse.name),
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 15,
@@ -695,7 +706,11 @@ class _NurseSlotBookingSheetState extends State<_NurseSlotBookingSheet> {
                             ],
                           ),
                           Text(
-                            '${widget.nurse.level} · ${widget.nurse.experience} yrs exp · ⭐ ${widget.nurse.rating.toStringAsFixed(1)}',
+                            [
+                              if (widget.nurse.level.isNotEmpty) widget.nurse.level,
+                              if (widget.nurse.experience > 0) '${widget.nurse.experience} yrs exp',
+                              if (widget.nurse.reviews > 0) '⭐ ${widget.nurse.rating.toStringAsFixed(1)}',
+                            ].join(' · '),
                             style: const TextStyle(
                               fontSize: 11.5,
                               color: AppColors.mutedForeground,

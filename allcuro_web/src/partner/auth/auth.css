@@ -873,6 +873,12 @@
 .pa-profile-head p {
   margin: 2px 0 0;
 }
+.pa-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
 .pa-profile-avatar {
   width: 60px;
   height: 60px;

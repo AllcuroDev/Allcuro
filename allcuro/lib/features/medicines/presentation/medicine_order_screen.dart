@@ -44,11 +44,13 @@ class _OrderBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final verified = order.prescriptionName == null;
+    // Prescription-only order: the pharmacist prices it on a call.
+    final rxOnly = order.items.isEmpty && order.prescriptionName != null;
     final steps = [
       ('Order placed', 'We have your order', true),
       (
         'Pharmacist verified',
-        verified ? 'No prescription needed' : 'Checking ${order.prescriptionName}',
+        verified ? 'No prescription needed' : 'Reviewing ${order.prescriptionName} · we will call you',
         verified,
       ),
       ('Packed', 'At the partner pharmacy', false),
@@ -81,7 +83,9 @@ class _OrderBody extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${inr(order.amount)} · ${order.providerQualifications.split(' · ').last}',
+                        rxOnly
+                            ? 'Price confirmed on call · ${order.providerQualifications.split(' · ').last}'
+                            : '${inr(order.amount)} · ${order.providerQualifications.split(' · ').last}',
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white),
                       ),
                       const SizedBox(height: 2),
@@ -137,6 +141,14 @@ class _OrderBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (rxOnly)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Prescription ${order.prescriptionName} — our pharmacist will review it and call you to confirm the medicines.',
+                    style: const TextStyle(fontSize: 13.5, height: 1.35, color: AppColors.ink),
+                  ),
+                ),
               for (final item in order.items)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -158,9 +170,9 @@ class _OrderBody extends StatelessWidget {
               Row(
                 children: [
                   const Expanded(
-                    child: Text('Total paid', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.ink)),
+                    child: Text('Total', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.ink)),
                   ),
-                  Text(inr(order.amount), style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: AppColors.ink)),
+                  Text(rxOnly ? 'To be confirmed' : inr(order.amount), style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: AppColors.ink)),
                 ],
               ),
             ],

@@ -1,6 +1,6 @@
 import { delay } from '../../lib/store'
 
-// Option lists, formatters and the mock identity lookups for the partner
+// Option lists, formatters and the stand-in identity lookups for the partner
 // auth / onboarding pages — ported from the partner app:
 //   identity/data/identity_service.dart, identity/presentation/identity_verification_steps.dart,
 //   clinician/presentation/signup/clinician_signup_steps.dart,
@@ -37,30 +37,17 @@ export const REGISTRATION_LABELS: Record<ClinicianProfession, string> = {
   Physiotherapist: 'State Physiotherapy Council / IAP reg. no.',
 }
 
-/** Nurse skills the app pre-selects at sign-up (edited later from Availability). */
-export const NURSE_DEFAULT_SKILLS = ['ICU / Critical Care', 'Tracheostomy Care', 'Post-Op Dressing']
+/** Qualification choices, since the registry lookup below doesn't return one yet. */
+export const NURSE_QUALIFICATION_OPTIONS = ['GNM', 'ANM', 'B.Sc Nursing', 'Post Basic B.Sc Nursing', 'M.Sc Nursing']
+export const CLINICIAN_QUALIFICATION_OPTIONS: Record<ClinicianProfession, string[]> = {
+  Doctor: ['MBBS', 'MD', 'MS', 'DNB'],
+  Physiotherapist: ['BPT', 'MPT'],
+}
+
+export const GENDER_OPTIONS = ['Female', 'Male', 'Other']
 
 export const CENTRE_TYPE_OPTIONS = ['Elderly care', 'Rehab', 'Day-care', 'Physiotherapy', 'Palliative']
 export const OWNERSHIP_TYPE_OPTIONS = ['Individual', 'Partnership', 'Trust', 'Company']
-
-/** Demo defaults the centre wizard starts with (centre_signup_view_model.dart). */
-export const CENTRE_DEFAULTS = {
-  businessEmail: 'admin@sanjeevanicaredemo.in',
-  centreName: 'Sanjeevani Elder Care Sanctuary',
-  centreType: 'Elderly care',
-  yearEstablished: '2019',
-  ownershipType: 'Company',
-  staffRatio: '1:4',
-  sampleFoodMenu: 'Nutritious south & north Indian meals tailored for elders',
-  staff: [
-    { name: 'Sister Mary', qualification: 'B.Sc Nursing (ICU)', role: 'Head Nurse' },
-    { name: 'Nurse John', qualification: 'GNM', role: 'Staff Nurse' },
-  ],
-  photoCount: 5,
-  pricePerPackage: '2800',
-  servicesIncluded: ['24/7 Nursing', 'Doctor-on-call', 'Meals Included'],
-  roomTypes: ['Private AC Room', 'Semi-Private Room'],
-}
 
 export const ACCOUNT_TYPES = ['Current Account', 'Savings Account']
 
@@ -76,50 +63,48 @@ export function formatDob(iso: string) {
 /** "123456789012" → "1234 5678 9012" (the app's _AadhaarFormatter). */
 export const groupAadhaar = (digits: string) => digits.replace(/(\d{4})(?=\d)/g, '$1 ')
 
-const normaliseName = (n: string) => n.trim().toLowerCase().replace(/\s+/g, ' ')
+// ---------------------------------------------------------------- identity checks
+//
+// There is no council-registry or UIDAI e-KYC integration yet. These stand-ins
+// validate the format of what the partner typed and echo it back: they never
+// invent a name, date of birth or address. ALLCURO checks the details against
+// the council register and the uploaded documents before approving a profile.
 
-// ---------------------------------------------------------------- mock identity service
-
-/** The only Aadhaar OTP the mock accepts — shown next to the OTP field. */
+/** The Aadhaar OTP the stand-in accepts until real e-KYC is wired up — shown next to the OTP field. */
 export const AADHAAR_DEMO_OTP = '123456'
 
 export interface RegistryRecord {
   registeredName: string
   council: string
   qualification: string
-  registeredSince: number
 }
 
+/** What the Aadhaar step confirms. Date of birth, gender and address are entered by the partner. */
 export interface AadhaarProfile {
   name: string
-  dob: string // ISO date
-  gender: string
-  address: string
 }
 
-export async function verifyNuid(nuid: string): Promise<RegistryRecord> {
-  await delay(900)
-  if (!/^[A-Za-z0-9]{6,20}$/.test(nuid.trim())) {
+export async function verifyNuid(opts: { nuid: string; registeredName: string; qualification: string }): Promise<RegistryRecord> {
+  await delay(600)
+  if (!/^[A-Za-z0-9]{6,20}$/.test(opts.nuid.trim())) {
     throw new Error('Enter the NUID exactly as shown on your NRTS registration.')
   }
-  return { registeredName: 'Priya Sharma', council: 'Karnataka State Nursing Council', qualification: 'GNM', registeredSince: 2017 }
+  if (!opts.registeredName.trim()) throw new Error('Enter your full name as registered.')
+  return { registeredName: opts.registeredName.trim(), council: 'Indian Nursing Council (NRTS)', qualification: opts.qualification }
 }
 
 export async function verifyCouncilRegistration(opts: {
-  isPhysiotherapist: boolean
   registrationNumber: string
   council: string
+  registeredName: string
+  qualification: string
 }): Promise<RegistryRecord> {
-  await delay(900)
+  await delay(600)
   if (!/^[A-Za-z0-9/-]{4,20}$/.test(opts.registrationNumber.trim())) {
     throw new Error('Enter a valid registration number (letters, digits, / or -).')
   }
-  return {
-    registeredName: 'Arjun Rao',
-    council: opts.council,
-    qualification: opts.isPhysiotherapist ? 'BPT' : 'MBBS',
-    registeredSince: 2013,
-  }
+  if (!opts.registeredName.trim()) throw new Error('Enter your full name as registered.')
+  return { registeredName: opts.registeredName.trim(), council: opts.council, qualification: opts.qualification }
 }
 
 export async function sendAadhaarOtp(aadhaar: string) {
@@ -128,16 +113,8 @@ export async function sendAadhaarOtp(aadhaar: string) {
   if (!/^[2-9]\d{11}$/.test(aadhaar)) throw new Error('Enter a valid 12-digit Aadhaar number.')
 }
 
-export async function verifyAadhaarOtp(opts: { otp: string; isClinician: boolean; registeredName: string }): Promise<AadhaarProfile> {
+export async function verifyAadhaarOtp(opts: { otp: string; registeredName: string }): Promise<AadhaarProfile> {
   await delay(800)
   if (opts.otp !== AADHAAR_DEMO_OTP) throw new Error('Incorrect OTP. Please try again.')
-  const profile: AadhaarProfile = opts.isClinician
-    ? { name: 'Arjun Rao', dob: '1988-11-02', gender: 'Male', address: '221, 27th Main, HSR Layout Sector 2, Bengaluru, Karnataka 560102' }
-    : { name: 'Priya Sharma', dob: '1996-05-14', gender: 'Female', address: '12, 4th Cross, Indiranagar, Bengaluru, Karnataka 560038' }
-  if (normaliseName(profile.name) !== normaliseName(opts.registeredName)) {
-    throw new Error(
-      `The name on your Aadhaar (${profile.name}) does not match your registration (${opts.registeredName}). Contact support to resolve this.`,
-    )
-  }
-  return profile
+  return { name: opts.registeredName }
 }

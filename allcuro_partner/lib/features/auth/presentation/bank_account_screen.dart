@@ -68,14 +68,15 @@ class _BankAccountScreenState extends ConsumerState<BankAccountScreen> {
       accountHolderName: _holderNameCtrl.text.trim(),
       accountType: _accountType,
       panNumber: _panCtrl.text.trim().toUpperCase(),
-      isVerified: true,
+      // Saved locally; ALLCURO verifies the account during review.
+      isVerified: false,
     );
 
     ref.read(partnerOnboardingProvider.notifier).updateBankAccount(newBank);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Bank account and payout details updated successfully'),
+        content: Text('Bank details saved. ALLCURO will verify them during review.'),
         backgroundColor: AppColors.success,
       ),
     );
@@ -158,7 +159,7 @@ class _BankAccountScreenState extends ConsumerState<BankAccountScreen> {
                     _CustomFormField(
                       label: 'Account Holder / Entity Name',
                       controller: _holderNameCtrl,
-                      hint: 'e.g. Sanjeevani Care / Priya Sharma',
+                      hint: 'Exactly as on your bank account',
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? 'Please enter account holder name' : null,
                     ),

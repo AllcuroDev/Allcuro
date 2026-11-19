@@ -36,14 +36,16 @@ import {
   ErrorBanner,
   SectionLabel,
   StepHeader,
-  VerifiedCard,
+  SummaryList,
 } from './AuthUi'
 import {
   AADHAAR_DEMO_OTP,
   ACCOUNT_TYPES,
+  CLINICIAN_QUALIFICATION_OPTIONS,
   COUNCIL_OPTIONS,
+  GENDER_OPTIONS,
+  NURSE_QUALIFICATION_OPTIONS,
   PROFESSIONS,
-  formatDob,
   groupAadhaar,
   sendAadhaarOtp,
   verifyAadhaarOtp,
@@ -53,6 +55,9 @@ import {
   type ClinicianProfession,
   type RegistryRecord,
 } from './data'
+import { useCompliance, useEquipment, useRooms, useStaff } from '../centre/state'
+import { CERTIFICATE_DOC_IDS, MEDICAL_DOC_ID } from '../nurse/data'
+import { availabilityStore, effectiveSkills, nurseDocs } from '../nurse/state'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -352,6 +357,11 @@ export function IdentityVerificationPage() {
   const [profession, setProfession] = useState<ClinicianProfession | null>(null)
   const [council, setCouncil] = useState<string | null>(null)
   const [regNo, setRegNo] = useState('')
+  const [registeredName, setRegisteredName] = useState('')
+  const [qualification, setQualification] = useState<string | null>(null)
+  const [dob, setDob] = useState('')
+  const [gender, setGender] = useState<string | null>(null)
+  const [address, setAddress] = useState('')
   const [registry, setRegistry] = useState<RegistryRecord | null>(null)
   const [aadhaar, setAadhaar] = useState('')
   const [consent, setConsent] = useState(false)
@@ -398,8 +408,8 @@ export function IdentityVerificationPage() {
     run(async () => {
       setRegistry(
         isClinician
-          ? await verifyCouncilRegistration({ isPhysiotherapist: isPhysio, registrationNumber: regNo, council: council! })
-          : await verifyNuid(regNo),
+          ? await verifyCouncilRegistration({ registrationNumber: regNo, council: council!, registeredName, qualification: qualification ?? '' })
+          : await verifyNuid({ nuid: regNo, registeredName, qualification: qualification ?? '' }),
       )
     })
 
@@ -412,17 +422,20 @@ export function IdentityVerificationPage() {
 
   const verifyOtp = () =>
     run(async () => {
-      setProfile(await verifyAadhaarOtp({ otp, isClinician, registeredName: registry?.registeredName ?? '' }))
+      setProfile(await verifyAadhaarOtp({ otp, registeredName: registry?.registeredName ?? '' }))
     })
 
+  const today = new Date().toISOString().slice(0, 10)
+  const personalReady = dob !== '' && dob < today && gender != null && address.trim() !== ''
+
   const finish = () => {
-    if (!registry || !profile) return
+    if (!registry || !profile || !personalReady) return
     // The portal guard moves on to the sign-up wizard once this is saved.
     saveIdentity({
       fullName: profile.name,
-      dob: profile.dob,
-      gender: profile.gender,
-      address: profile.address,
+      dob,
+      gender: gender!,
+      address: address.trim(),
       aadhaarLast4: aadhaar.slice(-4),
       registrationLabel,
       registrationNumber: regNo.trim().toUpperCase(),
@@ -442,12 +455,13 @@ export function IdentityVerificationPage() {
   if (stepIndex === 0) {
     if (registry) primary = ['Continue', next]
     else {
-      const ready = regNo.trim() !== '' && (!isClinician || (profession != null && council != null))
-      primary = [isClinician ? 'Verify registration' : 'Verify NUID', ready ? verifyRegistration : null]
+      const ready =
+        regNo.trim() !== '' && registeredName.trim() !== '' && qualification != null && (!isClinician || (profession != null && council != null))
+      primary = ['Save registration', ready ? verifyRegistration : null]
     }
   } else if (!otpSent) primary = ['Send OTP', aadhaar.length === 12 && consent ? sendOtp : null]
   else if (!profile) primary = ['Verify OTP', otp.length === 6 ? verifyOtp : null]
-  else primary = ['Continue to profile', finish]
+  else primary = ['Continue to profile', personalReady ? finish : null]
 
   return (
     <>
@@ -468,11 +482,11 @@ export function IdentityVerificationPage() {
         {stepIndex === 0 ? (
           <>
             <StepHeader
-              title={isClinician ? 'Verify your registration' : 'Verify your NUID'}
+              title={isClinician ? 'Your registration' : 'Your NUID'}
               subtitle={
                 isClinician
-                  ? 'We check your registration number against the council register before you can practise on ALLCURO.'
-                  : "Enter your Nurse Unique ID (NUID) from the Indian Nursing Council's NRTS. We fetch your registration from the council's records."
+                  ? 'ALLCURO checks your registration against the council register before your profile goes live.'
+                  : "Enter your Nurse Unique ID (NUID) from the Indian Nursing Council's NRTS. ALLCURO checks it against the council's records before your profile goes live."
               }
             />
             {isClinician && (
@@ -485,7 +499,10 @@ export function IdentityVerificationPage() {
                     value={profession}
                     onChange={(p) =>
                       editRegistration(() => {
-                        if (p !== profession) setCouncil(null)
+                        if (p !== profession) {
+                          setCouncil(null)
+                          setQualification(null)
+                        }
                         setProfession(p as ClinicianProfession)
                       })
                     }
@@ -504,6 +521,28 @@ export function IdentityVerificationPage() {
                 )}
               </>
             )}
+            {(!isClinician || profession) && (
+              <div>
+                <SectionLabel id="pa-qual-label">Highest qualification</SectionLabel>
+                <ChoiceChips
+                  labelledBy="pa-qual-label"
+                  options={isClinician ? CLINICIAN_QUALIFICATION_OPTIONS[profession!] : NURSE_QUALIFICATION_OPTIONS}
+                  value={qualification}
+                  onChange={(q) => editRegistration(() => setQualification(q))}
+                />
+              </div>
+            )}
+            <PField label="Full name (as registered)" hint="Exactly as it appears on your council registration">
+              <input
+                value={registeredName}
+                autoComplete="name"
+                maxLength={80}
+                onChange={(e) => {
+                  const v = e.target.value
+                  editRegistration(() => setRegisteredName(v))
+                }}
+              />
+            </PField>
             <PField
               label={isClinician ? (isPhysio ? 'Physiotherapy registration number' : 'Doctor registration number') : 'NUID (Nurse Unique ID)'}
               hint={isClinician ? 'Letters, digits, / or -' : 'Letters and digits only'}
@@ -522,22 +561,24 @@ export function IdentityVerificationPage() {
             </PField>
             {error && <ErrorBanner message={error} />}
             {registry && (
-              <VerifiedCard
-                title={isClinician ? 'Registration verified' : 'NUID verified'}
-                rows={[
-                  ['Name', registry.registeredName],
-                  ['Council', registry.council],
-                  ['Qualification', registry.qualification],
-                  ['Registered since', String(registry.registeredSince)],
-                ]}
-              />
+              <>
+                <SummaryList
+                  rows={[
+                    ['Name', registry.registeredName],
+                    ['Council', registry.council],
+                    ['Qualification', registry.qualification],
+                    [registrationLabel, regNo.trim().toUpperCase()],
+                  ]}
+                />
+                <p className="p-muted">Saved. ALLCURO verifies these details with the council before approving your profile.</p>
+              </>
             )}
           </>
         ) : (
           <>
             <StepHeader
               title="Aadhaar verification"
-              subtitle="We confirm your identity with Aadhaar e-KYC. Your name, date of birth, gender and address are taken from Aadhaar and can't be edited later."
+              subtitle="Confirm your Aadhaar with an OTP, then add your date of birth, gender and address exactly as printed on your Aadhaar card."
             />
             <PField label="Aadhaar number" hint={profile ? undefined : '12 digits, as printed on your Aadhaar card'}>
               <input
@@ -584,19 +625,19 @@ export function IdentityVerificationPage() {
             {error && <ErrorBanner message={error} />}
             {profile && (
               <>
-                <VerifiedCard
-                  title="Aadhaar verified"
-                  rows={[
-                    ['Name', profile.name],
-                    ['Date of birth', formatDob(profile.dob)],
-                    ['Gender', profile.gender],
-                    ['Address', profile.address],
-                    ['Aadhaar', `XXXX XXXX ${last4}`],
-                  ]}
-                />
                 <p className="pa-match">
-                  <PIcon name="check" size={16} /> Name matches your {registrationLabel} record
+                  <PIcon name="check" size={16} /> Aadhaar XXXX XXXX {last4} confirmed for {profile.name}
                 </p>
+                <PField label="Date of birth">
+                  <input type="date" value={dob} max={today} autoComplete="bday" onChange={(e) => setDob(e.target.value)} />
+                </PField>
+                <div>
+                  <SectionLabel id="pa-gender-label">Gender</SectionLabel>
+                  <ChoiceChips labelledBy="pa-gender-label" options={GENDER_OPTIONS} value={gender} onChange={setGender} />
+                </div>
+                <PField label="Address (as on Aadhaar)">
+                  <textarea rows={3} value={address} autoComplete="street-address" onChange={(e) => setAddress(e.target.value)} />
+                </PField>
               </>
             )}
           </>
@@ -683,7 +724,7 @@ export function BankAccountPage() {
         <form className="pa-bank-form" onSubmit={save} noValidate>
           <h2 className="pa-h2">Account details</h2>
           <PField label="Account Holder / Entity Name" error={shown('holder')}>
-            <input value={form.holder} onChange={set('holder')} placeholder="e.g. Sanjeevani Care / Priya Sharma" autoComplete="name" />
+            <input value={form.holder} onChange={set('holder')} placeholder="As on your bank account" autoComplete="name" />
           </PField>
           <PField label="Bank Name" error={shown('bankName')}>
             <input value={form.bankName} onChange={set('bankName')} placeholder="e.g. HDFC Bank, ICICI Bank, SBI" />
@@ -775,37 +816,59 @@ export function PartnerProfilePage() {
   const isCentre = s.role === 'centre'
   const isClinician = s.role === 'clinician'
   const identity = practitionerIdentity(s)
-  const city = (s.signup.city as string | undefined) || 'Bengaluru'
+  const city = (s.signup.city as string | undefined) || ''
+  const inCity = city ? ` · ${city}` : ''
   const hasBank = s.bank != null
+  const practitionerDocs = nurseDocs(s)
+  const availability = availabilityStore.use()
+  const rooms = useRooms()
+  const staff = useStaff()
+  const centreDocs = useCompliance()
+  const equipment = useEquipment()
+  const certificatesDone = practitionerDocs.filter((d) => CERTIFICATE_DOC_IDS.includes(d.id) && d.isUploaded).length >= CERTIFICATE_DOC_IDS.length
+  const medicalDone = practitionerDocs.some((d) => d.id === MEDICAL_DOC_ID && d.isUploaded)
+  const skillCount = effectiveSkills(availability, s).length
 
   const practitionerName = identity
     ? identity.profession === 'Doctor' && !identity.fullName.startsWith('Dr.')
       ? `Dr. ${identity.fullName}`
       : identity.fullName
-    : s.name || (isClinician ? 'Dr. Arjun Rao' : 'Priya Sharma')
-  const name = isCentre ? s.name || 'Sanjeevani Elder Care Sanctuary' : practitionerName
+    : s.name || 'Partner'
+  const name = isCentre ? s.name || 'Your centre' : practitionerName
   const subtitle = isCentre
-    ? `Homecare Centre Partner · ${city}`
+    ? `Homecare Centre Partner${inCity}`
     : isClinician
-      ? `${identity?.profession ?? 'Doctor / Physiotherapist'}${identity?.qualification ? ` (${identity.qualification})` : ''} · ${city}`
-      : `Registered Nurse (${identity?.qualification ?? 'GNM'}) · ${city}`
+      ? `${identity?.profession ?? 'Doctor / Physiotherapist'}${identity?.qualification ? ` (${identity.qualification})` : ''}${inCity}`
+      : `Registered Nurse${identity?.qualification ? ` (${identity.qualification})` : ''}${inCity}`
   const home = usesNurseShell(s.role) ? PR.nurseHome : PR.centreHome
 
   const [statusLabel, statusTone] = isCentre ? CENTRE_STATUS[s.centreStatus] : NURSE_STATUS[practitionerStatus(s)]
 
   const tiles: SetupTile[] = isCentre
     ? [
-        { icon: 'shield', title: 'Compliance & Legal NOCs', subtitle: 'CEA, Fire Safety, Biomedical waste clearance', done: false, to: PR.centreCompliance },
-        { icon: 'users', title: 'Staff Roster & Duty Nurses', subtitle: 'Manage nurse-to-patient staff ratios', done: true, to: PR.centreStaff },
-        { icon: 'bed', title: 'Room Inventory & Pricing', subtitle: 'AC private rooms, packages and photos', done: true, to: PR.centreRooms },
-        { icon: 'store', title: 'Public Listing Management', subtitle: 'Facility amenities, photos and brochure', done: true, to: PR.centreListing },
+        {
+          icon: 'shield',
+          title: 'Compliance & Legal NOCs',
+          subtitle: 'CEA, Fire Safety, Biomedical waste clearance',
+          done: centreDocs.length > 0 && centreDocs.every((d) => d.isUploaded),
+          to: PR.centreCompliance,
+        },
+        { icon: 'users', title: 'Staff Roster & Duty Nurses', subtitle: 'Manage nurse-to-patient staff ratios', done: staff.length > 0, to: PR.centreStaff },
+        { icon: 'bed', title: 'Room Inventory & Pricing', subtitle: 'Rooms, beds and amenities', done: rooms.length > 0, to: PR.centreRooms },
+        { icon: 'store', title: 'Equipment Rentals', subtitle: 'Equipment you can rent out to families', done: equipment.length > 0, to: PR.centreEquipment },
         { icon: 'bank', title: 'Bank Account & Payout Setup', subtitle: 'Direct Razorpay Route deposits', done: hasBank, to: PR.bankAccount },
       ]
     : [
-        { icon: 'file', title: 'Document Vault', subtitle: 'Degree certificates & HPR registry', done: true, to: PR.nurseDocuments },
-        { icon: 'heart', title: 'Medical Fitness & TB Report', subtitle: 'Upload annual fitness self-declaration', done: false, to: PR.nurseDocuments },
+        { icon: 'file', title: 'Document Vault', subtitle: 'Degree certificates & HPR registry', done: certificatesDone, to: PR.nurseDocuments },
+        { icon: 'heart', title: 'Medical Fitness & TB Report', subtitle: 'Upload annual fitness self-declaration', done: medicalDone, to: PR.nurseDocuments },
         { icon: 'bank', title: 'Bank Account & Payout Setup', subtitle: 'Direct Razorpay Route deposits', done: hasBank, to: PR.bankAccount },
-        { icon: 'star', title: 'Skills & Specialisations', subtitle: 'ICU, Tracheostomy, Palliative Care tags', done: true, to: PR.nurseAvailability },
+        {
+          icon: 'star',
+          title: 'Skills & Specialisations',
+          subtitle: skillCount ? `${skillCount} skills selected` : 'Pick the care you can provide',
+          done: skillCount > 0,
+          to: PR.nurseAvailability,
+        },
       ]
 
   // Submit for the admin's review. Approval itself happens in the admin panel.
@@ -819,7 +882,7 @@ export function PartnerProfilePage() {
       <PBody narrow>
         <div className="pa-profile-head">
           <span className="pa-profile-avatar" aria-hidden="true">
-            {initials(name) || 'AP'}
+            {s.photoUrl ? <img src={s.photoUrl} alt="" /> : initials(name) || 'AP'}
           </span>
           <div className="p-row-grow">
             <h2>{name}</h2>
@@ -829,8 +892,7 @@ export function PartnerProfilePage() {
         </div>
 
         {identity && (
-          <VerifiedCard
-            title="Verified identity"
+          <SummaryList
             rows={[
               [identity.registrationLabel, identity.registrationNumber],
               ['Council', identity.council],
@@ -847,7 +909,7 @@ export function PartnerProfilePage() {
           <p className="p-muted">
             {isCentre
               ? 'Complete facility compliance modules to make beds bookable for patients.'
-              : 'Complete remaining profile modules anytime. Verified profiles receive 3x more bookings.'}
+              : 'Complete the remaining profile modules, then submit your profile for approval.'}
           </p>
           <ul className="p-list">
             {tiles.map((t) => (

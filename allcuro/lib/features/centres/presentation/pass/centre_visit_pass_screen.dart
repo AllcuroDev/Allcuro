@@ -232,7 +232,7 @@ class CentreVisitPassScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      booking.roomType ?? 'Deluxe Room',
+                      booking.roomType ?? 'Room confirmed by the centre',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
                     ),
                     const SizedBox(height: 2),
@@ -275,7 +275,9 @@ class CentreVisitPassScreen extends ConsumerWidget {
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('📞 Calling Centre Reception Desk (${booking.providerPhone})...'),
+                        content: Text(booking.providerPhone.isEmpty
+                            ? 'The centre will call you to confirm your admission.'
+                            : 'Centre reception: ${booking.providerPhone}'),
                         backgroundColor: AppColors.success,
                       ),
                     );
@@ -355,8 +357,8 @@ class CentreVisitPassScreen extends ConsumerWidget {
         children: const [
           Text('Admission Flow', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink)),
           SizedBox(height: 14),
-          _StepTile(title: 'Digital Pass Issued', subtitle: 'Room reserved & deposit confirmed in escrow', isDone: true),
-          _StepTile(title: 'Travel to Care Centre', subtitle: 'Check-in scheduled for 10:00 AM', isDone: true, isCurrent: true),
+          _StepTile(title: 'Admission Requested', subtitle: 'Digital pass issued for your request', isDone: true),
+          _StepTile(title: 'Centre Confirms Bed', subtitle: 'The centre or our care desk calls to confirm the check-in date', isDone: false, isCurrent: true),
           _StepTile(title: 'OTP Verification at Reception', subtitle: 'Staff verifies OTP & completes documentation', isDone: false),
           _StepTile(title: 'Room Allotted & Admitted', subtitle: 'Care attendant & clinical routine initiated', isDone: false, isLast: true),
         ],

@@ -16,13 +16,13 @@ class StaffMember {
 
 /// Every field collected for Home Care Centre setup & onboarding.
 class CentreSignupData {
-  String businessEmail = 'admin@sanjeevanicaredemo.in';
-  String centreName = 'Sanjeevani Elder Care Sanctuary';
-  String? centreType = 'Elderly Care';
-  String yearEstablished = '2019';
-  String? ownershipType = 'Private Limited';
-  String staffRatio = '1:4';
-  String sampleFoodMenu = 'Nutritious south & north Indian meals tailored for elders';
+  String businessEmail = '';
+  String centreName = '';
+  String? centreType;
+  String yearEstablished = '';
+  String? ownershipType;
+  String staffRatio = '';
+  String sampleFoodMenu = '';
 
   final Map<String, String?> documents = {
     'shop_act': null,
@@ -31,10 +31,7 @@ class CentreSignupData {
     'bio_waste': null,
   };
 
-  final List<StaffMember> staff = [
-    StaffMember(name: 'Sister Mary', qualification: 'B.Sc Nursing (ICU)', role: 'Head Nurse'),
-    StaffMember(name: 'Nurse John', qualification: 'GNM', role: 'Staff Nurse'),
-  ];
+  final List<StaffMember> staff = [StaffMember()];
 
   String? siteVisitSlot;
 
@@ -43,10 +40,10 @@ class CentreSignupData {
   String bankIfsc = '';
   String gstNumber = '';
 
-  int photoCount = 5;
-  String pricePerPackage = '2800';
-  final Set<String> servicesIncluded = {'24/7 Nursing', 'Doctor-on-call', 'Meals Included'};
-  final Set<String> roomTypes = {'Private AC Room', 'Semi-Private Room'};
+  int photoCount = 0;
+  String pricePerPackage = '';
+  final Set<String> servicesIncluded = {};
+  final Set<String> roomTypes = {};
 }
 
 class CentreSignupState {
@@ -129,10 +126,9 @@ class CentreSignupViewModel extends AutoDisposeNotifier<CentreSignupState> {
 
   Future<void> submit() async {
     state = state.copyWith(isSubmitting: true, clearError: true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    await ref
-        .read(authViewModelProvider.notifier)
-        .setCentreVerificationStatus(CentreVerificationStatus.onboarding);
+    final auth = ref.read(authViewModelProvider.notifier);
+    await auth.saveCentreName(state.data.centreName);
+    await auth.setCentreVerificationStatus(CentreVerificationStatus.onboarding);
     state = state.copyWith(isSubmitting: false);
   }
 }

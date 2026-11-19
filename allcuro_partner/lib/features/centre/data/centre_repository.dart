@@ -3,7 +3,7 @@ import 'models/placement_request_summary.dart';
 import 'models/room.dart';
 
 /// Thin domain layer over [CentreService] — view models talk to this,
-/// never to the mock data source directly. This is the seam a real API
+/// never to the data source directly. This is the seam a real API
 /// client slots into later.
 class CentreRepository {
   final CentreService _service;

@@ -13,6 +13,9 @@ final identityServiceProvider = Provider<IdentityService>((ref) => IdentityServi
 class IdentityFormData {
   /// Doctors / physiotherapists only — picks the register to check against.
   ClinicianProfession? profession;
+
+  /// Full name exactly as on the professional register — typed by the partner.
+  String registeredName = '';
   String registrationNumber = '';
   String? council;
   RegistryRecord? registry;
@@ -104,8 +107,9 @@ class IdentityVerificationViewModel extends AutoDisposeNotifier<IdentityVerifica
               isPhysiotherapist: data.profession == ClinicianProfession.physiotherapist,
               registrationNumber: data.registrationNumber,
               council: data.council!,
+              registeredName: data.registeredName,
             )
-          : await _service.verifyNuid(data.registrationNumber);
+          : await _service.verifyNuid(data.registrationNumber, registeredName: data.registeredName);
     });
   }
 
@@ -121,8 +125,12 @@ class IdentityVerificationViewModel extends AutoDisposeNotifier<IdentityVerifica
   Future<void> verifyOtp() async {
     final data = state.data;
     await _run(() async {
-      final profile = await _service.verifyAadhaarOtp(aadhaar: data.aadhaar, otp: data.otp, isClinician: isClinician);
       final registeredName = data.registry?.registeredName ?? '';
+      final profile = await _service.verifyAadhaarOtp(
+        aadhaar: data.aadhaar,
+        otp: data.otp,
+        registeredName: registeredName,
+      );
       if (_normalise(profile.name) != _normalise(registeredName)) {
         throw StateError(
           'The name on your Aadhaar (${profile.name}) does not match your '

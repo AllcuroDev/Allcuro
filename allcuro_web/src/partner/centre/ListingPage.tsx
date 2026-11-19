@@ -1,18 +1,22 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
+import { Link } from '../../components/Link'
 import { toast } from '../../lib/toast'
 import { PR } from '../routes'
+import { usePartnerSession } from '../session'
 import { PBody, PCard, PField, PIcon, PPageHead, Toggle } from '../ui'
-import { listingStore, useListing } from './state'
+import { listingFrom, saveListing } from './state'
 import './centre.css'
 
 // Listing management (features/centre/presentation/listing/listing_management_screen.dart):
-// what families see on the centre's public listing. Edits are a draft until "Save changes".
+// the centre's listing preferences, saved on its partner row. Edits are a
+// draft until "Save changes". ALLCURO sets the final listed price; photos are
+// managed on the public profile page.
 
 export function CentreListingPage() {
-  const saved = useListing()
+  const s = usePartnerSession()
+  const saved = listingFrom(s)
   const [draft, setDraft] = useState(saved)
   const [tried, setTried] = useState(false)
-  const photoInput = useRef<HTMLInputElement>(null)
 
   const priceErr = !draft.price.trim() ? 'Enter a price per day' : null
   const ratioErr = !/^\d+\s*:\s*\d+$/.test(draft.ratio.trim()) ? 'Use a ratio like 1:4' : null
@@ -21,7 +25,7 @@ export function CentreListingPage() {
   const save = () => {
     setTried(true)
     if (priceErr || ratioErr) return
-    listingStore.set({ ...draft, ratio: draft.ratio.replace(/\s/g, '') })
+    saveListing({ ...draft, ratio: draft.ratio.replace(/\s/g, '') })
     toast('Listing updated')
   }
 
@@ -38,7 +42,7 @@ export function CentreListingPage() {
           }}
         >
           <div className="p-form-grid">
-            <PField label="Price per package (₹/day)" error={tried ? priceErr : null}>
+            <PField label="Your suggested price (₹/day)" error={tried ? priceErr : null} hint="ALLCURO confirms the final listed price">
               <span className="pc-prefix">
                 <span aria-hidden="true">₹</span>
                 <input value={draft.price} inputMode="numeric" onChange={(e) => setDraft({ ...draft, price: e.target.value.replace(/\D/g, '') })} />
@@ -51,27 +55,11 @@ export function CentreListingPage() {
 
           <div className="pc-stack-sm">
             <span className="p-field-label">Photos</span>
-            <button type="button" className="p-card pc-choose" onClick={() => photoInput.current?.click()}>
+            <Link to={PR.publicProfile} className="p-card pc-choose">
               <PIcon name="camera" size={18} />
-              <span className="p-row-grow">
-                {draft.photoCount} photo{draft.photoCount === 1 ? '' : 's'} uploaded
-              </span>
-              <span className="pc-link">Add more</span>
-            </button>
-            <input
-              ref={photoInput}
-              type="file"
-              accept="image/*"
-              multiple
-              className="sr-only"
-              tabIndex={-1}
-              aria-hidden="true"
-              onChange={(e) => {
-                const n = e.target.files?.length ?? 0
-                if (n) setDraft((d) => ({ ...d, photoCount: d.photoCount + n }))
-                e.target.value = ''
-              }}
-            />
+              <span className="p-row-grow">Add and manage photos on your public profile</span>
+              <span className="pc-link">Open</span>
+            </Link>
           </div>
 
           <div className="pc-stack-sm">

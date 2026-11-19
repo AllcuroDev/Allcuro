@@ -40,7 +40,7 @@ class DocumentVaultScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Upload PDF, JPG or PNG (Max 15MB). Verified by State Nursing Council automated registry.',
+              'Upload PDF, JPG or PNG (Max 15MB). ALLCURO reviews it before your profile goes live.',
               style: TextStyle(fontSize: 12.5, color: AppColors.mutedForeground),
             ),
             const SizedBox(height: 20),
@@ -56,7 +56,7 @@ class DocumentVaultScreen extends ConsumerWidget {
                 ref.read(partnerOnboardingProvider.notifier).markDocUploaded(
                       docId: doc.id,
                       isCentre: false,
-                      fileName: '${doc.docType}_verified_${DateTime.now().year}.pdf',
+                      fileName: '${doc.docType}.pdf',
                     );
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -86,7 +86,7 @@ class DocumentVaultScreen extends ConsumerWidget {
           children: [
             ScreenHeader(
               title: 'Document Vault & KYC',
-              subtitle: 'Keep registrations current — verified profiles receive 3x more bookings',
+              subtitle: 'Upload your certificates for ALLCURO review',
               onBack: onBack,
             ),
             Expanded(
@@ -130,7 +130,7 @@ class DocumentVaultScreen extends ConsumerWidget {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: UploadTile(
                         label: doc.title,
-                        fileName: doc.fileName,
+                        fileName: doc.isUploaded ? doc.fileName : null,
                         onTap: () => _simulateUpload(context, ref, doc),
                       ),
                     ),

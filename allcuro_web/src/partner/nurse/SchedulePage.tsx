@@ -43,12 +43,16 @@ export function NurseSchedulePage() {
 
       {filtered.length === 0 ? (
         <PCard>
-          <EmptyState icon="calendar" title="No shifts here yet" />
+          <EmptyState
+            icon="calendar"
+            title={shifts.length === 0 ? 'No shifts yet' : 'No shifts here yet'}
+            text={shifts.length === 0 ? 'Requests you accept will be added to your schedule.' : undefined}
+          />
         </PCard>
       ) : (
         <ul className="p-list pn-grid2" role="tabpanel">
           {filtered.map((s) => {
-            const isVisit = s.id === visit.shiftId && s.status === 'ongoing'
+            const isVisit = visit != null && s.id === visit.shiftId && s.status === 'ongoing'
             return (
               <li key={s.id}>
                 <PCard className="pn-rowcard pn-shift">

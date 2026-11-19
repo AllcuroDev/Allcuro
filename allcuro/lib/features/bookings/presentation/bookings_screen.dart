@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/app_shell.dart';
+import '../../../core/ui/empty_state.dart';
 import '../../../core/ui/screen_header.dart';
 import '../../../core/ui/surface.dart';
 import '../../../core/utils/currency.dart';
@@ -34,9 +35,20 @@ class BookingsScreen extends ConsumerWidget {
                 padding: EdgeInsets.symmetric(vertical: 40),
                 child: Center(child: Text('Could not load bookings', style: TextStyle(color: AppColors.mutedForeground))),
               ),
-              data: (bookings) => Column(
-                children: bookings.map((b) => _BookingCard(booking: b)).toList(),
-              ),
+              data: (bookings) => bookings.isEmpty
+                  ? EmptyState(
+                      icon: Icons.event_note_outlined,
+                      title: 'No bookings yet',
+                      message: 'Nurse visits, centre admissions, equipment rentals and medicine orders '
+                          'you book will show up here.',
+                      action: ElevatedButton(
+                        onPressed: () => context.go('/'),
+                        child: const Text('Explore services'),
+                      ),
+                    )
+                  : Column(
+                      children: bookings.map((b) => _BookingCard(booking: b)).toList(),
+                    ),
             ),
           ),
         ],
@@ -167,7 +179,7 @@ class _BookingCard extends StatelessWidget {
                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.mutedForeground),
                   ),
                 Text(
-                  inr(b.amount),
+                  b.amount > 0 ? inr(b.amount) : 'To be confirmed',
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink),
                 ),
               ],

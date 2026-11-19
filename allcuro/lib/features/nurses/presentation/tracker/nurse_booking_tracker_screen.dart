@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/content/site_contact.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_shell.dart';
+import '../../../../core/ui/partner_avatar.dart';
 import '../../../../core/ui/surface.dart';
 import '../../../../core/ui/tappable.dart';
 import '../../../bookings/data/models/booking.dart';
@@ -88,7 +90,9 @@ class _NurseBookingTrackerScreenState
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'How was your session with ${booking.providerName}?',
+                  _isAwaitingNurse(booking)
+                      ? 'How was your ALLCURO visit?'
+                      : 'How was your session with ${booking.providerName}?',
                   style: const TextStyle(fontSize: 12.5, color: AppColors.mutedForeground),
                 ),
                 const SizedBox(height: 16),
@@ -113,7 +117,7 @@ class _NurseBookingTrackerScreenState
                   controller: _reviewController,
                   maxLines: 3,
                   decoration: const InputDecoration(
-                    labelText: 'Write a review for Sister Priya...',
+                    labelText: 'Write a review for your nurse...',
                     hintText: 'e.g. Very gentle with wound dressing, punctual and caring.',
                     border: OutlineInputBorder(),
                   ),
@@ -150,6 +154,7 @@ class _NurseBookingTrackerScreenState
   }
 
   void _showSosDialog(BuildContext context) {
+    final careDesk = ref.read(careDeskPhoneProvider);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -165,7 +170,8 @@ class _NurseBookingTrackerScreenState
           ],
         ),
         content: const Text(
-          'Connecting you directly with the ALLCURO 24x7 Emergency Clinical Supervisor for immediate assistance.',
+          'Connecting you with the ALLCURO care desk for immediate assistance. '
+          'In a medical emergency, also call 108 for an ambulance.',
           style: TextStyle(fontSize: 13, height: 1.35),
         ),
         actions: [
@@ -177,8 +183,10 @@ class _NurseBookingTrackerScreenState
             onPressed: () {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('📞 Dialing ALLCURO Emergency Care Team (+91 80 4718 9000)...'),
+                SnackBar(
+                  content: Text(careDesk.isEmpty
+                      ? 'Please call 108 for an ambulance in an emergency.'
+                      : 'ALLCURO care desk: $careDesk'),
                   backgroundColor: AppColors.destructive,
                 ),
               );
@@ -215,7 +223,11 @@ class _NurseBookingTrackerScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (booking.type == BookingType.nurse && booking.liveStatus != BookingLiveStatus.completed) ...[
+                    // The live map only appears once a real nurse is on the way.
+                    if (booking.type == BookingType.nurse &&
+                        !_isAwaitingNurse(booking) &&
+                        booking.liveStatus != BookingLiveStatus.assigned &&
+                        booking.liveStatus != BookingLiveStatus.completed) ...[
                       _buildLiveMapCard(booking),
                       const SizedBox(height: 14),
                     ],
@@ -417,7 +429,7 @@ class _NurseBookingTrackerScreenState
           ),
           const SizedBox(height: 12),
           const Text(
-            'Share this 4-digit code with Sister Priya Sharma upon arrival or service completion to securely finalize your clinical visit.',
+            'Share this 4-digit code with your ALLCURO nurse when they arrive, to confirm the visit.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 11.5, color: Colors.white70, height: 1.35),
           ),
@@ -427,6 +439,36 @@ class _NurseBookingTrackerScreenState
   }
 
   Widget _buildLiveStepper(Booking booking) {
+    final awaiting = _isAwaitingNurse(booking);
+    // Index of the step currently under way (0 = waiting for assignment).
+    final current = awaiting
+        ? 0
+        : switch (booking.liveStatus) {
+            BookingLiveStatus.assigned => 1,
+            BookingLiveStatus.enRoute => 1,
+            BookingLiveStatus.reached => 2,
+            BookingLiveStatus.inProgress => 3,
+            BookingLiveStatus.completed => 5,
+          };
+    final steps = [
+      (
+        'Nurse assigned',
+        awaiting ? 'Our care desk is matching a verified nurse for you' : booking.providerName,
+      ),
+      ('Nurse on the way', 'You will see live tracking here'),
+      ('Arrival verified', 'Share your OTP when the nurse arrives'),
+      ('Service in progress', 'Vitals and notes are logged by your nurse'),
+      ('Service completed', 'Visit summary shared with you'),
+    ];
+    final statusLabel = awaiting
+        ? 'Awaiting nurse'
+        : switch (booking.liveStatus) {
+            BookingLiveStatus.assigned => 'Nurse assigned',
+            BookingLiveStatus.enRoute => 'On the way',
+            BookingLiveStatus.reached => 'Arrived',
+            BookingLiveStatus.inProgress => 'In progress',
+            BookingLiveStatus.completed => 'Completed',
+          };
     return Surface(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -435,7 +477,10 @@ class _NurseBookingTrackerScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Live Visit Status', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink)),
+              const Flexible(
+                child: Text('Visit Status', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink)),
+              ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                 decoration: BoxDecoration(
@@ -443,32 +488,31 @@ class _NurseBookingTrackerScreenState
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                   border: Border.all(color: AppColors.secondaryAccentBorder, width: 0.8),
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.bolt_rounded, size: 13, color: AppColors.secondaryAccent),
-                    SizedBox(width: 2),
-                    Text(
-                      'ETA: 12 mins',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.secondaryAccent),
-                    ),
-                  ],
+                child: Text(
+                  statusLabel,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.secondaryAccent),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          _StepTile(title: 'Nurse Assigned', subtitle: '${booking.providerName} (${booking.providerQualifications})', isDone: true),
-          _StepTile(title: 'Nurse En Route', subtitle: 'Sister Priya is traveling to Indiranagar location', isDone: true),
-          _StepTile(title: 'Arrival & Selfie Verified', subtitle: 'GPS geofence match passed (30m)', isDone: true),
-          _StepTile(title: 'Service in Progress', subtitle: 'Digital clinical vitals logging active', isDone: true, isCurrent: true),
-          _StepTile(title: 'Service Completed', subtitle: 'Final medical report filed with Allcuro', isDone: false, isLast: true),
+          for (int i = 0; i < steps.length; i++)
+            _StepTile(
+              title: steps[i].$1,
+              subtitle: steps[i].$2,
+              isDone: i < current,
+              isCurrent: i == current,
+              isLast: i == steps.length - 1,
+            ),
         ],
       ),
     );
   }
 
   Widget _buildNurseProfileCard(Booking booking) {
+    final awaiting = _isAwaitingNurse(booking);
+    final phone = booking.providerPhone.isNotEmpty ? booking.providerPhone : ref.watch(careDeskPhoneProvider);
+    final completed = booking.liveStatus == BookingLiveStatus.completed;
     return Surface(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -480,7 +524,12 @@ class _NurseBookingTrackerScreenState
                 height: 52,
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(color: AppColors.primarySoft, shape: BoxShape.circle),
-                child: const Text('PS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.primary)),
+                child: awaiting || PartnerAvatar.initialsOf(booking.providerName).isEmpty
+                    ? const Icon(Icons.medical_services_rounded, color: AppColors.primary)
+                    : Text(
+                        PartnerAvatar.initialsOf(booking.providerName),
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.primary),
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -489,19 +538,24 @@ class _NurseBookingTrackerScreenState
                   children: [
                     Row(
                       children: [
-                        Text(
-                          booking.providerName,
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink),
+                        Flexible(
+                          child: Text(
+                            booking.providerName.isEmpty ? kAssignedNurseLabel : booking.providerName,
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink),
+                          ),
                         ),
                         const SizedBox(width: 6),
                         const Icon(Icons.verified, color: AppColors.success, size: 16),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      booking.providerQualifications,
-                      style: const TextStyle(fontSize: 12, color: AppColors.mutedForeground),
-                    ),
+                    if (booking.providerQualifications.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        booking.providerQualifications,
+                        style: const TextStyle(fontSize: 12, color: AppColors.mutedForeground),
+                      ),
+                    ],
+                    if (booking.providerRating > 0) ...[
                     const SizedBox(height: 2),
                     Row(
                       children: [
@@ -509,12 +563,13 @@ class _NurseBookingTrackerScreenState
                         const SizedBox(width: 2),
                         Flexible(
                           child: Text(
-                            '${booking.providerRating} (142 visits completed)',
+                            booking.providerRating.toStringAsFixed(1),
                             style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.ink),
                           ),
                         ),
                       ],
                     ),
+                    ],
                   ],
                 ),
               ),
@@ -525,18 +580,19 @@ class _NurseBookingTrackerScreenState
           const SizedBox(height: 12),
           Row(
             children: [
+              if (phone.isNotEmpty)
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('📞 Calling Sister Priya (${booking.providerPhone})...'),
+                        content: Text(awaiting ? 'ALLCURO care desk: $phone' : 'Call ${booking.providerName}: $phone'),
                         backgroundColor: AppColors.success,
                       ),
                     );
                   },
                   icon: const Icon(Icons.phone_in_talk, size: 16),
-                  label: const Text('Call Nurse', style: TextStyle(fontWeight: FontWeight.w700)),
+                  label: Text(awaiting ? 'Call care desk' : 'Call nurse', style: const TextStyle(fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -544,12 +600,13 @@ class _NurseBookingTrackerScreenState
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              if (phone.isNotEmpty && completed) const SizedBox(width: 10),
+              if (completed)
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _showRatingModal(context, booking),
                   icon: const Icon(Icons.rate_review_outlined, size: 16),
-                  label: Text(_reviewSubmitted ? 'Rated ★★★★★' : 'Rate Nurse', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  label: Text(_reviewSubmitted ? 'Thanks for rating' : 'Rate Nurse', style: const TextStyle(fontWeight: FontWeight.w700)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.primary),
@@ -580,21 +637,12 @@ class _NurseBookingTrackerScreenState
                     SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'Real-Time Clinical Vitals',
+                        'Clinical Vitals',
                         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.successSoft,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: const Text('Live Sync', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.success)),
               ),
             ],
           ),
@@ -623,9 +671,18 @@ class _NurseBookingTrackerScreenState
         children: [
           const Text('Patient & Service Address', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink)),
           const SizedBox(height: 10),
-          Text('${booking.patientName} (${booking.patientAge}y, ${booking.patientGender})', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink)),
-          const SizedBox(height: 2),
-          Text(booking.condition ?? '', style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+          Text(
+            [
+              booking.patientName.isEmpty ? 'Patient' : booking.patientName,
+              if (booking.patientAge > 0 || booking.patientGender.isNotEmpty)
+                '(${[if (booking.patientAge > 0) '${booking.patientAge}y', if (booking.patientGender.isNotEmpty) booking.patientGender].join(', ')})',
+            ].join(' '),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.ink),
+          ),
+          if ((booking.condition ?? '').isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(booking.condition!, style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ],
           const SizedBox(height: 4),
           Text(booking.address, style: const TextStyle(fontSize: 12, color: AppColors.mutedForeground)),
         ],
@@ -648,6 +705,10 @@ class _NurseBookingTrackerScreenState
     );
   }
 }
+
+/// True while the care desk has not yet assigned a named nurse.
+bool _isAwaitingNurse(Booking booking) =>
+    booking.providerName.isEmpty || booking.providerName == kAssignedNurseLabel;
 
 class _StepTile extends StatelessWidget {
   final String title;

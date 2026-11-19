@@ -4,7 +4,7 @@ part 'score_item.freezed.dart';
 part 'score_item.g.dart';
 
 @freezed
-class ScoreItem with _$ScoreItem {
+abstract class ScoreItem with _$ScoreItem {
   const factory ScoreItem({required String label, required double value}) = _ScoreItem;
 
   factory ScoreItem.fromJson(Map<String, dynamic> json) => _$ScoreItemFromJson(json);

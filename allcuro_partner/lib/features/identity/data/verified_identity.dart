@@ -5,24 +5,29 @@ class RegistryRecord {
   final String registeredName;
   final String council;
   final String qualification;
-  final int registeredSince;
+
+  /// Year of first registration, when the register reports it.
+  final int? registeredSince;
 
   const RegistryRecord({
     required this.registeredName,
     required this.council,
     required this.qualification,
-    required this.registeredSince,
+    this.registeredSince,
   });
 }
 
 /// Demographic details returned by Aadhaar e-KYC after a successful OTP.
+/// [dob], [gender] and [address] are null / empty when the e-KYC source
+/// didn't provide them (e.g. the local mock) — the sign-up wizard then asks
+/// the partner for them instead of locking them.
 class AadhaarProfile {
   final String name;
-  final DateTime dob;
-  final String gender;
+  final DateTime? dob;
+  final String? gender;
   final String address;
 
-  const AadhaarProfile({required this.name, required this.dob, required this.gender, required this.address});
+  const AadhaarProfile({required this.name, this.dob, this.gender, this.address = ''});
 }
 
 /// The identity a nurse / doctor / physiotherapist proved at sign-up —
@@ -31,8 +36,11 @@ class AadhaarProfile {
 /// from it and lock these fields.
 class VerifiedIdentity {
   final String fullName;
-  final DateTime dob;
-  final String gender;
+
+  /// Null / empty when e-KYC didn't return them — then they're entered (and
+  /// editable) in the sign-up wizard rather than locked.
+  final DateTime? dob;
+  final String? gender;
   final String address;
   final String aadhaarLast4;
 
@@ -47,9 +55,9 @@ class VerifiedIdentity {
 
   const VerifiedIdentity({
     required this.fullName,
-    required this.dob,
-    required this.gender,
-    required this.address,
+    this.dob,
+    this.gender,
+    this.address = '',
     required this.aadhaarLast4,
     required this.registrationLabel,
     required this.registrationNumber,
@@ -62,7 +70,7 @@ class VerifiedIdentity {
 
   Map<String, dynamic> toJson() => {
     'fullName': fullName,
-    'dob': dob.toIso8601String(),
+    'dob': dob?.toIso8601String(),
     'gender': gender,
     'address': address,
     'aadhaarLast4': aadhaarLast4,
@@ -75,9 +83,9 @@ class VerifiedIdentity {
 
   factory VerifiedIdentity.fromJson(Map<String, dynamic> json) => VerifiedIdentity(
     fullName: json['fullName'] as String,
-    dob: DateTime.parse(json['dob'] as String),
-    gender: json['gender'] as String,
-    address: json['address'] as String,
+    dob: DateTime.tryParse(json['dob'] as String? ?? ''),
+    gender: json['gender'] as String?,
+    address: json['address'] as String? ?? '',
     aadhaarLast4: json['aadhaarLast4'] as String,
     registrationLabel: json['registrationLabel'] as String,
     registrationNumber: json['registrationNumber'] as String,

@@ -43,9 +43,9 @@ class AuthViewModel extends AsyncNotifier<AuthSession> {
     state = await AsyncValue.guard(() => _repository.saveIdentity(role, identity));
   }
 
-  /// Called when the nurse sign-up wizard is submitted, and by the demo
-  /// "advance verification" control on `ProfileScreen` — there's no real
-  /// admin review queue behind this yet.
+  /// Called when the nurse sign-up wizard is submitted. Admin approval
+  /// comes from `public.partners` (see `AuthService.syncStatusesFromServer`);
+  /// only demo builds (no Supabase keys) can advance it locally.
   Future<void> setNurseVerificationStatus(NurseVerificationStatus status) async {
     state = await AsyncValue.guard(() => _repository.setNurseVerificationStatus(status));
   }
@@ -67,6 +67,16 @@ class AuthViewModel extends AsyncNotifier<AuthSession> {
   /// Same as [setNurseVerificationStatus], for the centre sign-up wizard.
   Future<void> setCentreVerificationStatus(CentreVerificationStatus status) async {
     state = await AsyncValue.guard(() => _repository.setCentreVerificationStatus(status));
+  }
+
+  /// Remembers the centre name entered in the centre sign-up wizard.
+  Future<void> saveCentreName(String name) async {
+    state = await AsyncValue.guard(() => _repository.saveCentreName(name));
+  }
+
+  /// Re-reads admin-set statuses (and site-visit time) from Supabase.
+  Future<void> refreshFromServer() async {
+    state = await AsyncValue.guard(() => _repository.loadSession(syncFromServer: true));
   }
 
   Future<void> logout() async {

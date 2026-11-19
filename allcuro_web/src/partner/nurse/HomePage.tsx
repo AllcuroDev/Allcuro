@@ -5,14 +5,15 @@ import { toast } from '../../lib/toast'
 import { PR } from '../routes'
 import { practitionerIdentity, practitionerStatus, setPractitionerStatus, usePartnerSession } from '../session'
 import { PBody, PCard, PIcon, PSectionTitle, Toggle, ToolTile, type PIconName } from '../ui'
-import { SOS_GPS_HOME, type JobRequestSummary, type NurseVisit } from './data'
+import { SOS_LOCATION_NOTE, type JobRequestSummary, type NurseVisit } from './data'
 import { ProgressBar, SosButton } from './parts'
 import {
   availabilityStore,
   effectiveSkills,
   givePoliceConsent,
   greeting,
-  kycStore,
+  hasPoliceConsent,
+  nurseDocs,
   mapsUrl,
   requestsStore,
   setDutyStatus,
@@ -31,7 +32,7 @@ export function NurseHomePage() {
   const session = usePartnerSession()
   const status = practitionerStatus(session)
   const identity = practitionerIdentity(session)
-  const name = session.name || identity?.fullName || 'Priya Sharma'
+  const name = session.name || identity?.fullName || 'Partner'
   const isVerified = status === 'verified'
   const isUnderReview = status === 'underReview'
   const isClinician = session.role === 'clinician'
@@ -48,7 +49,7 @@ export function NurseHomePage() {
         </div>
         <SosButton
           text="Triggering SOS broadcasts your location to ALLCURO Emergency HQ and dials the 24x7 clinical command desk."
-          gps={SOS_GPS_HOME}
+          gps={SOS_LOCATION_NOTE}
           callLabel="Call Allcuro SOS HQ"
           sentMessage="Emergency SOS alert sent! Allcuro team is contacting you."
         />
@@ -111,7 +112,7 @@ function LiveDashboard() {
 
   return (
     <>
-      {visit.status !== 'completed' && <ActiveVisitCard visit={visit} />}
+      {visit && visit.status !== 'completed' && <ActiveVisitCard visit={visit} />}
 
       <div className="pn-stat-row">
         <div className="pn-stat is-coral">
@@ -126,7 +127,7 @@ function LiveDashboard() {
             <strong>{active.length}</strong>
             <span>Scheduled</span>
           </div>
-          <span className="pn-stat-label">Shifts this week</span>
+          <span className="pn-stat-label">Upcoming shifts</span>
         </div>
       </div>
 
@@ -148,7 +149,7 @@ function LiveDashboard() {
           </PCard>
         ) : (
           <PCard>
-            <span className="p-muted">No upcoming shifts right now</span>
+            <span className="p-muted">No upcoming shifts yet. Shifts you accept will show up here.</span>
           </PCard>
         )}
       </section>
@@ -158,7 +159,7 @@ function LiveDashboard() {
           <span id="pn-newreq">New Patient Requests</span>
         </PSectionTitle>
         {requests.length === 0 ? (
-          <p className="p-muted pn-pad">No pending requests right now</p>
+          <p className="p-muted pn-pad">No visit requests yet. You’ll see them here once families start booking.</p>
         ) : (
           <ul className="p-list">
             {requests.slice(0, 2).map((r) => (
@@ -240,10 +241,9 @@ function RequestPreview({ request: r }: { request: JobRequestSummary }) {
 
 function SetupHub() {
   const session = usePartnerSession()
-  const kyc = kycStore.use()
   const avail = availabilityStore.use()
   const identity = practitionerIdentity(session)
-  const p = setupProgress(kyc, avail, session)
+  const p = setupProgress(avail, session)
   const pct = Math.round((p.completed / p.total) * 100)
   const skills = effectiveSkills(avail, session)
   const [consentOpen, setConsentOpen] = useState(false)
@@ -268,7 +268,7 @@ function SetupHub() {
         </span>
       </div>
       <ProgressBar value={pct} label="Profile setup progress" />
-      <p className="p-muted pn-small">Your identity is verified. Add certificates, bank details and skills to activate patient matching.</p>
+      <p className="p-muted pn-small">Add your certificates, bank details and skills, then submit your profile for ALLCURO to review.</p>
 
       <ol className="pn-checks">
         <CheckTile
@@ -277,11 +277,11 @@ function SetupHub() {
           title="Identity & Basic Profile"
           subtitle={
             identity
-              ? `Aadhaar & ${identity.registrationLabel} ${identity.registrationNumber} verified at sign-up`
-              : 'Aadhaar & registration verified at sign-up'
+              ? `Aadhaar & ${identity.registrationLabel} ${identity.registrationNumber} added at sign-up`
+              : 'Aadhaar & registration added at sign-up'
           }
           done={p.profileDone}
-          status="Verified"
+          status="Added"
         />
         <CheckTile
           n={2}
@@ -417,16 +417,25 @@ function CheckTile({
 
 // ---------------------------------------------------------------- under review
 
-const AUDIT_STEPS: { title: string; done: boolean; time: string }[] = [
-  { title: 'Aadhaar & Registration (verified at sign-up)', done: true, time: 'Verified' },
-  { title: 'Certificates & HPR Registry Review', done: true, time: 'Passed' },
-  { title: 'Police Background Verification Clearance', done: true, time: 'Clean Record' },
-  { title: 'ALLCURO Nurse Badge & Shift Matching', done: false, time: 'Final Review' },
-]
-
 function UnderReviewCard() {
   const session = usePartnerSession()
+  const docs = nurseDocs(session)
   const isClinician = session.role === 'clinician'
+  const docsUploaded = docs.filter((d) => d.isUploaded).length
+  const consented = hasPoliceConsent(session)
+  // Honest progress: only "submitted" is done. Everything else is ALLCURO's
+  // review, which happens in the admin panel and isn't tracked step by step.
+  const steps: { title: string; done: boolean; time: string }[] = [
+    { title: 'Profile submitted for review', done: true, time: 'Submitted' },
+    { title: 'Aadhaar & registration check', done: false, time: 'Awaiting ALLCURO review' },
+    {
+      title: 'Certificates & HPR registry review',
+      done: false,
+      time: docsUploaded ? `${docsUploaded} of ${docs.length} documents uploaded · awaiting review` : 'Documents still to upload',
+    },
+    { title: 'Police background verification', done: false, time: consented ? 'Consent given · awaiting check' : 'Consent not given yet' },
+    { title: `Approval & ${isClinician ? 'visit' : 'shift'} matching`, done: false, time: 'Pending' },
+  ]
   return (
     <PCard as="section" className="pn-hub">
       <div className="pn-hub-head">
@@ -435,11 +444,10 @@ function UnderReviewCard() {
         <span className="p-pill is-warn">Under Review</span>
       </div>
       <p className="p-muted pn-small">
-        Your certificates and police background clearance are being reviewed by ALLCURO ops. Verified {isClinician ? 'clinicians' : 'nurses'} get
-        instant access to shift requests.
+        ALLCURO is reviewing your details and documents. Once approved, families can find and book you, and requests will show up here.
       </p>
       <ul className="pn-audit">
-        {AUDIT_STEPS.map((s) => {
+        {steps.map((s) => {
           const icon: PIconName = s.done ? 'check' : 'clock'
           return (
             <li key={s.title} className={s.done ? 'is-done' : ''}>
@@ -447,7 +455,7 @@ function UnderReviewCard() {
                 <PIcon name={icon} size={13} />
               </span>
               <span>
-                <strong>{isClinician ? s.title.replace('Nurse Badge', 'Clinician Badge') : s.title}</strong>
+                <strong>{s.title}</strong>
                 <small>{s.time}</small>
               </span>
             </li>

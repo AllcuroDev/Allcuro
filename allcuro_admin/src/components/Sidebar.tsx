@@ -23,7 +23,6 @@ interface SidebarProps {
   currentSection: NavSection;
   onSelectSection: (section: NavSection) => void;
   pendingVerifications: number;
-  sosAlertsCount: number;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -32,7 +31,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentSection,
   onSelectSection,
   pendingVerifications,
-  sosAlertsCount,
   isCollapsed,
   onToggleCollapse,
 }) => {
@@ -86,11 +84,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <Activity size={18} className="item-icon" />
             {!isCollapsed && <span className="item-label">Live Shifts & SOS</span>}
-            {sosAlertsCount > 0 && (
-              <span className={`pill-badge alert-badge ${isCollapsed ? 'dot-badge red' : ''}`}>
-                {isCollapsed ? '' : `${sosAlertsCount} SOS`}
-              </span>
-            )}
           </button>
 
           <button
@@ -105,10 +98,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             className={`nav-menu-item ${currentSection === 'payouts' ? 'active' : ''}`}
             onClick={() => onSelectSection('payouts')}
-            title={isCollapsed ? 'Razorpay Split Ledger' : undefined}
+            title={isCollapsed ? 'Payouts Ledger' : undefined}
           >
             <DollarSign size={18} className="item-icon" />
-            {!isCollapsed && <span className="item-label">Razorpay Split Ledger</span>}
+            {!isCollapsed && <span className="item-label">Payouts Ledger</span>}
           </button>
 
           <button
@@ -123,10 +116,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             className={`nav-menu-item ${currentSection === 'analytics' ? 'active' : ''}`}
             onClick={() => onSelectSection('analytics')}
-            title={isCollapsed ? 'City Demand Heatmap' : undefined}
+            title={isCollapsed ? 'Cities & Demand' : undefined}
           >
             <BarChart3 size={18} className="item-icon" />
-            {!isCollapsed && <span className="item-label">Demand Heatmap</span>}
+            {!isCollapsed && <span className="item-label">Cities &amp; Demand</span>}
           </button>
 
           <button
@@ -173,10 +166,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <FileSpreadsheet size={17} className="item-icon" />
             {!isCollapsed && <span className="item-label">GST Settlements</span>}
           </div>
-          <div className="nav-menu-item secondary" title={isCollapsed ? 'Field Audit Logs (7)' : undefined}>
+          <div className="nav-menu-item secondary" title={isCollapsed ? 'Field Audit Logs' : undefined}>
             <FolderKanban size={17} className="item-icon" />
             {!isCollapsed && <span className="item-label">Field Audit Logs</span>}
-            {!isCollapsed && <span className="pill-badge pink-badge">7</span>}
           </div>
         </div>
       </div>

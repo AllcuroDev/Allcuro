@@ -16,10 +16,10 @@ class AddEditRoomDialog extends ConsumerStatefulWidget {
 class _AddEditRoomDialogState extends ConsumerState<AddEditRoomDialog> {
   final _formKey = GlobalKey<FormState>();
   final _roomNumCtrl = TextEditingController();
-  final _rateCtrl = TextEditingController(text: '2500');
+  final _rateCtrl = TextEditingController();
   String _selectedWard = 'Care Wing A';
   int _bedCount = 2;
-  final Set<String> _selectedAmenities = {'AC', 'Attached Restroom', 'Nurse Call Bell'};
+  final Set<String> _selectedAmenities = {};
 
   final _wards = [
     'Care Wing A',

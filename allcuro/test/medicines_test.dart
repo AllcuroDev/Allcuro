@@ -12,12 +12,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'fixtures.dart';
+
 Medicine _m(String id) => MedicineCatalog.byId(id)!;
 
 const _pdf = PrescriptionFile(name: 'rx.pdf', sizeBytes: 120000, isPdf: true);
 
 void main() {
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+  setUp(() => MedicineCatalog.replaceAll(testMedicines));
+  tearDown(() => MedicineCatalog.replaceAll(const []));
 
   group('MedicineCartState pricing', () {
     test('adds a ₹39 delivery fee below ₹499 and none from ₹499', () {
@@ -25,14 +29,14 @@ void main() {
       addTearDown(c.dispose);
       final cart = c.read(medicineCartProvider.notifier);
 
-      cart.add(_m('paracetamol-650')); // ₹30
+      cart.add(_m('test-pain-650')); // ₹30
       var s = c.read(medicineCartProvider);
       expect(s.itemTotal, 30);
       expect(s.deliveryFee, 39);
       expect(s.total, 69);
       expect(s.toFreeDelivery, 469);
 
-      cart.setQty(_m('multivitamin'), 2); // + ₹544
+      cart.setQty(_m('test-vitamin'), 2); // + ₹544
       s = c.read(medicineCartProvider);
       expect(s.itemTotal, 574);
       expect(s.deliveryFee, 0);
@@ -45,9 +49,9 @@ void main() {
       addTearDown(c.dispose);
       final cart = c.read(medicineCartProvider.notifier);
 
-      cart.setQty(_m('cetirizine-10'), 25);
-      expect(c.read(medicineCartProvider).qtyOf('cetirizine-10'), MedicinePricing.maxQty);
-      cart.setQty(_m('cetirizine-10'), 0);
+      cart.setQty(_m('test-allergy-10'), 25);
+      expect(c.read(medicineCartProvider).qtyOf('test-allergy-10'), MedicinePricing.maxQty);
+      cart.setQty(_m('test-allergy-10'), 0);
       expect(c.read(medicineCartProvider).lines, isEmpty);
       expect(c.read(medicineCartProvider).deliveryFee, 0, reason: 'no fee on an empty cart');
     });
@@ -55,50 +59,66 @@ void main() {
     test('Rx medicines block checkout until a prescription is attached', () {
       final c = ProviderContainer();
       addTearDown(c.dispose);
-      c.read(medicineCartProvider.notifier).add(_m('amoxicillin-500'));
+      c.read(medicineCartProvider.notifier).add(_m('test-rx-antibiotic'));
       final s = c.read(medicineCartProvider);
       expect(s.needsPrescription, isTrue);
       expect(s.canCheckout, isFalse);
     });
 
     test('search matches name, category and pack within a category', () {
-      expect(MedicineCatalog.search('paracet').map((m) => m.id), ['paracetamol-650']);
-      expect(MedicineCatalog.search('', category: 'Vitamins'), hasLength(3));
+      expect(MedicineCatalog.search('pain relief').map((m) => m.id), ['test-pain-650']);
+      expect(MedicineCatalog.search('', category: 'Vitamins'), hasLength(1));
       expect(MedicineCatalog.search('syrup', category: 'Vitamins'), isEmpty);
-      expect(MedicineCatalog.search('sachets').single.id, 'ors-orange');
+      expect(MedicineCatalog.search('sachets').single.id, 'test-ors');
+    });
+
+    test('catalog has no bundled medicines: empty until Supabase fills it', () {
+      MedicineCatalog.replaceAll(const []);
+      expect(MedicineCatalog.all, isEmpty);
+      expect(MedicineCatalog.categories, ['All']);
+      expect(MedicineCatalog.byId('test-pain-650'), isNull);
+    });
+
+    test('medicine rows map from Supabase', () {
+      final m = medicineFromRow({
+        'id': 'x', 'name': 'X 5 mg', 'pack': 'Strip', 'category': 'Vitamins',
+        'mrp': 50.0, 'price': 45.4, 'rx': true, 'image_url': null,
+      });
+      expect((m.id, m.price, m.mrp, m.rx, m.discountPercent), ('x', 45, 50, true, 10));
     });
   });
 
-  group('prescription review', () {
-    test('adds the prescribed medicines and unlocks checkout', () async {
+  group('prescription', () {
+    test('attaching never adds medicines; it unlocks Rx checkout for the pharmacist to review', () {
       final c = ProviderContainer();
       addTearDown(c.dispose);
       final cart = c.read(medicineCartProvider.notifier);
-      cart.setQty(_m('metformin-500'), 5);
-
-      final review = cart.attachPrescription(_pdf);
-      expect(c.read(medicineCartProvider).prescriptionStatus, PrescriptionStatus.reviewing);
+      cart.setQty(_m('test-rx-bp'), 5);
       expect(c.read(medicineCartProvider).canCheckout, isFalse);
-      await review;
 
+      cart.attachPrescription(_pdf);
       final s = c.read(medicineCartProvider);
-      expect(s.prescriptionStatus, PrescriptionStatus.reviewed);
-      expect(s.qtyOf('metformin-500'), 5, reason: 'keeps a larger quantity the user chose');
-      expect(s.qtyOf('amlodipine-5'), 1);
-      expect(s.qtyOf('pantoprazole-40'), 1);
-      expect(s.lines.every((l) => l.fromPrescription), isTrue);
+      expect(s.prescriptionStatus, PrescriptionStatus.attached);
+      expect(s.lines.single.medicine.id, 'test-rx-bp');
+      expect(s.qtyOf('test-rx-bp'), 5);
+      expect(s.lines.any((l) => l.fromPrescription), isFalse);
       expect(s.canCheckout, isTrue);
     });
 
-    test('a prescription removed mid-review adds nothing', () async {
+    test('a prescription alone is a valid order; removing it empties the cart again', () {
       final c = ProviderContainer();
       addTearDown(c.dispose);
       final cart = c.read(medicineCartProvider.notifier);
-      final review = cart.attachPrescription(_pdf);
+      cart.attachPrescription(_pdf);
+      var s = c.read(medicineCartProvider);
+      expect(s.lines, isEmpty);
+      expect(s.isPrescriptionOnly, isTrue);
+      expect(s.canCheckout, isTrue);
+
       cart.removePrescription();
-      await review;
-      expect(c.read(medicineCartProvider).lines, isEmpty);
-      expect(c.read(medicineCartProvider).prescriptionStatus, PrescriptionStatus.none);
+      s = c.read(medicineCartProvider);
+      expect(s.prescriptionStatus, PrescriptionStatus.none);
+      expect(s.canCheckout, isFalse);
     });
   });
 
@@ -114,7 +134,10 @@ void main() {
       tester.view.devicePixelRatio = 2;
       addTearDown(tester.view.reset);
 
-      final container = ProviderContainer();
+      final container = ProviderContainer(overrides: [
+        // Keep the test catalog (no Supabase in tests).
+        medicineCatalogProvider.overrideWith((ref) async => MedicineCatalog.all),
+      ]);
       addTearDown(container.dispose);
       seed?.call(container);
 
@@ -166,8 +189,8 @@ void main() {
       testWidgets('cart with Rx items lays out and gates checkout at ${size.width.toInt()}dp', (tester) async {
         await pump(tester, '/medicines/cart', size: size, seed: (c) {
           final cart = c.read(medicineCartProvider.notifier);
-          cart.setQty(_m('azithromycin-500'), 1);
-          cart.setQty(_m('ors-orange'), 2);
+          cart.setQty(_m('test-rx-antibiotic'), 1);
+          cart.setQty(_m('test-ors'), 2);
         });
         expect(tester.takeException(), isNull);
         expect(find.text('Upload a prescription to order Rx medicines'), findsOneWidget);
@@ -185,11 +208,20 @@ void main() {
       });
     }
 
+    testWidgets('empty catalog shows a friendly empty state, not fake medicines', (tester) async {
+      MedicineCatalog.replaceAll(const []);
+      await pump(tester, '/medicines');
+      expect(tester.takeException(), isNull);
+      expect(find.text('No medicines listed yet'), findsOneWidget);
+      expect(find.text('ADD'), findsNothing);
+      expect(find.text('Have a prescription?'), findsOneWidget, reason: 'upload still works');
+    });
+
     testWidgets('a paid order shows its OTP and items', (tester) async {
       final c = await pump(tester, '/medicines');
       // Create an order the way the cart does, then open its page.
       final cart = c.read(medicineCartProvider.notifier);
-      cart.setQty(_m('vitamin-d3'), 2);
+      cart.setQty(_m('test-vitamin'), 2);
       final bookings = c.read(bookingsViewModelProvider.notifier);
       await tester.runAsync(() => c.read(bookingsViewModelProvider.future));
       await tester.runAsync(() => bookings.createBooking(
@@ -199,10 +231,10 @@ void main() {
               title: 'Medicine order · 2 items',
               when: 'Delivery today, within 3 hrs',
               status: 'Confirmed',
-              amount: 269,
+              amount: 544,
               otp: '5521',
               providerQualifications: 'Licensed pharmacy · UPI',
-              items: ['Vitamin D3 60,000 IU Capsule × 2 · ₹230'],
+              items: ['Test Multivitamin × 2 · ₹544'],
             ),
           ));
       GoRouter.of(tester.element(find.byType(MedicinesScreen))).go('/medicine-order/ALC-MED-12345');
@@ -212,11 +244,11 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('5521'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.text('Vitamin D3 60,000 IU Capsule × 2 · ₹230'),
+        find.text('Test Multivitamin × 2 · ₹544'),
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('Vitamin D3 60,000 IU Capsule × 2 · ₹230'), findsOneWidget);
+      expect(find.text('Test Multivitamin × 2 · ₹544'), findsOneWidget);
     });
   });
 }

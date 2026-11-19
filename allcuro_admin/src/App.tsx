@@ -14,15 +14,15 @@ import { ComplianceView } from './components/ComplianceView';
 import { AnalyticsView } from './components/AnalyticsView';
 import { ServicesCatalogView } from './components/ServicesCatalogView';
 import { AdminLogin } from './components/AdminLogin';
+import { EmptyState } from './components/EmptyState';
+import { LifeBuoy } from 'lucide-react';
 import { useAdminSession } from './lib/adminAuth';
 import type { NavSection } from './types/admin';
-import { mockStats } from './data/mockData';
 import './App.css';
 
 export function App() {
   const { status, session, signOut } = useAdminSession();
   const [currentSection, setCurrentSection] = useState<NavSection>('overview');
-  const [timeframe, setTimeframe] = useState<string>('Sep 1 – Nov 30, 2026');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [pendingPartners, setPendingPartners] = useState(0);
 
@@ -34,7 +34,7 @@ export function App() {
   const renderCurrentView = () => {
     switch (currentSection) {
       case 'overview':
-        return <OverviewView />;
+        return <OverviewView onNavigate={setCurrentSection} />;
       case 'verification':
         return <PartnersView onCountChange={setPendingPartners} />;
       case 'equipment':
@@ -46,7 +46,7 @@ export function App() {
       case 'live_ops':
         return <LiveOperationsView />;
       case 'centres_beds':
-        return <BedOccupancyView />;
+        return <BedOccupancyView onOpenPartners={() => setCurrentSection('verification')} />;
       case 'payouts':
         return <PayoutsLedgerView />;
       case 'compliance':
@@ -56,9 +56,21 @@ export function App() {
       case 'services':
         return <ServicesCatalogView />;
       case 'support':
-        return <LiveOperationsView />;
+        return (
+          <div>
+            <div className="view-header-row">
+              <div>
+                <h1 className="view-title">Ops Helpdesk</h1>
+                <p className="view-subtitle">Support requests from families and partners.</p>
+              </div>
+            </div>
+            <EmptyState icon={LifeBuoy} title="No support requests yet">
+              Tickets and call-backs from families and partners will appear here once bookings go live.
+            </EmptyState>
+          </div>
+        );
       default:
-        return <OverviewView />;
+        return <OverviewView onNavigate={setCurrentSection} />;
     }
   };
 
@@ -73,7 +85,6 @@ export function App() {
         currentSection={currentSection}
         onSelectSection={(sec) => setCurrentSection(sec)}
         pendingVerifications={pendingPartners}
-        sosAlertsCount={mockStats.sosAlertsCount}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
       />
@@ -81,8 +92,6 @@ export function App() {
       {/* Main Content Area */}
       <main className="allcuro-main-content">
         <Header
-          timeframe={timeframe}
-          setTimeframe={setTimeframe}
           onNewAction={() => setCurrentSection('verification')}
           adminEmail={session?.user.email ?? ''}
           onSignOut={signOut}

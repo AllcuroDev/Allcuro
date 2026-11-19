@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../auth/presentation/auth_view_model.dart';
 import '../../../../core/provider_role.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_shell.dart';
@@ -32,7 +33,7 @@ class CentreRequestsScreen extends ConsumerWidget {
       currentIndex: 1,
       onTabSelected: onTabSelected,
       onProfileTap: onProfileTap,
-      initials: 'SC',
+      initials: ref.watch(authViewModelProvider).valueOrNull?.initials ?? 'P',
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -44,7 +45,11 @@ class CentreRequestsScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             child: requestsAsync.when(
               data: (requests) => requests.isEmpty
-                  ? const EmptyState(message: 'No placement requests right now')
+                  ? const EmptyState(
+                      icon: Icons.inbox_outlined,
+                      title: 'No placement requests yet',
+                      message: "You'll see them here once families start enquiring about your centre.",
+                    )
                   : Column(
                       children: requests
                           .map(

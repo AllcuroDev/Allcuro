@@ -123,98 +123,13 @@ export const isActive = (b: Booking, now = Date.now()) =>
 
 const store = persistedStore<Record<string, Booking[]>>('bookings', {})
 
-/** The app ships demo bookings so the tracker and admission pass can be explored straight away. */
-const demoBookings = (): Booking[] => [
-  {
-    id: 'ALC-NUR-8921',
-    type: 'nurse',
-    title: 'Priya Sharma (GNM) · Post-Op Care',
-    when: 'Today · 08:00 AM – 08:00 PM',
-    amount: 1600,
-    otp: '4829',
-    liveStatus: 'inProgress',
-    createdAt: Date.now() - 3_600_000,
-    patientName: 'Ramesh Iyer',
-    patientAge: 68,
-    patientGender: 'Male',
-    address: 'Flat 402, Green Glen Palms, 12th Main, Indiranagar, Bengaluru',
-    locality: 'Indiranagar, Bengaluru',
-    providerName: 'Priya Sharma',
-    providerPhone: '+91 98450 12345',
-    providerRating: 4.92,
-    providerQualifications: 'GNM · 4 yrs exp · HPR Verified',
-    vitalsSummary: 'BP: 120/80 mmHg · Sugar: 112 mg/dL · Pulse: 74 bpm · Temp: 98.4 °F',
-    condition: 'Post-Op Knee Replacement Care & IV Infusion',
-    formalities: [],
-  },
-  {
-    id: 'ALC-CTR-4920',
-    type: 'centre',
-    title: 'Sanjeevani Elder Care · Deluxe Room',
-    when: 'Check-in: Tomorrow, 10:00 AM · 30 Days',
-    amount: 45000,
-    otp: '7391',
-    liveStatus: 'assigned',
-    createdAt: Date.now() - 7_200_000,
-    patientName: 'Kavita Nair',
-    patientAge: 74,
-    patientGender: 'Female',
-    address: 'Sanjeevani Elder Care, 4th Cross, 100ft Road, Indiranagar, Bengaluru',
-    locality: 'Indiranagar, Bengaluru',
-    providerName: 'Sanjeevani Elder Care Home',
-    providerPhone: '+91 80 4120 5500',
-    providerRating: 4.88,
-    providerQualifications: 'Field Audited · 1:3 Nurse Ratio · Fire & NABH NOC',
-    roomType: 'Deluxe Private Room with Assisted Bath',
-    formalities: [
-      'Govt Photo ID (Aadhaar / Passport) of patient',
-      'Hospital Discharge Summary & Doctor Prescription',
-      'Digital Admission Pass & Check-In OTP (7391)',
-      'Signed Care Agreement & Emergency Contact Consent',
-    ],
-  },
-  {
-    id: 'ALC-EQP-83102',
-    type: 'equipment',
-    title: 'Philips EverFlo 5L Oxygen Concentrator',
-    when: 'Monthly Rental · 18 days left',
-    amount: 4500,
-    otp: '2910',
-    liveStatus: 'inProgress',
-    createdAt: Date.now() - 86_400_000 * 12,
-    patientName: 'Ramesh Iyer',
-    patientAge: 68,
-    patientGender: 'Male',
-    address: 'Indiranagar, Bengaluru',
-    locality: 'Indiranagar',
-    providerName: 'ALLCURO Equipment Desk',
-    providerPhone: '+91 80 4120 5500',
-    providerRating: 4.8,
-    providerQualifications: 'Sanitised · Delivered & demonstrated',
-    formalities: [],
-  },
-  {
-    id: 'ALC-NUR-82554',
-    type: 'nurse',
-    title: 'Ananya Deshmukh (B.Sc) · IV Infusion',
-    when: '14 Aug 2026 · Completed',
-    amount: 1200,
-    otp: '1839',
-    liveStatus: 'completed',
-    createdAt: Date.now() - 86_400_000 * 70,
-    patientName: 'Ramesh Iyer',
-    patientAge: 68,
-    patientGender: 'Male',
-    address: 'Indiranagar, Bengaluru',
-    locality: 'Indiranagar',
-    providerName: 'Ananya Deshmukh',
-    providerPhone: '+91 98450 22345',
-    providerRating: 4.9,
-    providerQualifications: 'B.Sc Nursing · HPR Verified',
-    vitalsSummary: 'BP: 124/82 mmHg · Pulse: 76 bpm · Normal Recovery',
-    formalities: [],
-  },
-]
+// Older builds seeded these sample bookings on first sign-in; clear them from
+// browsers that still have them saved.
+const OLD_SAMPLE_IDS = new Set(['ALC-NUR-8921', 'ALC-CTR-4920', 'ALC-EQP-83102', 'ALC-NUR-82554'])
+if (Object.values(store.get()).some((list) => list.some((b) => OLD_SAMPLE_IDS.has(b.id))))
+  store.set((all) =>
+    Object.fromEntries(Object.entries(all).map(([phone, list]) => [phone, list.filter((b) => !OLD_SAMPLE_IDS.has(b.id))])),
+  )
 
 const EMPTY: Booking[] = []
 
@@ -227,12 +142,6 @@ export function useBookings(): Booking[] {
 }
 
 export const useBooking = (id: string) => useBookings().find((b) => b.id === id)
-
-/** Gives a member the demo bookings the first time they sign in. */
-export function seedDemoBookings(phone: string) {
-  if (store.get()[phone]) return
-  store.set((all) => ({ ...all, [phone]: demoBookings() }))
-}
 
 const PREFIX: Record<BookingType, string> = {
   nurse: 'ALC-NUR',

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/ui/empty_state.dart';
+import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/surface.dart';
 import '../../../../core/ui/tappable.dart';
 import '../../data/models/nurse_visit_model.dart';
@@ -24,11 +26,11 @@ class NurseVisitExecutionScreen extends ConsumerStatefulWidget {
 class _NurseVisitExecutionScreenState
     extends ConsumerState<NurseVisitExecutionScreen> {
   // Vital logging controllers
-  final _bpController = TextEditingController(text: '120/80');
-  final _pulseController = TextEditingController(text: '74');
-  final _sugarController = TextEditingController(text: '112');
-  final _tempController = TextEditingController(text: '98.4');
-  final _spo2Controller = TextEditingController(text: '99');
+  final _bpController = TextEditingController();
+  final _pulseController = TextEditingController();
+  final _sugarController = TextEditingController();
+  final _tempController = TextEditingController();
+  final _spo2Controller = TextEditingController();
 
   // OTP controller for completion
   final _otpController = TextEditingController();
@@ -36,18 +38,20 @@ class _NurseVisitExecutionScreenState
   bool _isCompleting = false;
 
   Timer? _timer;
-  int _elapsedSeconds = 1845; // simulated ~30 mins
 
   @override
   void initState() {
     super.initState();
+    // Re-render every second so the elapsed-time clock ticks.
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _elapsedSeconds++;
-        });
-      }
+      if (mounted) setState(() {});
     });
+  }
+
+  /// Seconds since check-in, from the visit's real check-in time.
+  int _elapsedSince(DateTime? from, [DateTime? to]) {
+    if (from == null) return 0;
+    return (to ?? DateTime.now()).difference(from).inSeconds.clamp(0, 1 << 31);
   }
 
   @override
@@ -113,7 +117,7 @@ class _NurseVisitExecutionScreenState
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Indiranagar 12th Main (12.9716° N, 77.5946° E)',
+                      'Your current location will be shared with the response team.',
                       style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -215,25 +219,6 @@ class _NurseVisitExecutionScreenState
                 ],
               ),
               const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, size: 18, color: AppColors.primary),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Demo OTP for ${visit.patientName}: ${visit.expectedOtp}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 16),
               TextField(
                 controller: _otpController,
@@ -279,7 +264,7 @@ class _NurseVisitExecutionScreenState
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('🎉 Shift completed! ${visit.payAmount} credited to earnings ledger.'),
+                                content: const Text('Visit completed and checked out.'),
                                 backgroundColor: AppColors.success,
                                 duration: const Duration(seconds: 4),
                               ),
@@ -323,7 +308,20 @@ class _NurseVisitExecutionScreenState
         child: visitAsync.when(
           loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
           error: (err, _) => Center(child: Text('Error loading visit: $err')),
-          data: (visit) => Column(
+          data: (visit) => visit == null
+              ? Column(
+                  children: [
+                    ScreenHeader(title: 'Active visit', onBack: widget.onBack),
+                    const Expanded(
+                      child: EmptyState(
+                        icon: Icons.medical_services_outlined,
+                        title: 'No active visit',
+                        message: "When you accept a booking and start the visit, you'll check in and log care here.",
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
             children: [
               _buildTopHeader(visit),
               Expanded(
@@ -664,7 +662,11 @@ class _NurseVisitExecutionScreenState
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isInProgress ? _formatTimer(_elapsedSeconds) : (isCompleted ? '08 hrs 15 mins' : 'Not checked in yet'),
+                  isInProgress
+                      ? _formatTimer(_elapsedSince(visit.checkInTime))
+                      : (isCompleted
+                          ? _formatTimer(_elapsedSince(visit.checkInTime, visit.checkOutTime))
+                          : 'Not checked in yet'),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -777,13 +779,23 @@ class _NurseVisitExecutionScreenState
               Expanded(
                 child: ElevatedButton(
                   onPressed: () async {
-                    final pulse = int.tryParse(_pulseController.text) ?? 72;
-                    final sugar = int.tryParse(_sugarController.text) ?? 110;
-                    final temp = double.tryParse(_tempController.text) ?? 98.6;
-                    final spo2 = int.tryParse(_spo2Controller.text) ?? 99;
+                    final pulse = int.tryParse(_pulseController.text.trim());
+                    final sugar = int.tryParse(_sugarController.text.trim());
+                    final temp = double.tryParse(_tempController.text.trim());
+                    final spo2 = int.tryParse(_spo2Controller.text.trim());
+                    if (_bpController.text.trim().isEmpty ||
+                        pulse == null ||
+                        sugar == null ||
+                        temp == null ||
+                        spo2 == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Enter all vitals before saving.')),
+                      );
+                      return;
+                    }
 
                     final log = VitalSignsLog(
-                      bloodPressure: _bpController.text,
+                      bloodPressure: _bpController.text.trim(),
                       pulse: pulse,
                       bloodSugar: sugar,
                       temperature: temp,
@@ -794,7 +806,7 @@ class _NurseVisitExecutionScreenState
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('📊 Vitals recorded & synced to patient app!'),
+                          content: Text('Vitals recorded.'),
                           backgroundColor: AppColors.primary,
                         ),
                       );

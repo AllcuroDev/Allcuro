@@ -242,7 +242,7 @@ class MedicineRow extends ConsumerWidget {
   }
 }
 
-/// Prescription status card: upload prompt → pharmacist reviewing → attached.
+/// Prescription status card: upload prompt → attached (pharmacist calls after review).
 class PrescriptionCard extends ConsumerWidget {
   /// Shown above the upload button when Rx medicines are waiting on it.
   final bool isRequired;
@@ -255,23 +255,26 @@ class PrescriptionCard extends ConsumerWidget {
     final file = cart.prescription;
 
     if (file == null) {
-      return Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isRequired ? const Color(0xFFFFF7ED) : const Color(0xFFF2FAF5),
+      const saffron = Color(0xFFEE6D01);
+      return Material(
+        color: const Color(0xFFFFF3E6),
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: isRequired ? const Color(0xFFFED7AA) : AppColors.primarySoft),
+          side: const BorderSide(color: Color(0xFFFFD8B3)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: InkWell(
+          onTap: () => pickPrescription(context, ref),
+          customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+            child: Row(
               children: [
-                Icon(
-                  isRequired ? Icons.error_outline_rounded : Icons.description_outlined,
-                  color: isRequired ? AppColors.warning : AppColors.primary,
-                  size: 24,
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: saffron, borderRadius: BorderRadius.circular(AppRadius.md)),
+                  child: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 19),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -280,40 +283,33 @@ class PrescriptionCard extends ConsumerWidget {
                     children: [
                       Text(
                         isRequired ? 'Prescription needed' : 'Have a prescription?',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink),
+                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: Color(0xFF7C2D12)),
                       ),
-                      const SizedBox(height: 2),
                       Text(
-                        isRequired
-                            ? 'Upload a prescription to order Rx medicines. A licensed pharmacist checks it before dispatch.'
-                            : 'Upload it and our pharmacist adds the medicines to your cart with the total.',
-                        style: const TextStyle(fontSize: 12, height: 1.35, color: AppColors.mutedForeground),
+                        isRequired ? 'Needed for Rx medicines in your cart' : 'Our pharmacist will review it and call you',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFFC85A00)),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: saffron, borderRadius: BorderRadius.circular(AppRadius.pill)),
+                  child: const Text(
+                    'Upload',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Colors.white),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () => pickPrescription(context, ref),
-              icon: const Icon(Icons.file_upload_outlined, size: 18),
-              label: const Text('Upload prescription'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                minimumSize: const Size.fromHeight(46),
-                textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 14, fontWeight: FontWeight.w800),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
-              ),
-            ),
-          ],
+          ),
         ),
       );
     }
 
-    final reviewing = cart.prescriptionStatus == PrescriptionStatus.reviewing;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -352,11 +348,11 @@ class PrescriptionCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      reviewing ? '${file.sizeLabel} · Pharmacist is reading it…' : '${file.sizeLabel} · Medicines added to cart',
-                      style: TextStyle(
+                      '${file.sizeLabel} · Pharmacist will review it and call you',
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: reviewing ? AppColors.warning : AppColors.success,
+                        color: AppColors.success,
                       ),
                     ),
                   ],
@@ -369,18 +365,7 @@ class PrescriptionCard extends ConsumerWidget {
               ),
             ],
           ),
-          if (reviewing) ...[
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-              child: const LinearProgressIndicator(
-                minHeight: 4,
-                color: AppColors.primary,
-                backgroundColor: AppColors.primarySoft,
-              ),
-            ),
-          ] else
-            Align(
+          Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 onPressed: () => pickPrescription(context, ref),

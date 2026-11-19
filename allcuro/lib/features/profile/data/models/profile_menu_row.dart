@@ -6,7 +6,7 @@ part 'profile_menu_row.g.dart';
 /// [iconKey] is resolved to an [IconData] in the presentation layer, keeping
 /// this model free of Flutter/Material dependencies.
 @freezed
-class ProfileMenuRow with _$ProfileMenuRow {
+abstract class ProfileMenuRow with _$ProfileMenuRow {
   const factory ProfileMenuRow({
     required String iconKey,
     required String label,

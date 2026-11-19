@@ -1,12 +1,7 @@
-import { delay, persistedStore } from '../../lib/store'
-import { setCentreStatus, type PartnerSession } from '../session'
+import { delay, persistedStore, type Store } from '../../lib/store'
+import { partnerSession, saveSignup, setCentreStatus, uploadedDocs, usePartnerSession, type PartnerSession } from '../session'
 import {
-  SEED_ADMITTED_THIS_MONTH,
-  SEED_COMPLIANCE_DOCS,
-  SEED_EQUIPMENT,
-  SEED_REQUESTS,
-  SEED_ROOMS,
-  SEED_STAFF,
+  REQUIRED_COMPLIANCE_DOCS,
   STAFF_QUALIFICATION,
   type ComplianceDoc,
   type EquipmentItem,
@@ -16,12 +11,42 @@ import {
   type StaffRoleType,
 } from './data'
 
-// Mutable centre state — the web twin of the app's CentreService (requests)
-// and PartnerOnboardingNotifier (rooms, staff, equipment, compliance docs),
-// plus the listing / promotions / review-reply screens' local state, kept in
-// localStorage so it survives reloads in demo mode.
+// Centre state — the web twin of the app's CentreService (requests) and
+// PartnerOnboardingNotifier (rooms, staff, equipment, compliance docs).
+//
+// Nothing is seeded. Rooms, staff and equipment are what the centre adds; they
+// live in the partner row's details (via the sign-up bag), and the bed totals
+// go to partners.total_beds / beds_available. There is no placements backend
+// yet, so requests start empty.
 
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+
+// Caches from the old demo build held seeded families, rooms and staff.
+if (typeof localStorage !== 'undefined') {
+  for (const key of ['requests', 'rooms', 'staff', 'equipment', 'compliance', 'listing', 'promotions', 'replies']) {
+    try {
+      localStorage.removeItem(`allcuro.partner.centre.${key}`)
+    } catch {
+      // Storage blocked: nothing cached to clear.
+    }
+  }
+}
+
+const NONE: never[] = []
+const listIn = <T>(signup: Record<string, unknown>, key: string): T[] => {
+  const v = signup[key]
+  return Array.isArray(v) ? (v as T[]) : NONE
+}
+
+/** A list kept in the sign-up bag (so it reaches public.partners.details). */
+function signupList<T>(key: string): Store<T[]> {
+  const get = () => listIn<T>(partnerSession.get().signup, key)
+  return {
+    get,
+    set: (next) => saveSignup({ [key]: typeof next === 'function' ? next(get()) : next }),
+    use: () => listIn<T>(partnerSession.use().signup, key),
+  }
+}
 
 // ---------------------------------------------------------------- placement requests
 
@@ -31,10 +56,10 @@ export interface RequestsState {
   admittedThisMonth: number
 }
 
-export const requestsStore = persistedStore<RequestsState>('partner.centre.requests', {
-  pending: SEED_REQUESTS,
+export const requestsStore = persistedStore<RequestsState>('partner.centre.v2.requests', {
+  pending: [],
   waitlisted: [],
-  admittedThisMonth: SEED_ADMITTED_THIS_MONTH,
+  admittedThisMonth: 0,
 })
 export const useRequests = () => requestsStore.use()
 
@@ -63,16 +88,9 @@ export async function waitlistRequest(id: string) {
   })
 }
 
-/** Demo helper: bring the sample requests back once they've all been handled. */
-export const restoreDemoRequests = () =>
-  requestsStore.set((s) => ({
-    ...s,
-    pending: SEED_REQUESTS.filter((r) => !s.waitlisted.some((w) => w.id === r.id)),
-  }))
-
 // ---------------------------------------------------------------- rooms & beds
 
-export const roomsStore = persistedStore<Room[]>('partner.centre.rooms', SEED_ROOMS)
+export const roomsStore = signupList<Room>('rooms')
 export const useRooms = () => roomsStore.use()
 
 export interface RoomDraft {
@@ -140,7 +158,7 @@ export function groupByWard(rooms: Room[]): [string, Room[]][] {
 
 // ---------------------------------------------------------------- staff
 
-export const staffStore = persistedStore<StaffMember[]>('partner.centre.staff', SEED_STAFF)
+export const staffStore = signupList<StaffMember>('staff')
 export const useStaff = () => staffStore.use()
 
 export interface StaffDraft {
@@ -155,13 +173,13 @@ const staffFields = (d: StaffDraft) => ({
   name: d.name.trim(),
   roleType: d.roleType,
   qualification: `${STAFF_QUALIFICATION[d.roleType]} · ${d.experienceYears.trim()} yrs exp`,
-  experienceYears: parseInt(d.experienceYears, 10) || 3,
+  experienceYears: parseInt(d.experienceYears, 10) || 0,
   ratio: d.ratio,
-  shiftRate: parseFloat(d.shiftRate) || 1800,
+  shiftRate: parseFloat(d.shiftRate) || 0,
 })
 
 export function addStaff(d: StaffDraft): StaffMember {
-  const member: StaffMember = { id: newId('s'), ...staffFields(d), isCertified: true, certificateExpiring: false }
+  const member: StaffMember = { id: newId('s'), ...staffFields(d), isCertified: false, certificateExpiring: false }
   staffStore.set((list) => [...list, member])
   return member
 }
@@ -171,13 +189,9 @@ export const updateStaff = (id: string, d: StaffDraft) =>
 
 export const removeStaff = (id: string) => staffStore.set((list) => list.filter((m) => m.id !== id))
 
-/** Marks a staff member's expiring certificate as renewed. */
-export const renewStaffCertificate = (id: string) =>
-  staffStore.set((list) => list.map((m) => (m.id === id ? { ...m, isCertified: true, certificateExpiring: false } : m)))
-
 // ---------------------------------------------------------------- equipment
 
-export const equipmentStore = persistedStore<EquipmentItem[]>('partner.centre.equipment', SEED_EQUIPMENT)
+export const equipmentStore = signupList<EquipmentItem>('equipment')
 export const useEquipment = () => equipmentStore.use()
 
 export type EquipmentDraft = Omit<EquipmentItem, 'id' | 'isAvailable'>
@@ -198,31 +212,39 @@ export const toggleEquipmentAvailable = (id: string) =>
 
 // ---------------------------------------------------------------- compliance
 
-export const complianceStore = persistedStore<ComplianceDoc[]>('partner.centre.compliance', SEED_COMPLIANCE_DOCS)
-export const useCompliance = () => complianceStore.use()
+/** The required documents, marked uploaded from what the centre actually uploaded (partners.details.documents). */
+export function centreDocs(s: PartnerSession): ComplianceDoc[] {
+  const uploaded = uploadedDocs(s)
+  return REQUIRED_COMPLIANCE_DOCS.map((d) => {
+    const u = uploaded[d.id]
+    if (!u) return d
+    const when = new Date(u.uploadedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    return { ...d, fileName: u.fileName, expiry: `Uploaded ${when}`, isUploaded: true, isVerified: false }
+  })
+}
 
-/** markDocUploaded(isCentre: true) — a fresh upload waits for ALLCURO re-verification. */
-export const markDocUploaded = (docId: string, fileName: string) =>
-  complianceStore.set((docs) =>
-    docs.map((d) => (d.id === docId ? { ...d, fileName, expiry: 'Uploaded just now', isUploaded: true, isVerified: false } : d)),
-  )
+export const useCompliance = () => centreDocs(usePartnerSession())
 
 // ---------------------------------------------------------------- listing
 
+/** The centre's own listing preferences, saved on the partner row. The listed price itself is set by ALLCURO. */
 export interface ListingState {
+  /** Suggested ₹/day; ALLCURO sets the final listed price. */
   price: string
   ratio: string
-  photoCount: number
   accepting: boolean
 }
 
-export const listingStore = persistedStore<ListingState>('partner.centre.listing', {
-  price: '1200',
-  ratio: '1:4',
-  photoCount: 6,
-  accepting: true,
-})
-export const useListing = () => listingStore.use()
+export function listingFrom(s: PartnerSession): ListingState {
+  const g = s.signup
+  return {
+    price: typeof g.suggestedPricePerDay === 'string' ? g.suggestedPricePerDay : '',
+    ratio: typeof g.staffRatio === 'string' ? g.staffRatio : '',
+    accepting: g.acceptingPlacements !== false,
+  }
+}
+
+export const saveListing = (l: ListingState) => saveSignup({ suggestedPricePerDay: l.price, staffRatio: l.ratio, acceptingPlacements: l.accepting })
 
 // ---------------------------------------------------------------- promotions
 
@@ -231,13 +253,8 @@ export interface PromotionsState {
   campaigns: Record<string, boolean>
 }
 
-export const promotionsStore = persistedStore<PromotionsState>('partner.centre.promotions', { featured: false, campaigns: {} })
+export const promotionsStore = persistedStore<PromotionsState>('partner.centre.v2.promotions', { featured: false, campaigns: {} })
 export const usePromotions = () => promotionsStore.use()
-
-// ---------------------------------------------------------------- review replies
-
-export const replyStore = persistedStore<Record<string, string>>('partner.centre.replies', {})
-export const useReplies = () => replyStore.use()
 
 // ---------------------------------------------------------------- setup hub
 

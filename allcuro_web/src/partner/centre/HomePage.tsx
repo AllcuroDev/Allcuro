@@ -3,7 +3,6 @@ import { toast } from '../../lib/toast'
 import { PR } from '../routes'
 import { usePartnerSession } from '../session'
 import { PBadge, PBody, PCard, PIcon, PSectionTitle, ToolTile, type PIconName } from '../ui'
-import { DEFAULT_CENTRE_NAME, SITE_VISIT } from './data'
 import { useBusy } from './hooks'
 import {
   bedCounts,
@@ -51,7 +50,7 @@ export function CentreHomePage() {
       <div className="pc-greet">
         <div className="pc-greet-text">
           <span className="p-muted">{greeting()}</span>
-          <h1>{s.name || DEFAULT_CENTRE_NAME}</h1>
+          <h1>{s.name || 'Your centre'}</h1>
         </div>
         <Link to={PR.profile} className="p-btn p-btn-outline p-btn-sm pc-greet-profile">
           <PIcon name="user" size={16} /> Centre profile
@@ -95,7 +94,7 @@ function SetupHub() {
   const submit = () =>
     run('submit', async () => {
       await submitCentreForReview()
-      toast('Application submitted! Physical site visit scheduled.')
+      toast('Application submitted! ALLCURO will contact you to schedule a site visit.')
     })
 
   const steps: { n: number; title: string; subtitle: string; done: boolean; status: string; to: string }[] = [
@@ -195,7 +194,7 @@ function SetupHub() {
         </p>
       )}
       <button type="button" className="p-btn p-btn-primary p-btn-block pc-pill-btn" disabled={!p.canSubmit || !!busy} onClick={submit}>
-        {busy ? 'Submitting…' : 'Submit for Review & Schedule Site Visit'}
+        {busy ? 'Submitting…' : 'Submit for Review'}
       </button>
     </PCard>
   )
@@ -205,7 +204,25 @@ function SetupHub() {
 
 function SiteVisitCard() {
   const s = usePartnerSession()
+  const docs = useCompliance()
+  const rooms = useRooms()
   const visitBooked = s.centreStatus === 'siteVisitScheduled'
+  const visitAt = s.siteVisitAt ? new Date(s.siteVisitAt) : null
+  const visitLabel = visitAt
+    ? visitAt.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+    : null
+  const uploaded = docs.filter((d) => d.isUploaded).length
+  // Only what actually happened is ticked; the rest is ALLCURO's review.
+  const audit = [
+    { title: 'Application submitted', done: true, time: 'Submitted' },
+    {
+      title: 'Compliance documents',
+      done: false,
+      time: `${uploaded} of ${docs.length} uploaded · awaiting ALLCURO review`,
+    },
+    { title: 'Physical site audit & inspection', done: false, time: visitLabel ? `Scheduled for ${visitLabel}` : 'Not scheduled yet' },
+    { title: 'Final approval & listing goes live', done: false, time: 'Pending' },
+  ]
   return (
     <PCard as="section" className="pc-review">
       <div className="pc-card-head">
@@ -219,17 +236,18 @@ function SiteVisitCard() {
       <div className="pc-visit">
         <div className="p-row">
           <PIcon name="calendar" size={16} />
-          <strong>Physical Field Inspection: {SITE_VISIT.when}</strong>
+          <strong>{visitLabel ? `Site visit: ${visitLabel}` : 'Site visit: not scheduled yet'}</strong>
         </div>
         <p>
-          ALLCURO City Operations Officer ({SITE_VISIT.officer}) will inspect bed count, fire clearances, biomedical waste protocols,
-          and room hygiene on site.
+          {visitLabel
+            ? 'An ALLCURO officer will inspect bed count, fire clearances, biomedical waste protocols and room hygiene on site.'
+            : `ALLCURO will contact you to schedule an on-site inspection of your ${rooms.length ? 'rooms, ' : ''}fire clearances, biomedical waste protocols and hygiene.`}
         </p>
       </div>
 
-      <h3 className="pc-subhead">Verification Checklist &amp; Audit Trail</h3>
+      <h3 className="pc-subhead">Verification Checklist</h3>
       <ol className="pc-audit">
-        {SITE_VISIT.audit.map((a) => (
+        {audit.map((a) => (
           <li key={a.title} className={a.done ? 'is-done' : ''}>
             <span className="pc-audit-dot" aria-hidden="true">
               {a.done && <PIcon name="check" size={12} />}
@@ -275,7 +293,11 @@ function LiveDashboard() {
 
   return (
     <>
-      <Link to={PR.centreRooms} className="p-card pc-occupancy" aria-label={`Bed occupancy ${occupied} of ${total} beds. Manage rooms and admissions`}>
+      <Link
+        to={PR.centreRooms}
+        className="p-card pc-occupancy"
+        aria-label={total ? `Bed occupancy ${occupied} of ${total} beds. Manage rooms and admissions` : 'No beds added yet. Add rooms'}
+      >
         <div className="pc-occupancy-top">
           <strong>Bed occupancy</strong>
           <span>
@@ -285,7 +307,9 @@ function LiveDashboard() {
         <div className="pc-progress is-thick" aria-hidden="true">
           <span style={{ width: `${Math.round(occupancy * 100)}%` }} />
         </div>
-        <span className="p-muted pc-small">{vacant} beds vacant · tap to manage rooms &amp; admissions</span>
+        <span className="p-muted pc-small">
+          {total ? <>{vacant} beds vacant · tap to manage rooms &amp; admissions</> : 'No beds added yet · tap to add your rooms'}
+        </span>
       </Link>
 
       <div className="pc-statpair">
@@ -304,7 +328,7 @@ function LiveDashboard() {
           <span id="pc-new-req">New placement requests</span>
         </PSectionTitle>
         {preview.length === 0 ? (
-          <p className="p-muted">No placement requests right now</p>
+          <p className="p-muted">No placement requests yet. You’ll see them here once families start booking.</p>
         ) : (
           <ul className="p-list">
             {preview.map((r) => (

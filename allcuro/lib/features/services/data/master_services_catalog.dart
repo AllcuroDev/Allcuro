@@ -25,6 +25,15 @@ class MasterServiceItem {
   final String? imageUrl;
   final String badge;
 
+  /// Lowest numeric price (₹) before discount, from Supabase `price_from`.
+  final num? priceFrom;
+
+  /// Admin-set discount, 0–100.
+  final num discountPercent;
+
+  /// Admin-set Quick Book Nurse position, 1–5 (1 = first). null = only under "Other".
+  final int? quickBookRank;
+
   const MasterServiceItem({
     required this.id,
     required this.name,
@@ -42,7 +51,20 @@ class MasterServiceItem {
     this.iconKey = '',
     this.imageUrl,
     this.badge = '',
+    this.priceFrom,
+    this.discountPercent = 0,
+    this.quickBookRank,
   });
+
+  /// What the customer pays (₹), after the admin's discount. Falls back to the
+  /// first number in the display price for bundled entries.
+  int? get finalPrice {
+    final base = priceFrom ?? num.tryParse(RegExp(r'\d[\d,]*').firstMatch(price)?.group(0)?.replaceAll(',', '') ?? '');
+    if (base == null) return null;
+    return (base * (1 - discountPercent / 100)).round();
+  }
+
+  bool get isNursing => mainCategory == 'Nursing Care' || alsoIn.contains('Nursing Care');
 }
 
 class MasterServicesCatalog {

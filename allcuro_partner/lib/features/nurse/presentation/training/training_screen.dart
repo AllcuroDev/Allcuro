@@ -35,11 +35,11 @@ class TrainingScreen extends StatefulWidget {
 }
 
 class _TrainingScreenState extends State<TrainingScreen> {
-  final List<_Course> _courses = const [
+  final List<_Course> _courses = [
     _Course(title: 'Wound care essentials', duration: '45 min', progress: 0),
-    _Course(title: 'Medication administration', duration: '30 min', progress: 40),
-    _Course(title: 'Elderly mobility support', duration: '50 min', progress: 100),
-    _Course(title: 'Infection control basics', duration: '25 min', progress: 60),
+    _Course(title: 'Medication administration', duration: '30 min', progress: 0),
+    _Course(title: 'Elderly mobility support', duration: '50 min', progress: 0),
+    _Course(title: 'Infection control basics', duration: '25 min', progress: 0),
     _Course(title: 'Post-op recovery care', duration: '40 min', progress: 0),
   ];
 

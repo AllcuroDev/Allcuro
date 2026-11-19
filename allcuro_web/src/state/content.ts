@@ -63,6 +63,7 @@ interface ServiceRow {
   icon: string
   image_url: string | null
   extra_category_ids: string[] | null
+  quick_book_rank?: number | null
 }
 
 interface PartnerRow {
@@ -175,6 +176,7 @@ const toService = (r: ServiceRow): Service => ({
   icon: r.icon,
   imageUrl: r.image_url ?? undefined,
   alsoIn: r.extra_category_ids ?? [],
+  quickBookRank: r.quick_book_rank ?? undefined,
 })
 
 function toNurse(p: PartnerRow, offers: OfferingRow[]): Nurse {
@@ -278,9 +280,7 @@ async function load() {
     db.from('service_categories').select('id, slug, label, blurb, icon, art, ink, wash, href, image_url').eq('is_active', true).order('sort_order'),
     db
       .from('services')
-      .select(
-        'id, name, category_id, subcategory, description, includes, not_included, duration, professional, price, price_from, discount_percent, notes, badge, icon, image_url, extra_category_ids',
-      )
+      .select('*') // '*' so a newly added column (e.g. quick_book_rank) never breaks the load
       .eq('is_active', true)
       .order('sort_order'),
     db.from('partners_public').select('*').order('rating', { ascending: false, nullsFirst: false }),

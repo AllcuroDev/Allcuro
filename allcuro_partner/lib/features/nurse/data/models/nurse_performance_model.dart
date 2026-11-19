@@ -54,4 +54,28 @@ class NursePerformance {
     required this.pendingPayout,
     required this.feedbacks,
   });
+
+  /// A partner with no completed visits and no reviews — what every partner
+  /// sees until there's a bookings / reviews backend.
+  static const empty = NursePerformance(
+    totalJobsCompleted: 0,
+    monthlyJobsCompleted: 0,
+    weeklyJobsCompleted: 0,
+    attendanceRate: 0,
+    onTimeArrivalRate: 0,
+    averageRating: 0,
+    totalRatingsCount: 0,
+    ratingDistribution: {},
+    totalComplaints: 0,
+    resolvedComplaints: 0,
+    thisMonthEarnings: 0,
+    thisWeekEarnings: 0,
+    pendingPayout: 0,
+    feedbacks: [],
+  );
+
+  /// Whether there's anything real to show (completed visits or reviews).
+  bool get hasActivity => totalJobsCompleted > 0 || totalRatingsCount > 0;
+
+  bool get hasRatings => totalRatingsCount > 0;
 }

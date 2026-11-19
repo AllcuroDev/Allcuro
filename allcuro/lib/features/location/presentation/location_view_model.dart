@@ -25,48 +25,22 @@ class LocationState {
   }
 }
 
-const _initialAddresses = [
-  UserAddress(
-    id: 'addr-1',
-    title: 'Home',
-    addressLine: 'Flat 402, Green Glen Palms, 12th Main',
-    locality: 'Indiranagar, Bengaluru',
-    arrivalTime: '44 mins',
-    tag: AddressTag.home,
-    isDefault: true,
-  ),
-  UserAddress(
-    id: 'addr-2',
-    title: "Parents' Home",
-    addressLine: 'Sanjeevani Villa, 4th Cross, 100ft Road',
-    locality: 'Indiranagar, Bengaluru',
-    arrivalTime: '38 mins',
-    tag: AddressTag.parents,
-  ),
-  UserAddress(
-    id: 'addr-3',
-    title: 'Work / Office',
-    addressLine: 'Prestige Tech Park, Outer Ring Road',
-    locality: 'Marathahalli, Bengaluru',
-    arrivalTime: '52 mins',
-    tag: AddressTag.work,
-  ),
-  UserAddress(
-    id: 'addr-4',
-    title: 'South Delhi Home',
-    addressLine: 'C-48, Greater Kailash 1',
-    locality: 'South Delhi, New Delhi',
-    arrivalTime: '45 mins',
-    tag: AddressTag.other,
-  ),
-];
+/// Shown until the member adds an address or uses their location.
+const _unsetAddress = UserAddress(
+  id: 'unset',
+  title: 'Set your location',
+  addressLine: 'Add your address',
+  locality: '',
+  arrivalTime: '',
+  tag: AddressTag.other,
+);
 
 class LocationViewModel extends StateNotifier<LocationState> {
   LocationViewModel()
     : super(
         LocationState(
-          currentAddress: _initialAddresses[0],
-          savedAddresses: _initialAddresses,
+          currentAddress: _unsetAddress,
+          savedAddresses: const [],
         ),
       );
 
@@ -113,9 +87,7 @@ class LocationViewModel extends StateNotifier<LocationState> {
         ? "Parents' Home"
         : 'Other';
 
-    final cleanLocality = locality.trim().isEmpty
-        ? 'Indiranagar, Bengaluru'
-        : locality.trim();
+    final cleanLocality = locality.trim();
     final cleanAddressLine = landmark.trim().isEmpty
         ? houseNo.trim()
         : '${houseNo.trim()}, ${landmark.trim()}';
@@ -125,7 +97,7 @@ class LocationViewModel extends StateNotifier<LocationState> {
       title: title,
       addressLine: cleanAddressLine,
       locality: cleanLocality,
-      arrivalTime: '44 mins',
+      arrivalTime: '',
       tag: tag,
     );
 

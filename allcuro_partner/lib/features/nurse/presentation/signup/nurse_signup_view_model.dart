@@ -18,19 +18,25 @@ class ReferenceContact {
 
 /// Every field the nurse sign-up & profile setup collects.
 class NurseSignupData {
-  String fullName = 'Priya Sharma';
-  DateTime? dob = DateTime(1996, 5, 14);
-  String? gender = 'Female';
-  String city = 'Bengaluru';
-  String address = 'Indiranagar 100ft Road';
+  String fullName = '';
+  DateTime? dob;
+  String? gender;
+  String city = '';
+  String address = '';
+
+  /// Which of [dob] / [gender] / [address] came from Aadhaar (shown locked);
+  /// the rest the nurse enters herself.
+  bool dobVerified = false;
+  bool genderVerified = false;
+  bool addressVerified = false;
 
   String? employmentType = 'Full-time';
 
-  String? qualification = 'GNM';
+  String? qualification;
   String registrationNumber = '';
   String council = '';
-  String experienceYears = '5';
-  String previousEmployer = 'Manipal Hospital';
+  String experienceYears = '';
+  String previousEmployer = '';
 
   final Map<String, String?> documents = {
     'govt_id': null,
@@ -43,11 +49,11 @@ class NurseSignupData {
 
   final Map<String, String?> medicalDocuments = {'self_certificate': null, 'tb_report': null};
 
-  bool policeConsent = true;
+  bool policeConsent = false;
 
   final List<ReferenceContact> references = [ReferenceContact(), ReferenceContact()];
 
-  final Set<String> skills = {'ICU / Critical Care', 'Tracheostomy Care', 'Post-Op Dressing'};
+  final Set<String> skills = {};
 
   String bankAccountHolder = '';
   String bankAccountNumber = '';
@@ -62,6 +68,9 @@ class NurseSignupData {
     dob = identity.dob;
     gender = identity.gender;
     address = identity.address;
+    dobVerified = identity.dob != null;
+    genderVerified = identity.gender != null;
+    addressVerified = identity.address.trim().isNotEmpty;
     qualification = identity.qualification;
     registrationNumber = identity.registrationNumber;
     council = identity.council;

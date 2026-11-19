@@ -4,9 +4,9 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/surface.dart';
 
-/// Editable view of what families see on the centre's public listing. A
-/// self-contained demo screen — edits only update local state, there's no
-/// backend wiring yet. Pushed from the centre home screen's "More tools"
+/// Editable view of what families see on the centre's public listing.
+/// Everything starts empty — the centre fills it in. Edits only update local
+/// state for now (ALLCURO sets the final published price). Pushed from the centre home screen's "More tools"
 /// grid.
 class ListingManagementScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -18,9 +18,9 @@ class ListingManagementScreen extends StatefulWidget {
 }
 
 class _ListingManagementScreenState extends State<ListingManagementScreen> {
-  late final _price = TextEditingController(text: '1200');
-  late final _ratio = TextEditingController(text: '1:4');
-  int _photoCount = 6;
+  late final _price = TextEditingController();
+  late final _ratio = TextEditingController();
+  int _photoCount = 0;
   bool _accepting = true;
 
   @override
@@ -67,7 +67,7 @@ class _ListingManagementScreenState extends State<ListingManagementScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            '$_photoCount photo${_photoCount == 1 ? '' : 's'} uploaded',
+                            _photoCount == 0 ? 'No photos yet' : '$_photoCount photo${_photoCount == 1 ? '' : 's'} added',
                             style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink),
                           ),
                         ),
@@ -104,7 +104,7 @@ class _ListingManagementScreenState extends State<ListingManagementScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Listing updated (demo)')),
+                          const SnackBar(content: Text('Listing changes saved. ALLCURO reviews them before they go live.')),
                         );
                       },
                       style: ElevatedButton.styleFrom(

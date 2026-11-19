@@ -11,16 +11,16 @@ class ProfileService {
 }
 
 const _profile = Profile(
-  name: 'Ananya Kulkarni',
-  initials: 'AK',
-  phone: '+91 98765 43210',
-  email: 'ananya.k@email.com',
-  verified: true,
+  name: '',
+  initials: '',
+  phone: '',
+  email: '',
+  verified: false,
   menuRows: [
-    ProfileMenuRow(iconKey: 'location', label: 'Saved addresses', hint: '2 saved'),
+    ProfileMenuRow(iconKey: 'location', label: 'Saved addresses', hint: 'Home, family and work'),
     ProfileMenuRow(iconKey: 'badge', label: 'ID verification', hint: 'Unlocks live-in bookings'),
-    ProfileMenuRow(iconKey: 'wallet', label: 'ALLCURO credits', hint: '₹500'),
-    ProfileMenuRow(iconKey: 'gift', label: 'Refer a family', hint: 'Earn ₹500'),
+    ProfileMenuRow(iconKey: 'wallet', label: 'ALLCURO credits', hint: 'Offers and refunds'),
+    ProfileMenuRow(iconKey: 'gift', label: 'Refer a family', hint: 'Share ALLCURO'),
     ProfileMenuRow(iconKey: 'support', label: 'Help & SOS', hint: '24/7'),
     ProfileMenuRow(iconKey: 'faq', label: 'FAQs', hint: 'Common questions about home care'),
   ],

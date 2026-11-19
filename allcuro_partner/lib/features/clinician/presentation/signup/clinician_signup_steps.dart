@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/wizard_scaffold.dart';
+import '../../../identity/presentation/personal_details_fields.dart';
 import 'clinician_signup_view_model.dart';
 
 const specialisationOptions = {
@@ -61,7 +62,7 @@ class _ClinicianBasicDetailsStepState extends ConsumerState<ClinicianBasicDetail
       children: [
         const WizardStepHeader(
           title: 'Tell us about yourself',
-          subtitle: "Your identity details come from Aadhaar and can't be changed.",
+          subtitle: "Details verified from Aadhaar can't be changed.",
         ),
         WizardVerifiedCard(
           title: 'Verified from Aadhaar',
@@ -69,12 +70,32 @@ class _ClinicianBasicDetailsStepState extends ConsumerState<ClinicianBasicDetail
             if (data.profession != null)
               ('I am a', data.profession == ClinicianProfession.doctor ? 'Doctor' : 'Physiotherapist'),
             ('Full name', data.fullName),
-            if (data.dob != null) ('Date of birth', _formatDate(data.dob!)),
-            if (data.gender != null) ('Gender', data.gender!),
-            ('Address', data.address),
+            if (data.dobVerified && data.dob != null) ('Date of birth', _formatDate(data.dob!)),
+            if (data.genderVerified && data.gender != null) ('Gender', data.gender!),
+            if (data.addressVerified) ('Address', data.address),
           ],
         ),
         const SizedBox(height: 16),
+        PersonalDetailsFields(
+          showDob: !data.dobVerified,
+          showGender: !data.genderVerified,
+          showAddress: !data.addressVerified,
+          dob: data.dob,
+          gender: data.gender,
+          address: data.address,
+          onDobChanged: (v) {
+            data.dob = v;
+            notifier.touch();
+          },
+          onGenderChanged: (v) {
+            data.gender = v;
+            notifier.touch();
+          },
+          onAddressChanged: (v) {
+            data.address = v;
+            notifier.touch();
+          },
+        ),
         WizardTextField(controller: _city, label: "City you'll work in", hint: 'Bengaluru', onChanged: (v) {
           data.city = v;
           notifier.touch();

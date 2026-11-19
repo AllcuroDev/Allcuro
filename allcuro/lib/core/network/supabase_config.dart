@@ -4,8 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 ///
 ///   flutter run --dart-define-from-file=supabase.json
 ///
-/// (copy `supabase.example.json` → `supabase.json`). Without them the app runs
-/// on its bundled demo data and [supabaseOrNull] stays null.
+/// (copy `supabase.example.json` → `supabase.json`). Without them
+/// [supabaseOrNull] stays null: the services catalog falls back to its bundled
+/// copy, and partners, equipment, medicines and bookings are simply empty.
 class SupabaseConfig {
   SupabaseConfig._();
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/allcuro_chip.dart';
 import '../../../../core/ui/app_shell.dart';
+import '../../../../core/ui/partner_avatar.dart';
 import '../../../../core/ui/score_bar.dart';
 import '../../../../core/ui/surface.dart';
 import '../../../../core/ui/tappable.dart';
@@ -100,6 +101,12 @@ class _CentreDetail extends StatelessWidget {
                       color: AppColors.mutedForeground,
                     ),
                   ),
+                  if (centre.pricePerDay <= 0)
+                    const Text(
+                      'Price on request',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink),
+                    )
+                  else
                   Text.rich(
                     TextSpan(
                       text: inr(centre.pricePerDay),
@@ -152,7 +159,7 @@ class _CentreDetail extends StatelessWidget {
             children: [
               AspectRatio(
                 aspectRatio: 4 / 3,
-                child: Image.asset(centre.photo, fit: BoxFit.cover),
+                child: NetworkPhoto(url: centre.photo, icon: Icons.apartment_rounded),
               ),
               Positioned(
                 left: 16,
@@ -185,6 +192,7 @@ class _CentreDetail extends StatelessWidget {
                   ),
                 ),
               ),
+              if (centre.photoCount > 1)
               Positioned(
                 right: 16,
                 bottom: 16,
@@ -262,13 +270,19 @@ class _CentreDetail extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${centre.locality} · ${centre.city}',
+                  [centre.locality, centre.city].where((s) => s.isNotEmpty).join(' · '),
                   style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.mutedForeground,
                   ),
                 ),
                 const SizedBox(height: 8),
+                if (centre.reviews == 0)
+                  const Text(
+                    'New on ALLCURO · no reviews yet',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.mutedForeground),
+                  )
+                else
                 Row(
                   children: [
                     const Icon(
@@ -278,7 +292,7 @@ class _CentreDetail extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${centre.rating}',
+                      centre.rating.toStringAsFixed(1),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -305,6 +319,7 @@ class _CentreDetail extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (centre.licence.isNotEmpty)
                       Text(
                         'LICENCE NO. ${centre.licence}',
                         style: const TextStyle(
@@ -324,7 +339,10 @@ class _CentreDetail extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Operating since ${centre.since} · Staff-to-patient ${centre.staffRatio}',
+                        [
+                          if (centre.since > 0) 'Operating since ${centre.since}',
+                          if (centre.staffRatio.isNotEmpty) 'Staff-to-patient ${centre.staffRatio}',
+                        ].join(' · '),
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.mutedForeground,
@@ -333,7 +351,15 @@ class _CentreDetail extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (centre.bedsLeft <= 3) ...[
+                if (centre.about.isNotEmpty)
+                  _Section(
+                    title: 'About',
+                    child: Text(
+                      centre.about,
+                      style: const TextStyle(fontSize: 13.5, height: 1.45, color: AppColors.ink),
+                    ),
+                  ),
+                if (centre.bedsLeft > 0 && centre.bedsLeft <= 3) ...[
                   const SizedBox(height: 16),
                   Container(
                     width: double.infinity,
@@ -355,6 +381,7 @@ class _CentreDetail extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (centre.scores.isNotEmpty)
                 _Section(
                   title: 'Quality sub-scores',
                   child: Column(
@@ -368,6 +395,16 @@ class _CentreDetail extends StatelessWidget {
                         .toList(),
                   ),
                 ),
+                if (centre.roomTypes.isNotEmpty)
+                  _Section(
+                    title: 'Room types',
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: centre.roomTypes.map(AllcuroChip.new).toList(),
+                    ),
+                  ),
+                if (centre.services.isNotEmpty)
                 _Section(
                   title: 'Services included',
                   child: Wrap(
@@ -376,6 +413,7 @@ class _CentreDetail extends StatelessWidget {
                     children: centre.services.map(AllcuroChip.new).toList(),
                   ),
                 ),
+                if (centre.pricePerDay > 0 || centre.pricePerMonth > 0)
                 _Section(
                   title: 'Pricing',
                   child: Row(
@@ -394,7 +432,7 @@ class _CentreDetail extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                inr(centre.pricePerDay),
+                                centre.pricePerDay > 0 ? inr(centre.pricePerDay) : 'On request',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
@@ -420,7 +458,7 @@ class _CentreDetail extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                inr(centre.pricePerMonth),
+                                centre.pricePerMonth > 0 ? inr(centre.pricePerMonth) : 'On request',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
@@ -430,24 +468,6 @@ class _CentreDetail extends StatelessWidget {
                             ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                _Section(
-                  title: 'Verified reviews',
-                  child: Column(
-                    children: const [
-                      _ReviewCard(
-                        name: 'Meera K. · Verified stay',
-                        text:
-                            '"Rooms were spotless and the nurses updated us daily. My father recovered faster than we expected."',
-                      ),
-                      SizedBox(height: 12),
-                      _ReviewCard(
-                        name: 'Anand R. · Verified stay',
-                        text:
-                            '"Physio team is excellent. Food could have more variety."',
                       ),
                     ],
                   ),
@@ -541,41 +561,6 @@ class _Section extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           child,
-        ],
-      ),
-    );
-  }
-}
-
-class _ReviewCard extends StatelessWidget {
-  final String name;
-  final String text;
-
-  const _ReviewCard({required this.name, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Surface(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            name,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.ink,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.mutedForeground,
-            ),
-          ),
         ],
       ),
     );

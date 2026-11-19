@@ -6,15 +6,17 @@ import '../home/nurse_home_view_model.dart';
 import '../nurse_providers.dart';
 
 final nurseVisitViewModelProvider =
-    AsyncNotifierProvider<NurseVisitViewModel, NurseVisit>(
+    AsyncNotifierProvider<NurseVisitViewModel, NurseVisit?>(
       NurseVisitViewModel.new,
     );
 
-class NurseVisitViewModel extends AsyncNotifier<NurseVisit> {
+/// The nurse's active visit — null when there is none (the execution
+/// screen then shows a "No active visit" empty state).
+class NurseVisitViewModel extends AsyncNotifier<NurseVisit?> {
   NurseRepository get _repository => ref.read(nurseRepositoryProvider);
 
   @override
-  Future<NurseVisit> build() async {
+  Future<NurseVisit?> build() async {
     return _repository.getActiveVisit();
   }
 

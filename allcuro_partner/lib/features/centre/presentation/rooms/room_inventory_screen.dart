@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../auth/presentation/auth_view_model.dart';
 import '../../../../core/provider_role.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_shell.dart';
@@ -50,7 +51,7 @@ class RoomInventoryScreen extends ConsumerWidget {
       currentIndex: 2,
       onTabSelected: onTabSelected,
       onProfileTap: onProfileTap,
-      initials: 'SC',
+      initials: ref.watch(authViewModelProvider).valueOrNull?.initials ?? 'P',
       child: ListView(
         padding: EdgeInsets.zero,
         children: [

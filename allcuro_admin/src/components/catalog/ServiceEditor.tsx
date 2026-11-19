@@ -11,6 +11,8 @@ interface ServiceEditorProps {
   isNew: boolean;
   categories: ServiceCategoryRecord[];
   takenIds: string[];
+  /** All services, to show which one already holds each Quick Book position. */
+  allServices?: ServiceRecord[];
   onClose: () => void;
   onSaved: (s: ServiceRecord) => void;
 }
@@ -20,6 +22,7 @@ export const ServiceEditor: React.FC<ServiceEditorProps> = ({
   isNew,
   categories,
   takenIds,
+  allServices = [],
   onClose,
   onSaved,
 }) => {
@@ -37,8 +40,19 @@ export const ServiceEditor: React.FC<ServiceEditorProps> = ({
     e.preventDefault();
     if (!id || idTaken) return;
     setBusy(true);
+    // A Quick Book position belongs to one service: free it on whoever had it.
+    const rank = s.quick_book_rank ?? null;
+    const holder = rank != null ? allServices.find((x) => x.id !== id && x.quick_book_rank === rank) : undefined;
+    if (holder) {
+      const { error: freeErr } = await supabase.from('services').update({ quick_book_rank: null }).eq('id', holder.id);
+      if (freeErr) {
+        setBusy(false);
+        return setError(freeErr.message);
+      }
+    }
     const row: ServiceRecord = {
       ...s,
+      quick_book_rank: rank,
       id,
       price_from: priceFrom(s.price),
       extra_category_ids: s.extra_category_ids.filter((c) => c !== s.category_id),
@@ -52,7 +66,7 @@ export const ServiceEditor: React.FC<ServiceEditorProps> = ({
 
   type TextKey = Exclude<
     keyof ServiceRecord,
-    'price_from' | 'discount_percent' | 'image_url' | 'sort_order' | 'is_active' | 'extra_category_ids'
+    'price_from' | 'discount_percent' | 'image_url' | 'sort_order' | 'quick_book_rank' | 'is_active' | 'extra_category_ids'
   >;
 
   const text = (key: TextKey, label: string, placeholder = '') => (
@@ -189,6 +203,25 @@ export const ServiceEditor: React.FC<ServiceEditorProps> = ({
               value={s.sort_order}
               onChange={(e) => set('sort_order', Number(e.target.value))}
             />
+          </label>
+          <label className="catalog-field">
+            <span>Quick Book Nurse</span>
+            <select
+              value={s.quick_book_rank ?? ''}
+              onChange={(e) => set('quick_book_rank', e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Not in top five</option>
+              {[1, 2, 3, 4, 5].map((n) => {
+                const holder = allServices.find((x) => x.id !== s.id && x.quick_book_rank === n);
+                return (
+                  <option key={n} value={n}>
+                    Position {n}
+                    {holder ? ` (replaces ${holder.name})` : ''}
+                  </option>
+                );
+              })}
+            </select>
+            <small>Top five shown first when booking a nurse</small>
           </label>
           <label className="catalog-check is-wide">
             <input

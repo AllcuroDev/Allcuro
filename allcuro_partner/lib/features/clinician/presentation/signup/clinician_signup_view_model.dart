@@ -15,7 +15,12 @@ class ClinicianSignupData {
   DateTime? dob;
   String? gender;
   String address = '';
-  String city = 'Bengaluru';
+  String city = '';
+
+  /// Which of [dob] / [gender] / [address] came from Aadhaar (shown locked).
+  bool dobVerified = false;
+  bool genderVerified = false;
+  bool addressVerified = false;
 
   String? qualification;
   final Set<String> specialisations = {};
@@ -35,6 +40,9 @@ class ClinicianSignupData {
     dob = identity.dob;
     gender = identity.gender;
     address = identity.address;
+    dobVerified = identity.dob != null;
+    genderVerified = identity.gender != null;
+    addressVerified = identity.address.trim().isNotEmpty;
     qualification = identity.qualification;
     registrationNumber = identity.registrationNumber;
     council = identity.council;

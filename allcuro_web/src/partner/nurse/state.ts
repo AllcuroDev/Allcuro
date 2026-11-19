@@ -1,45 +1,50 @@
 import { delay, persistedStore } from '../../lib/store'
-import { saveSignup, type PartnerSession } from '../session'
+import { saveSignup, uploadedDocs, type PartnerSession } from '../session'
 import {
   CERTIFICATE_DOC_IDS,
-  DEMO_VISIT_OTP,
-  EMPTY_CHECKLIST,
   MEDICAL_DOC_ID,
-  REQUEST_DETAILS,
-  SEED_BLOCKED_DATES,
-  SEED_COURSES,
-  SEED_DAY_SLOTS,
-  SEED_DOCS,
-  SEED_PERFORMANCE,
-  SEED_REQUESTS,
-  SEED_SHIFTS,
-  SEED_SKILLS,
-  SEED_VISIT,
+  REQUIRED_DOCS,
   SHIFT_TIME_OPTIONS,
+  TRAINING_MODULES,
   type ChecklistKey,
   type ComplianceDoc,
   type Course,
   type JobRequestDetail,
   type JobRequestSummary,
-  type NursePerformance,
   type NurseVisit,
   type Shift,
-  type ShiftPayout,
   type VisitStatus,
   type VitalSignsLog,
 } from './data'
 
-// Mutable demo state for the nurse / clinician pages — the web twin of the
-// app's NurseService (in-memory mock) + PartnerOnboardingState nurse fields.
-// Kept in localStorage so accept/decline, the active visit, duty status,
-// documents and availability survive reloads.
+// State for the nurse / clinician pages — the web twin of the app's
+// NurseService + PartnerOnboardingState nurse fields.
+//
+// There is no bookings backend yet, so requests, shifts and the active visit
+// start empty (nothing is invented). The stores are kept so the pages are
+// ready for real data. What the partner sets up themselves (duty status,
+// availability, documents, training progress) is cached in localStorage, and
+// skills go to public.partners through the sign-up bag.
+
+// Caches from the old demo build held seeded patients, payouts and reviews.
+// Drop them so returning browsers don't keep showing fabricated data.
+if (typeof localStorage !== 'undefined') {
+  for (const key of ['requests', 'shifts', 'visit', 'performance', 'payouts', 'availability', 'kyc', 'courses']) {
+    try {
+      localStorage.removeItem(`allcuro.partner.nurse.${key}`)
+    } catch {
+      // Storage blocked: nothing cached to clear.
+    }
+  }
+}
 
 // ---------------------------------------------------------------- requests & shifts
 
-export const requestsStore = persistedStore<JobRequestSummary[]>('partner.nurse.requests', SEED_REQUESTS)
-export const shiftsStore = persistedStore<Shift[]>('partner.nurse.shifts', SEED_SHIFTS)
+export const requestsStore = persistedStore<JobRequestSummary[]>('partner.nurse.v2.requests', [])
+export const shiftsStore = persistedStore<Shift[]>('partner.nurse.v2.shifts', [])
+const requestDetailsStore = persistedStore<Record<string, JobRequestDetail>>('partner.nurse.v2.requestDetails', {})
 
-export const requestDetail = (id: string): JobRequestDetail | null => REQUEST_DETAILS[id] ?? null
+export const requestDetail = (id: string): JobRequestDetail | null => requestDetailsStore.get()[id] ?? null
 
 /** Accepting books the request onto the schedule as an upcoming shift. */
 export async function acceptRequest(id: string) {
@@ -66,17 +71,12 @@ export async function declineRequest(id: string) {
   requestsStore.set((list) => list.filter((r) => r.id !== id))
 }
 
-/** Demo helper: bring the sample requests back once they are all handled. */
-export const restoreDemoRequests = () => requestsStore.set(SEED_REQUESTS.filter((r) => !shiftsStore.get().some((s) => s.id === `shift-${r.id}`)))
-
 // ---------------------------------------------------------------- active visit
 
-export const visitStore = persistedStore<NurseVisit>('partner.nurse.visit', SEED_VISIT)
-export const performanceStore = persistedStore<NursePerformance>('partner.nurse.performance', SEED_PERFORMANCE)
-/** Payouts credited by visits completed on the web (shown above the app's mock ledger). */
-export const creditedPayoutsStore = persistedStore<ShiftPayout[]>('partner.nurse.payouts', [])
+/** The visit in progress, if any. null until bookings exist. */
+export const visitStore = persistedStore<NurseVisit | null>('partner.nurse.v2.visit', null)
 
-const patchVisit = (patch: Partial<NurseVisit>) => visitStore.set((v) => ({ ...v, ...patch }))
+const patchVisit = (patch: Partial<NurseVisit>) => visitStore.set((v) => (v ? { ...v, ...patch } : v))
 
 export async function setVisitStatus(status: VisitStatus) {
   await delay(200)
@@ -95,39 +95,20 @@ export async function checkInVisit() {
 
 export async function logVitals(vitals: VitalSignsLog) {
   await delay(200)
-  visitStore.set((v) => ({ ...v, vitalsLog: vitals, checklist: { ...v.checklist, vitalsLogged: true } }))
+  visitStore.set((v) => (v ? { ...v, vitalsLog: vitals, checklist: { ...v.checklist, vitalsLogged: true } } : v))
 }
 
 export const setChecklistItem = (key: ChecklistKey, value: boolean) =>
-  visitStore.set((v) => ({ ...v, checklist: { ...v.checklist, [key]: value } }))
+  visitStore.set((v) => (v ? { ...v, checklist: { ...v.checklist, [key]: value } } : v))
 
-/** Completes the visit when the patient's OTP (or the demo 1234) matches; credits the pay. */
+/** Completes the visit when the patient's OTP matches. */
 export async function completeVisitWithOtp(otp: string): Promise<boolean> {
   await delay(300)
   const v = visitStore.get()
-  const code = otp.trim()
-  if (code !== v.expectedOtp && code !== DEMO_VISIT_OTP) return false
+  if (!v || otp.trim() !== v.expectedOtp) return false
   patchVisit({ status: 'completed', checkOutTime: Date.now() })
   shiftsStore.set((list) => list.map((s) => (s.id === v.shiftId ? { ...s, status: 'completed' } : s)))
-  performanceStore.set((p) => ({
-    ...p,
-    totalJobsCompleted: p.totalJobsCompleted + 1,
-    monthlyJobsCompleted: p.monthlyJobsCompleted + 1,
-    weeklyJobsCompleted: p.weeklyJobsCompleted + 1,
-    totalRatingsCount: p.totalRatingsCount + 1,
-    thisMonthEarnings: p.thisMonthEarnings + v.payValue,
-    thisWeekEarnings: p.thisWeekEarnings + v.payValue,
-    pendingPayout: p.pendingPayout + v.payValue,
-  }))
-  const date = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-  creditedPayoutsStore.set((list) => [{ date, description: `${v.serviceType} · ${v.patientName}`, amount: v.payValue }, ...list])
   return true
-}
-
-/** Demo helper: start the sample visit over (the shift goes back to ongoing). */
-export function resetDemoVisit() {
-  visitStore.set({ ...SEED_VISIT, checklist: EMPTY_CHECKLIST })
-  shiftsStore.set((list) => list.map((s) => (s.id === SEED_VISIT.shiftId ? { ...s, status: 'ongoing' } : s)))
 }
 
 // ---------------------------------------------------------------- duty & availability
@@ -146,11 +127,11 @@ export interface AvailabilityState {
   dailyRate: number
 }
 
-export const availabilityStore = persistedStore<AvailabilityState>('partner.nurse.availability', {
-  isOnDuty: true,
+export const availabilityStore = persistedStore<AvailabilityState>('partner.nurse.v2.availability', {
+  isOnDuty: false,
   timing: SHIFT_TIME_OPTIONS[2],
-  daySlots: SEED_DAY_SLOTS,
-  blockedDates: SEED_BLOCKED_DATES,
+  daySlots: [],
+  blockedDates: [],
   skills: null,
   hourlyRate: 250,
   dailyRate: 2200,
@@ -181,12 +162,12 @@ export const saveSkillsAndRates = (skills: string[], hourlyRate: number, dailyRa
   saveSignup({ skills })
 }
 
-/** Skills chosen here, else the sign-up wizard's, else the app's demo set (nurses only). */
+/** Skills chosen here, else the sign-up wizard's. */
 export function effectiveSkills(a: AvailabilityState, s: PartnerSession): string[] {
   if (a.skills) return a.skills
   const fromSignup = s.signup.skills
   if (Array.isArray(fromSignup) && fromSignup.every((x) => typeof x === 'string')) return fromSignup as string[]
-  return s.role === 'clinician' ? [] : SEED_SKILLS
+  return []
 }
 
 /** "12-Hr Day (08:00 AM – 08:00 PM)" → "08:00 AM – 08:00 PM" for the compact duty bar. */
@@ -194,21 +175,21 @@ export const timingHours = (timing: string) => timing.match(/\(([^)]+)\)/)?.[1] 
 
 // ---------------------------------------------------------------- KYC & setup hub
 
-export interface KycState {
-  docs: ComplianceDoc[]
-  policeConsent: boolean
+/** The required documents, marked uploaded from what the partner actually uploaded (partners.details.documents). */
+export function nurseDocs(s: PartnerSession): ComplianceDoc[] {
+  const uploaded = uploadedDocs(s)
+  return REQUIRED_DOCS.map((d) => {
+    const u = uploaded[d.id]
+    if (!u) return d
+    const when = new Date(u.uploadedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    return { ...d, fileName: u.fileName, expiry: `Uploaded ${when} · awaiting ALLCURO review`, isUploaded: true, isVerified: false }
+  })
 }
 
-export const kycStore = persistedStore<KycState>('partner.nurse.kyc', { docs: SEED_DOCS, policeConsent: false })
+/** Police background-check consent, saved on the partner row (also asked in the sign-up wizard). */
+export const hasPoliceConsent = (s: PartnerSession) => s.signup.policeConsent === true || s.signup.backgroundConsent === true
 
-export function markDocUploaded(id: string, fileName: string) {
-  kycStore.set((k) => ({
-    ...k,
-    docs: k.docs.map((d) => (d.id === id ? { ...d, fileName, expiry: 'Uploaded just now', isUploaded: true, isVerified: false } : d)),
-  }))
-}
-
-export const givePoliceConsent = () => kycStore.set((k) => ({ ...k, policeConsent: true }))
+export const givePoliceConsent = () => saveSignup({ policeConsent: true })
 
 export interface SetupProgress {
   profileDone: boolean
@@ -223,13 +204,14 @@ export interface SetupProgress {
 }
 
 /** Same rules as PartnerOnboardingState's nurse getters. */
-export function setupProgress(k: KycState, a: AvailabilityState, s: PartnerSession): SetupProgress {
+export function setupProgress(a: AvailabilityState, s: PartnerSession): SetupProgress {
+  const docs = nurseDocs(s)
   const profileDone = true // finished in the sign-up wizard
-  const docsDone = k.docs.filter((d) => CERTIFICATE_DOC_IDS.includes(d.id) && d.isUploaded).length >= 2
-  const medicalDone = k.docs.some((d) => d.id === MEDICAL_DOC_ID && d.isUploaded)
+  const docsDone = docs.filter((d) => CERTIFICATE_DOC_IDS.includes(d.id) && d.isUploaded).length >= CERTIFICATE_DOC_IDS.length
+  const medicalDone = docs.some((d) => d.id === MEDICAL_DOC_ID && d.isUploaded)
   const bankDone = s.bank != null && !!s.bank.account && !!s.bank.ifsc && !!s.bank.holder
   const skillsDone = effectiveSkills(a, s).length > 0
-  const policeDone = k.policeConsent
+  const policeDone = hasPoliceConsent(s)
   const flags = [profileDone, docsDone, medicalDone, bankDone, skillsDone, policeDone]
   return {
     profileDone,
@@ -246,7 +228,7 @@ export function setupProgress(k: KycState, a: AvailabilityState, s: PartnerSessi
 
 // ---------------------------------------------------------------- training
 
-export const coursesStore = persistedStore<Course[]>('partner.nurse.courses', SEED_COURSES)
+export const coursesStore = persistedStore<Course[]>('partner.nurse.v2.courses', TRAINING_MODULES)
 
 /** "Continue" bumps progress by 25% like the app (no real course player). */
 export const continueCourse = (index: number) =>
@@ -266,9 +248,6 @@ export const formatDuration = (ms: number) => {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${pad(Math.floor(mins / 60))} hrs ${pad(mins % 60)} mins`
 }
-
-export const daysAgoLabel = (days: number) =>
-  days <= 0 ? 'Today' : days === 1 ? 'Yesterday' : days < 7 ? `${days} days ago` : days < 14 ? '1 week ago' : `${Math.floor(days / 7)} weeks ago`
 
 export const formatIsoDate = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })

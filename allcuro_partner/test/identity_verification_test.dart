@@ -5,6 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:allcuro_partner/main.dart';
 
+Finder _field(String key) =>
+    find.descendant(of: find.byKey(ValueKey(key)), matching: find.byType(TextField));
+
 Future<void> _tapButton(WidgetTester tester, String label) async {
   await tester.tap(find.widgetWithText(ElevatedButton, label));
   await tester.pump(const Duration(seconds: 2));
@@ -22,12 +25,15 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
 
-    // Step 1 — NUID.
+    // Step 1 — NUID. The registry mock echoes the name the nurse typed; it
+    // never invents a person.
     expect(find.text('Verify your NUID'), findsOneWidget);
-    await tester.enterText(find.byType(TextField), 'KA20170042');
+    await tester.enterText(_field('registered-name'), 'Anita Desai');
+    await tester.enterText(_field('registration-number'), 'KA20170042');
     await tester.pump();
     await _tapButton(tester, 'Verify NUID');
     expect(find.text('NUID verified'), findsOneWidget);
+    expect(find.text('Anita Desai'), findsWidgets); // typed field + verified card
     expect(find.text('Karnataka State Nursing Council'), findsOneWidget);
     await _tapButton(tester, 'Continue');
 
@@ -46,10 +52,12 @@ void main() {
     expect(find.text('XXXX XXXX 0123'), findsOneWidget);
     await _tapButton(tester, 'Continue to profile');
 
-    // Sign-up wizard, prefilled and locked from the verified identity.
+    // Sign-up wizard: the verified name is locked; details e-KYC didn't
+    // return (date of birth, gender, address) are left for the nurse to enter.
     expect(find.text('Verified from Aadhaar'), findsOneWidget);
-    expect(find.text('Priya Sharma'), findsOneWidget);
-    expect(find.text('14/05/1996'), findsOneWidget);
+    expect(find.text('Anita Desai'), findsOneWidget);
+    expect(find.text('Priya Sharma'), findsNothing);
+    expect(find.text('Select your date of birth'), findsOneWidget);
     expect(find.text('Skip for now'), findsOneWidget);
 
     // Skipping lands on the dashboard, where identity shows as already verified.
@@ -58,6 +66,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Identity & Basic Profile'), findsOneWidget);
     expect(find.textContaining('NUID KA20170042 verified at sign-up'), findsOneWidget);
+    expect(find.text('Anita Desai'), findsOneWidget);
   });
 
   testWidgets('wrong Aadhaar OTP is rejected', (tester) async {
@@ -75,7 +84,8 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Karnataka Medical Council'));
     await tester.pump();
-    await tester.enterText(find.byType(TextField), 'KMC-123456');
+    await tester.enterText(_field('registered-name'), 'Rahul Mehta');
+    await tester.enterText(_field('registration-number'), 'KMC-123456');
     await tester.pump();
     await _tapButton(tester, 'Verify registration');
     expect(find.text('MBBS'), findsOneWidget);

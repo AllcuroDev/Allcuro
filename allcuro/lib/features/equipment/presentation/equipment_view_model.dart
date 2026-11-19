@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/equipment_repository.dart';
+import '../data/equipment_service.dart';
 import '../data/models/equipment.dart';
 
 class EquipmentListData {
@@ -13,12 +14,8 @@ class EquipmentListData {
 class EquipmentViewModel extends AsyncNotifier<EquipmentListData> {
   @override
   Future<EquipmentListData> build() async {
-    final repository = ref.watch(equipmentRepositoryProvider);
-    final results = await Future.wait([repository.getAll(), repository.getCategories()]);
-    return EquipmentListData(
-      equipment: results[0] as List<Equipment>,
-      categories: results[1] as List<String>,
-    );
+    final equipment = await ref.watch(equipmentRepositoryProvider).getAll();
+    return EquipmentListData(equipment: equipment, categories: EquipmentService.categoriesOf(equipment));
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/app_shell.dart';
+import '../../../core/ui/empty_state.dart';
 import '../../../core/utils/currency.dart';
 import '../data/medicine.dart';
 import 'medicine_cart_view_model.dart';
@@ -49,12 +50,17 @@ class _MedicinesScreenState extends ConsumerState<MedicinesScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(medicineCartProvider);
+    // Rebuild once the Supabase catalog lands (it fills MedicineCatalog).
+    final catalog = ref.watch(medicineCatalogProvider);
+    final loading = catalog.isLoading && MedicineCatalog.all.isEmpty;
+    final categories = MedicineCatalog.categories;
+    if (!categories.contains(_category)) _category = 'All';
     final results = MedicineCatalog.search(_query, category: _category);
     final chipHeight = MediaQuery.textScalerOf(context).scale(13) * 1.3 + 18;
 
     return AppShell(
       currentPath: '/medicines',
-      bottomBar: cart.lines.isEmpty ? null : _CartBar(cart: cart),
+      bottomBar: cart.lines.isEmpty && cart.prescription == null ? null : _CartBar(cart: cart),
       child: ColoredBox(
         color: const Color(0xFFF7F8F7),
         child: ListView(
@@ -107,15 +113,16 @@ class _MedicinesScreenState extends ConsumerState<MedicinesScreen> {
               child: _PrescriptionStrip(),
             ),
             const SizedBox(height: 16),
+            if (categories.length > 1)
             SizedBox(
               height: chipHeight,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: MedicineCatalog.categories.length,
+                itemCount: categories.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
-                  final c = MedicineCatalog.categories[i];
+                  final c = categories[i];
                   final selected = c == _category;
                   return Material(
                     color: selected ? AppColors.ink : Colors.white,
@@ -144,7 +151,19 @@ class _MedicinesScreenState extends ConsumerState<MedicinesScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            if (results.isEmpty)
+            if (loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              )
+            else if (MedicineCatalog.all.isEmpty)
+              const EmptyState(
+                icon: Icons.medication_outlined,
+                title: 'No medicines listed yet',
+                message: 'Our partner pharmacy catalogue is on its way. You can still upload a prescription — '
+                    'our pharmacist will review it and call you.',
+              )
+            else if (results.isEmpty)
               _NoResults(query: _query)
             else
               for (final m in results)
@@ -235,7 +254,7 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-/// One slim row: upload prompt → pharmacist reading → attached.
+/// One slim row: upload prompt → attached (pharmacist calls after review).
 class _PrescriptionStrip extends ConsumerWidget {
   const _PrescriptionStrip();
 
@@ -243,18 +262,17 @@ class _PrescriptionStrip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(medicineCartProvider);
     final file = cart.prescription;
-    final reviewing = cart.prescriptionStatus == PrescriptionStatus.reviewing;
 
     final Widget leading;
     final String title;
     final String subtitle;
-    Widget? trailing;
+    final Widget trailing;
     VoidCallback? onTap;
 
     if (file == null) {
       leading = const Icon(Icons.receipt_long_rounded, color: _saffron, size: 20);
       title = 'Have a prescription?';
-      subtitle = 'We\'ll add the medicines for you';
+      subtitle = 'Our pharmacist will review it and call you';
       onTap = () => pickPrescription(context, ref);
       trailing = Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -264,18 +282,10 @@ class _PrescriptionStrip extends ConsumerWidget {
           style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Colors.white),
         ),
       );
-    } else if (reviewing) {
-      leading = const SizedBox(
-        width: 18,
-        height: 18,
-        child: CircularProgressIndicator(strokeWidth: 2.2, color: _saffron),
-      );
-      title = 'Pharmacist is reading it…';
-      subtitle = file.name;
     } else {
       leading = const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20);
-      title = 'Prescription added';
-      subtitle = 'Medicines are in your cart · ${file.name}';
+      title = 'Prescription attached';
+      subtitle = 'Pharmacist will review it and call you · ${file.name}';
       trailing = IconButton(
         tooltip: 'Remove prescription',
         visualDensity: VisualDensity.compact,
@@ -331,7 +341,8 @@ class _PrescriptionStrip extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (trailing != null) ...[const SizedBox(width: 8), trailing],
+              const SizedBox(width: 8),
+              trailing,
             ],
           ),
         ),
@@ -458,7 +469,7 @@ class _NoResults extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           const Text(
-            "Can't find it? Upload your prescription and our pharmacist will add it.",
+            "Can't find it? Upload your prescription — our pharmacist will review it and call you.",
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12.5, height: 1.4, color: AppColors.mutedForeground),
           ),
@@ -501,7 +512,9 @@ class _CartBar extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${cart.itemCount} item${cart.itemCount == 1 ? '' : 's'} · ${inr(cart.total)}',
+                        cart.isPrescriptionOnly
+                            ? 'Prescription attached'
+                            : '${cart.itemCount} item${cart.itemCount == 1 ? '' : 's'} · ${inr(cart.total)}',
                         style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: Colors.white),
                       ),
                       Text(

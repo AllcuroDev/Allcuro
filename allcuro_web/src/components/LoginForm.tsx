@@ -8,7 +8,6 @@ import {
   useAuth,
   verifyOtp,
 } from '../state/auth'
-import { seedDemoBookings } from '../state/bookings'
 import { selectAddress, useLocation } from '../state/location'
 import { ArrowIcon, ShieldIcon } from './Icons'
 import { Field, Select, Spinner } from './ui'
@@ -45,7 +44,6 @@ export function LoginForm({ onDone, headingId }: { onDone: () => void; headingId
           phone={phone}
           onEdit={() => setStep('phone')}
           onVerified={(result) => {
-            seedDemoBookings(phone)
             if (result === 'onboarded') onDone()
             else setStep('profile')
           }}

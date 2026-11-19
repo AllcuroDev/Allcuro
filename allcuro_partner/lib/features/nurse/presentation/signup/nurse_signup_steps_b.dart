@@ -17,11 +17,11 @@ const skillTags = [
   'Diabetic care',
 ];
 
+/// Preferred interview windows — ALLCURO confirms the exact time.
 const interviewSlots = [
-  'Mon, 18 Aug · 10:00 AM',
-  'Mon, 18 Aug · 2:00 PM',
-  'Tue, 19 Aug · 11:00 AM',
-  'Wed, 20 Aug · 4:00 PM',
+  'Weekday morning (10 AM – 1 PM)',
+  'Weekday afternoon (2 PM – 5 PM)',
+  'Saturday morning (10 AM – 1 PM)',
 ];
 
 /// Step 7: 1–2 previous employer/supervisor references.

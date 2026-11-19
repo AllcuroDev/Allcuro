@@ -329,10 +329,10 @@ class _AddEquipmentDialog extends ConsumerStatefulWidget {
 class _AddEquipmentDialogState extends ConsumerState<_AddEquipmentDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
-  final _dailyRateCtrl = TextEditingController(text: '250');
-  final _monthlyRateCtrl = TextEditingController(text: '4500');
-  final _depositCtrl = TextEditingController(text: '5000');
-  final _stockCtrl = TextEditingController(text: '5');
+  final _dailyRateCtrl = TextEditingController();
+  final _monthlyRateCtrl = TextEditingController();
+  final _depositCtrl = TextEditingController();
+  final _stockCtrl = TextEditingController();
   final _specsCtrl = TextEditingController();
   EquipmentCategory _selectedCategory = EquipmentCategory.respiratory;
   EquipmentCondition _selectedCondition = EquipmentCondition.brandNew;
@@ -356,10 +356,10 @@ class _AddEquipmentDialogState extends ConsumerState<_AddEquipmentDialog> {
       title: _titleCtrl.text.trim(),
       category: _selectedCategory,
       condition: _selectedCondition,
-      dailyRate: double.tryParse(_dailyRateCtrl.text.trim()) ?? 250.0,
-      monthlyRate: double.tryParse(_monthlyRateCtrl.text.trim()) ?? 4500.0,
-      depositAmount: double.tryParse(_depositCtrl.text.trim()) ?? 5000.0,
-      stockQuantity: int.tryParse(_stockCtrl.text.trim()) ?? 5,
+      dailyRate: double.tryParse(_dailyRateCtrl.text.trim()) ?? 0,
+      monthlyRate: double.tryParse(_monthlyRateCtrl.text.trim()) ?? 0,
+      depositAmount: double.tryParse(_depositCtrl.text.trim()) ?? 0,
+      stockQuantity: int.tryParse(_stockCtrl.text.trim()) ?? 0,
       specifications: _specsCtrl.text.trim(),
     );
 

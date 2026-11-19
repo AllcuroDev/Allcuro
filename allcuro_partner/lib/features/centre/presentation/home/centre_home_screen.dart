@@ -8,6 +8,7 @@ import '../../../../core/ui/surface.dart';
 import '../../../../core/ui/tappable.dart';
 import '../../../../core/ui/tool_tile.dart';
 import '../../../../core/verification_status.dart';
+import '../../../auth/data/auth_service.dart';
 import '../../../auth/presentation/auth_view_model.dart';
 import '../../../auth/presentation/onboarding_view_model.dart';
 import '../../data/models/placement_request_summary.dart';
@@ -55,10 +56,12 @@ class CentreHomeScreen extends ConsumerWidget {
       currentIndex: 0,
       onTabSelected: onTabSelected,
       onProfileTap: onProfileTap,
-      initials: 'SC',
+      initials: ref.watch(authViewModelProvider).valueOrNull?.initials ?? 'P',
       child: summary.when(
         data: (data) => _CentreHomeContent(
           status: status,
+          centreName: session?.displayName ?? 'Your centre',
+          siteVisitAt: session?.centreSiteVisitAt,
           onboardingState: onboardingState,
           summary: data,
           onSeeAllRequests: onSeeAllRequests,
@@ -81,6 +84,8 @@ class CentreHomeScreen extends ConsumerWidget {
 
 class _CentreHomeContent extends ConsumerWidget {
   final CentreVerificationStatus status;
+  final String centreName;
+  final DateTime? siteVisitAt;
   final PartnerOnboardingState onboardingState;
   final CentreHomeSummary summary;
   final VoidCallback onSeeAllRequests;
@@ -96,6 +101,8 @@ class _CentreHomeContent extends ConsumerWidget {
 
   const _CentreHomeContent({
     required this.status,
+    required this.centreName,
+    required this.siteVisitAt,
     required this.onboardingState,
     required this.summary,
     required this.onSeeAllRequests,
@@ -137,7 +144,7 @@ class _CentreHomeContent extends ConsumerWidget {
                 style: TextStyle(fontSize: 14, color: AppColors.mutedForeground),
               ),
               Text(
-                'Sanjeevani Elder Care Sanctuary',
+                centreName,
                 style: appHeadingStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.3),
               ),
               const SizedBox(height: 16),
@@ -158,7 +165,7 @@ class _CentreHomeContent extends ConsumerWidget {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Application submitted! Physical site visit scheduled.'),
+                          content: Text('Application submitted. ALLCURO will review it and schedule a site visit.'),
                           backgroundColor: AppColors.success,
                         ),
                       );
@@ -173,6 +180,7 @@ class _CentreHomeContent extends ConsumerWidget {
               if (isUnderReview) ...[
                 _SiteVisitTimelineCard(
                   status: status,
+                  siteVisitAt: siteVisitAt,
                   onboarding: onboardingState,
                   onOpenCompliance: onOpenCompliance,
                   onOpenRooms: onSeeRooms,
@@ -230,6 +238,13 @@ class _CentreHomeContent extends ConsumerWidget {
                     ],
                   ),
                 ),
+                if (totalBeds == 0) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'No beds added yet. Add rooms & beds so families can see availability.',
+                    style: TextStyle(fontSize: 12, color: AppColors.mutedForeground),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -292,7 +307,7 @@ class _CentreHomeContent extends ConsumerWidget {
                 ? const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
                     child: Text(
-                      'No placement requests right now',
+                      "No placement requests yet. You'll see them here once families start enquiring.",
                       style: TextStyle(color: AppColors.mutedForeground),
                     ),
                   )
@@ -504,6 +519,7 @@ class _SetupProgressHub extends StatelessWidget {
 
 class _SiteVisitTimelineCard extends StatelessWidget {
   final CentreVerificationStatus status;
+  final DateTime? siteVisitAt;
   final PartnerOnboardingState onboarding;
   final VoidCallback onOpenCompliance;
   final VoidCallback onOpenRooms;
@@ -512,6 +528,7 @@ class _SiteVisitTimelineCard extends StatelessWidget {
 
   const _SiteVisitTimelineCard({
     required this.status,
+    required this.siteVisitAt,
     required this.onboarding,
     required this.onOpenCompliance,
     required this.onOpenRooms,
@@ -519,8 +536,17 @@ class _SiteVisitTimelineCard extends StatelessWidget {
     required this.onAdvanceToVerified,
   });
 
+  static String _formatVisit(DateTime d) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final hour = d.hour % 12 == 0 ? 12 : d.hour % 12;
+    final minute = d.minute.toString().padLeft(2, '0');
+    return '${d.day} ${months[d.month - 1]} ${d.year}, $hour:$minute ${d.hour < 12 ? 'AM' : 'PM'}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final visitScheduled = status == CentreVerificationStatus.siteVisitScheduled;
+    final visitAt = siteVisitAt;
     return Surface(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -549,8 +575,8 @@ class _SiteVisitTimelineCard extends StatelessWidget {
                   color: AppColors.warningSoft,
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
-                child: const Text(
-                  'Site Visit Scheduled',
+                child: Text(
+                  visitScheduled ? 'Site Visit Scheduled' : 'Under Review',
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w800,
@@ -568,29 +594,33 @@ class _SiteVisitTimelineCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
+                    const Padding(
                       padding: EdgeInsets.only(top: 2),
                       child: Icon(Icons.calendar_month_rounded, size: 15, color: AppColors.primary),
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Physical Field Inspection: Tomorrow 11:30 AM',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: AppColors.ink),
+                        visitAt != null
+                            ? 'Site visit: ${_formatVisit(visitAt)}'
+                            : 'Site visit: not scheduled yet',
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: AppColors.ink),
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 5),
+                const SizedBox(height: 5),
                 Text(
-                  'ALLCURO City Operations Officer (Kiran Rao) will inspect bed count, fire clearances, biomedical waste protocols, and room hygiene on site.',
-                  style: TextStyle(fontSize: 11, color: AppColors.mutedForeground, height: 1.35),
+                  visitAt != null
+                      ? 'An ALLCURO team member will visit to check bed count, fire clearances, biomedical waste protocols and room hygiene.'
+                      : 'ALLCURO will review your application and contact you to schedule an on-site inspection.',
+                  style: const TextStyle(fontSize: 11, color: AppColors.mutedForeground, height: 1.35),
                 ),
               ],
             ),
@@ -601,13 +631,22 @@ class _SiteVisitTimelineCard extends StatelessWidget {
             style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.ink),
           ),
           const SizedBox(height: 10),
-          _AuditStepRow(title: 'KYC & Regulatory Clearances Submitted', isDone: true, time: '16 Aug 2026'),
-          _AuditStepRow(title: 'Police & CEA Registry Verification', isDone: true, time: 'Passed'),
-          _AuditStepRow(title: 'Physical Site Audit & Inspection', isDone: false, time: 'Officer Assigned'),
-          _AuditStepRow(title: 'Final Approval & Live Placement Activation', isDone: false, time: 'Pending Audit'),
-          const SizedBox(height: 14),
+          const _AuditStepRow(title: 'Application & documents submitted', isDone: true, time: 'Submitted'),
+          const _AuditStepRow(
+            title: 'Document & licence verification',
+            isDone: false,
+            time: 'Awaiting ALLCURO review',
+          ),
+          _AuditStepRow(
+            title: 'On-site inspection',
+            isDone: false,
+            time: visitAt != null ? 'Scheduled for ${_formatVisit(visitAt)}' : 'Not scheduled yet',
+          ),
+          const _AuditStepRow(title: 'Approval & listing goes live', isDone: false, time: 'Awaiting ALLCURO review'),
 
-          // Demo advance action
+          // Demo-build-only advance action (no Supabase keys).
+          if (AuthService.isDemo) ...[
+          const SizedBox(height: 14),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -619,7 +658,7 @@ class _SiteVisitTimelineCard extends StatelessWidget {
               children: [
                 const Expanded(
                   child: Text(
-                    'Simulate physical audit clearance to unlock live dashboard.',
+                    'Demo build only: simulate admin approval.',
                     style: TextStyle(fontSize: 11, color: AppColors.mutedForeground),
                   ),
                 ),
@@ -637,6 +676,7 @@ class _SiteVisitTimelineCard extends StatelessWidget {
               ],
             ),
           ),
+          ],
         ],
       ),
     );

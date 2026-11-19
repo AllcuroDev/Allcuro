@@ -1,35 +1,36 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from '../../lib/toast'
 import { PR } from '../routes'
-import { practitionerIdentity, usePartnerSession } from '../session'
+import { practitionerIdentity, uploadPartnerDocument, usePartnerSession } from '../session'
 import { PBody, PIcon, PPageHead } from '../ui'
 import type { ComplianceDoc } from './data'
-import { kycStore, markDocUploaded, maskedAadhaar } from './state'
+import { maskedAadhaar, nurseDocs } from './state'
 
 // Document vault & KYC — documents/document_vault_screen.dart. Aadhaar and
-// council registration were verified at sign-up, so only certificates are
-// uploaded here. Demo mode keeps just the file name.
+// council registration were given at sign-up, so only certificates are
+// uploaded here — to the private kyc-documents bucket, recorded on the
+// partner row for the admin to review.
 
 export function NurseDocumentsPage() {
   const session = usePartnerSession()
   const identity = practitionerIdentity(session)
-  const { docs } = kycStore.use()
+  const docs = nurseDocs(session)
   const isClinician = session.role === 'clinician'
 
   return (
     <>
-      <PPageHead title="Document Vault & KYC" subtitle="Keep registrations current — verified profiles receive 3x more bookings" back={PR.nurseHome} />
+      <PPageHead title="Document Vault & KYC" subtitle="Upload your certificates so ALLCURO can review your profile" back={PR.nurseHome} />
       <PBody narrow>
-        <div className="p-note is-ok">
+        <div className="p-note">
           <PIcon name="shield" size={18} />
           <strong className="pn-fw500">
             {identity
-              ? `Aadhaar ${maskedAadhaar(identity.aadhaarLast4)} & ${identity.registrationLabel} ${identity.registrationNumber} verified at sign-up — no uploads needed`
-              : 'Aadhaar & registration verified at sign-up — no uploads needed'}
+              ? `Aadhaar ${maskedAadhaar(identity.aadhaarLast4)} & ${identity.registrationLabel} ${identity.registrationNumber} were added at sign-up — no uploads needed for them`
+              : 'Aadhaar & registration are added at sign-up — no uploads needed for them'}
           </strong>
         </div>
         <p className="p-muted pn-small pn-m0">
-          Upload PDF, JPG or PNG (Max 15MB). Verified by {isClinician ? 'the State Medical / Physiotherapy Council' : 'State Nursing Council'} automated registry.
+          Upload PDF, JPG or PNG (Max 15MB). ALLCURO checks them against the {isClinician ? 'State Medical / Physiotherapy Council' : 'State Nursing Council'} register.
         </p>
         <ul className="p-list">
           {docs.map((d) => (
@@ -45,11 +46,14 @@ export function NurseDocumentsPage() {
 
 function DocRow({ doc, title }: { doc: ComplianceDoc; title: string }) {
   const ref = useRef<HTMLInputElement>(null)
-  const status = !doc.isUploaded
+  const [busy, setBusy] = useState(false)
+  const status = busy
+    ? { label: 'Uploading…', tone: 'is-info' }
+    : !doc.isUploaded
     ? { label: 'Not uploaded', tone: 'is-warn' }
     : doc.isVerified
       ? { label: 'Verified', tone: 'is-ok' }
-      : { label: 'Pending verification', tone: 'is-info' }
+      : { label: 'Awaiting review', tone: 'is-info' }
   return (
     <div className={`p-upload ${doc.isUploaded ? 'is-done' : ''} pn-doc`}>
       <span className="p-upload-icon">
@@ -62,7 +66,7 @@ function DocRow({ doc, title }: { doc: ComplianceDoc; title: string }) {
       </span>
       <span className="pn-doc-side">
         <span className={`p-pill ${status.tone}`}>{status.label}</span>
-        <button type="button" className="p-btn p-btn-outline p-btn-sm" onClick={() => ref.current?.click()} aria-label={`${doc.isUploaded ? 'Replace' : 'Upload'} ${title}`}>
+        <button type="button" className="p-btn p-btn-outline p-btn-sm" disabled={busy} onClick={() => ref.current?.click()} aria-label={`${doc.isUploaded ? 'Replace' : 'Upload'} ${title}`}>
           {doc.isUploaded ? 'Replace' : 'Upload'}
         </button>
       </span>
@@ -81,8 +85,11 @@ function DocRow({ doc, title }: { doc: ComplianceDoc; title: string }) {
             toast('File is larger than 15MB.', 'danger')
             return
           }
-          markDocUploaded(doc.id, f.name)
-          toast(`Uploaded new file for ${title}`)
+          setBusy(true)
+          uploadPartnerDocument(doc.id, f)
+            .then(() => toast(`Uploaded ${title}`))
+            .catch((err: unknown) => toast(err instanceof Error ? err.message : 'Upload failed.', 'danger'))
+            .finally(() => setBusy(false))
         }}
       />
     </div>

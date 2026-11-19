@@ -14,6 +14,7 @@ import 'package:allcuro/app/router.dart';
 import 'package:allcuro/core/theme/app_theme.dart';
 import 'package:allcuro/features/auth/presentation/quick_login_sheet.dart';
 import 'package:allcuro/features/location/presentation/location_sheet.dart';
+import 'package:allcuro/features/medicines/data/medicine.dart';
 import 'package:allcuro/features/services/presentation/all_nurse_services_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +23,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'fixtures.dart';
 
 const _sizes = <Size>[Size(320, 640), Size(360, 740), Size(412, 915)];
 const _textScales = <double>[1.0, 1.3];
@@ -36,8 +39,12 @@ class _Case {
   /// Also lay the screen out with a 300dp software keyboard up.
   final bool keyboard;
 
-  const _Case(this.route, {String? name, this.steps = const [], this.keyboard = false})
-      : name = name ?? route;
+  /// Run with test fixtures (partners, equipment, medicines, bookings).
+  /// Unseeded cases see what a fresh install sees today: empty states.
+  final bool seeded;
+
+  const _Case(this.route, {String? name, this.steps = const [], this.keyboard = false, this.seeded = false})
+      : name = name ?? (seeded ? '$route (seeded)' : route);
 }
 
 Future<void> _tap(WidgetTester tester, Finder finder) async {
@@ -66,6 +73,7 @@ final _cases = <_Case>[
   ]),
   const _Case('/onboarding', keyboard: true),
   const _Case('/'),
+  const _Case('/', seeded: true),
   const _Case('/category-services/all'),
   const _Case('/category-services/nursing'),
   const _Case('/category-services/mother-baby'),
@@ -76,31 +84,42 @@ final _cases = <_Case>[
   const _Case('/nurse-services'),
   const _Case('/__all-nurse-services'),
   const _Case('/services/wound-dressing'),
-  _Case('/services/wound-dressing', name: '/services/wound-dressing (slot sheet)', steps: [
+  _Case('/services/wound-dressing', name: '/services/wound-dressing (slot sheet)', seeded: true, steps: [
     (t) => _tap(t, find.byWidgetPredicate((w) => w.runtimeType.toString() == '_NurseCard')),
   ]),
+  const _Case('/services/wound-dressing', seeded: true),
   const _Case('/services/mother-baby-2-hour-support'),
   const _Case('/services/quick-care'),
   const _Case('/nurses'),
-  const _Case('/nurses/priya-sharma'),
+  const _Case('/nurses', seeded: true),
+  const _Case('/nurses/test-nurse', seeded: true),
+  const _Case('/nurses/test-caregiver', seeded: true),
+  const _Case('/nurses/unknown-nurse'),
   const _Case('/nurse-quick-booking'),
-  const _Case('/nurse-tracker/ALC-NUR-8921'),
-  _Case('/nurse-tracker/ALC-NUR-8921', name: '/nurse-tracker (SOS dialog)', steps: [
+  const _Case('/nurse-tracker/ALC-NUR-10001', seeded: true),
+  _Case('/nurse-tracker/ALC-NUR-10001', name: '/nurse-tracker (SOS dialog)', seeded: true, steps: [
     (t) => _tap(t, find.text('SOS')),
   ]),
-  const _Case('/nurse-tracker/ALC-NUR-82554'),
-  _Case('/nurse-tracker/ALC-NUR-82554', name: '/nurse-tracker (rating sheet)', keyboard: true, steps: [
+  const _Case('/nurse-tracker/ALC-NUR-10002', seeded: true),
+  _Case('/nurse-tracker/ALC-NUR-10002', name: '/nurse-tracker (rating sheet)', keyboard: true, seeded: true, steps: [
     (t) => _tap(t, find.text('Rate Nurse')),
   ]),
+  const _Case('/nurse-tracker/ALC-NUR-99999'),
   const _Case('/centres'),
-  const _Case('/centres/serene-gardens'),
-  const _Case('/centre-booking/serene-gardens'),
-  const _Case('/centre-pass/ALC-CTR-4920'),
+  const _Case('/centres', seeded: true),
+  const _Case('/centres/test-centre', seeded: true),
+  const _Case('/centre-booking/test-centre', seeded: true, keyboard: true),
+  const _Case('/centre-booking/unknown-centre'),
+  const _Case('/centre-pass/ALC-CTR-10003', seeded: true),
   const _Case('/equipment'),
+  const _Case('/equipment', seeded: true),
   const _Case('/medicines'),
+  const _Case('/medicines', seeded: true),
   const _Case('/medicines/cart'),
   const _Case('/bookings'),
+  const _Case('/bookings', seeded: true),
   const _Case('/checkout'),
+  const _Case('/checkout?item=Test%20Wheelchair&price=1800&unit=month'),
   const _Case('/profile'),
   const _Case('/faq'),
   const _Case('/__sheet/quick-login', keyboard: true),
@@ -232,6 +251,7 @@ void main() {
           'no overflow: ${c.name} @ ${size.width.toInt()}x${size.height.toInt()} x$scale',
           (tester) async {
             SharedPreferences.setMockInitialValues({});
+            MedicineCatalog.replaceAll(const []);
             const dpr = 3.0;
             tester.view.devicePixelRatio = dpr;
             tester.view.physicalSize = size * dpr;
@@ -255,6 +275,7 @@ void main() {
 
             try {
               await tester.pumpWidget(ProviderScope(
+                overrides: c.seeded ? seededOverrides() : const [],
                 child: MaterialApp.router(
                   debugShowCheckedModeBanner: false,
                   theme: buildAppTheme(),

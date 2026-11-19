@@ -52,19 +52,19 @@ class Booking {
     required this.when,
     required this.status,
     required this.amount,
-    this.otp = '4829',
-    this.liveStatus = BookingLiveStatus.inProgress,
-    this.patientName = 'Ramesh Iyer',
-    this.patientAge = 68,
-    this.patientGender = 'Male',
-    this.address = 'Flat 402, Green Glen Palms, 12th Main, Indiranagar, Bengaluru',
-    this.locality = 'Indiranagar, Bengaluru',
-    this.providerName = 'Priya Sharma',
-    this.providerPhone = '+91 98450 12345',
-    this.providerRating = 4.92,
-    this.providerQualifications = 'GNM · 4 yrs exp · HPR Verified',
-    this.vitalsSummary = 'BP: 120/80 mmHg · Sugar: 112 mg/dL · Pulse: 74 bpm · Temp: 98.4 °F',
-    this.condition = 'Post-Op Knee Replacement Care & IV Infusion',
+    this.otp = '',
+    this.liveStatus = BookingLiveStatus.assigned,
+    this.patientName = '',
+    this.patientAge = 0,
+    this.patientGender = '',
+    this.address = '',
+    this.locality = '',
+    this.providerName = '',
+    this.providerPhone = '',
+    this.providerRating = 0,
+    this.providerQualifications = '',
+    this.vitalsSummary,
+    this.condition,
     this.roomType,
     this.formalities = const [
       'Govt Photo ID (Aadhaar / Passport) of patient',
@@ -128,3 +128,6 @@ class Booking {
     );
   }
 }
+
+/// Provider shown on a nurse booking until the care desk assigns someone.
+const kAssignedNurseLabel = 'ALLCURO verified nurse — assigned by our care desk';

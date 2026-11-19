@@ -388,6 +388,7 @@ export const PartnerEditor: React.FC<Props> = ({ initial, onClose, onSaved, onDe
                   )}
                 </dl>
               </section>
+              <PartnerDocuments details={p.details} />
             </div>
 
             <label className="catalog-field is-wide">
@@ -689,5 +690,56 @@ export const PartnerEditor: React.FC<Props> = ({ initial, onClose, onSaved, onDe
         </div>
       </div>
     </div>
+  );
+};
+
+interface UploadedDoc {
+  fileName?: string;
+  path?: string | null;
+  uploadedAt?: string;
+}
+
+const docLabel = (id: string) => id.replace(/[-_]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+
+/** Files the partner uploaded (partners.details.documents → private kyc-documents bucket). */
+const PartnerDocuments: React.FC<{ details: Record<string, unknown> | null }> = ({ details }) => {
+  const raw = details?.documents;
+  const docs =
+    raw && typeof raw === 'object' && !Array.isArray(raw) ? Object.entries(raw as Record<string, UploadedDoc>) : [];
+  const [error, setError] = useState<string | null>(null);
+
+  const open = async (path: string) => {
+    setError(null);
+    const { data, error: err } = await supabase.storage.from('kyc-documents').createSignedUrl(path, 300);
+    if (err || !data) return setError(err?.message ?? 'Could not open the file');
+    window.open(data.signedUrl, '_blank', 'noopener');
+  };
+
+  return (
+    <section>
+      <h3>Documents</h3>
+      <dl className="partner-dl">
+        {docs.length === 0 ? (
+          <dd>None uploaded yet</dd>
+        ) : (
+          docs.map(([id, d]) => (
+            <React.Fragment key={id}>
+              <dt>{docLabel(id)}</dt>
+              <dd>
+                {d.path ? (
+                  <button type="button" className="link-like" onClick={() => void open(d.path!)}>
+                    {d.fileName || 'View file'}
+                  </button>
+                ) : (
+                  d.fileName || '—'
+                )}
+                {d.uploadedAt && <span className="date-sub"> · {fmtDate(d.uploadedAt)}</span>}
+              </dd>
+            </React.Fragment>
+          ))
+        )}
+      </dl>
+      {error && <div className="catalog-notice is-error">{error}</div>}
+    </section>
   );
 };

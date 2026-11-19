@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast'
 import type { ReactNode } from 'react'
 import { Link } from '../components/Link'
 import { initials } from '../lib/format'
@@ -120,9 +121,8 @@ export function PartnerShell({ path, tabbed, title, children }: { path: string; 
         <div className="p-topbar">
           <h1 className="p-topbar-title">{title}</h1>
           <div className="p-header-actions">
-            <button type="button" className="p-round p-round-light" aria-label="Notifications">
+            <button type="button" className="p-round p-round-light" aria-label="Notifications" onClick={() => toast('No notifications yet.', 'info')}>
               <PIcon name="bell" size={19} />
-              <span className="p-dot">2</span>
             </button>
             <Link to={PR.profile} className="p-topbar-user" aria-label="Profile">
               <span className="p-avatar is-solid">{avatar}</span>
@@ -145,10 +145,9 @@ export function PartnerShell({ path, tabbed, title, children }: { path: string; 
                 <span className="p-brand-text">{brandFor(s)}</span>
               </Link>
               <div className="p-header-actions">
-                <button type="button" className="p-round" aria-label="Notifications">
+                <button type="button" className="p-round" aria-label="Notifications" onClick={() => toast('No notifications yet.', 'info')}>
                   <PIcon name="bell" size={19} />
-                  <span className="p-dot">2</span>
-                </button>
+                    </button>
                 <Link to={PR.profile} className="p-avatar" aria-label="Profile">
                   {avatar}
                 </Link>

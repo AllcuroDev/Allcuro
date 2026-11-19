@@ -56,7 +56,7 @@ class ComplianceScreen extends ConsumerWidget {
                 ref.read(partnerOnboardingProvider.notifier).markDocUploaded(
                       docId: doc.id,
                       isCentre: true,
-                      fileName: '${doc.docType}_verified_${DateTime.now().year}.pdf',
+                      fileName: '${doc.docType}.pdf',
                     );
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -153,7 +153,7 @@ class ComplianceScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${doc.fileName} · ${doc.expiry}',
+                                    doc.isUploaded ? '${doc.fileName} · ${doc.expiry}' : 'Not uploaded yet',
                                     style: const TextStyle(fontSize: 12, color: AppColors.mutedForeground),
                                   ),
                                   const SizedBox(height: 6),
@@ -183,7 +183,7 @@ class ComplianceScreen extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(AppRadius.pill),
                               ),
                               child: Text(
-                                doc.isUploaded ? 'Uploaded' : 'Pending',
+                                doc.isVerified ? 'Verified' : (doc.isUploaded ? 'Uploaded' : 'Pending'),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,

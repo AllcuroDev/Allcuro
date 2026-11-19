@@ -6,7 +6,7 @@ part of 'centre.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$CentreImpl _$$CentreImplFromJson(Map<String, dynamic> json) => _$CentreImpl(
+_Centre _$CentreFromJson(Map<String, dynamic> json) => _Centre(
   id: json['id'] as String,
   name: json['name'] as String,
   type: json['type'] as String,
@@ -28,25 +28,38 @@ _$CentreImpl _$$CentreImplFromJson(Map<String, dynamic> json) => _$CentreImpl(
   scores: (json['scores'] as List<dynamic>)
       .map((e) => ScoreItem.fromJson(e as Map<String, dynamic>))
       .toList(),
+  partnerId: json['partnerId'] as String? ?? '',
+  phone: json['phone'] as String? ?? '',
+  about: json['about'] as String? ?? '',
+  roomTypes:
+      (json['roomTypes'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const <String>[],
+  photos:
+      (json['photos'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const <String>[],
 );
 
-Map<String, dynamic> _$$CentreImplToJson(_$CentreImpl instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      'type': instance.type,
-      'locality': instance.locality,
-      'city': instance.city,
-      'photo': instance.photo,
-      'photoCount': instance.photoCount,
-      'rating': instance.rating,
-      'reviews': instance.reviews,
-      'since': instance.since,
-      'licence': instance.licence,
-      'staffRatio': instance.staffRatio,
-      'pricePerDay': instance.pricePerDay,
-      'pricePerMonth': instance.pricePerMonth,
-      'bedsLeft': instance.bedsLeft,
-      'services': instance.services,
-      'scores': instance.scores,
-    };
+Map<String, dynamic> _$CentreToJson(_Centre instance) => <String, dynamic>{
+  'id': instance.id,
+  'name': instance.name,
+  'type': instance.type,
+  'locality': instance.locality,
+  'city': instance.city,
+  'photo': instance.photo,
+  'photoCount': instance.photoCount,
+  'rating': instance.rating,
+  'reviews': instance.reviews,
+  'since': instance.since,
+  'licence': instance.licence,
+  'staffRatio': instance.staffRatio,
+  'pricePerDay': instance.pricePerDay,
+  'pricePerMonth': instance.pricePerMonth,
+  'bedsLeft': instance.bedsLeft,
+  'services': instance.services,
+  'scores': instance.scores,
+  'partnerId': instance.partnerId,
+  'phone': instance.phone,
+  'about': instance.about,
+  'roomTypes': instance.roomTypes,
+  'photos': instance.photos,
+};

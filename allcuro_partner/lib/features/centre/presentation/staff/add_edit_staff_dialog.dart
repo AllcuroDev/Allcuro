@@ -15,8 +15,8 @@ class AddEditStaffDialog extends ConsumerStatefulWidget {
 class _AddEditStaffDialogState extends ConsumerState<AddEditStaffDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
-  final _expCtrl = TextEditingController(text: '4');
-  final _rateCtrl = TextEditingController(text: '1800');
+  final _expCtrl = TextEditingController();
+  final _rateCtrl = TextEditingController();
   StaffRoleType _selectedRole = StaffRoleType.gnmNurse;
   String _selectedRatio = '1:4';
 
@@ -37,9 +37,9 @@ class _AddEditStaffDialogState extends ConsumerState<AddEditStaffDialog> {
       roleType: _selectedRole,
       qualification:
           '${_selectedRole == StaffRoleType.gnmNurse ? 'GNM' : _selectedRole == StaffRoleType.bscNursing ? 'B.Sc Nursing' : _selectedRole == StaffRoleType.anmNurse ? 'ANM' : _selectedRole == StaffRoleType.criticalCareNurse ? 'Critical Care Specialist' : _selectedRole == StaffRoleType.physiotherapist ? 'B.P.T Physio' : 'Certified Attendant'} · ${_expCtrl.text.trim()} yrs exp',
-      experienceYears: int.tryParse(_expCtrl.text.trim()) ?? 3,
+      experienceYears: int.tryParse(_expCtrl.text.trim()) ?? 0,
       ratio: _selectedRatio,
-      shiftRate: double.tryParse(_rateCtrl.text.trim()) ?? 1800.0,
+      shiftRate: double.tryParse(_rateCtrl.text.trim()) ?? 0,
       isCertified: true,
       certificateExpiring: false,
     );
@@ -98,7 +98,7 @@ class _AddEditStaffDialogState extends ConsumerState<AddEditStaffDialog> {
                   TextFormField(
                     controller: _nameCtrl,
                     decoration: InputDecoration(
-                      hintText: 'e.g. Deepa Nair, Ramesh Bhat',
+                      hintText: 'Full name as on their certificate',
                       filled: true,
                       fillColor: AppColors.card,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

@@ -60,6 +60,8 @@ export interface ServiceRecord {
   icon: string;
   image_url: string | null;
   sort_order: number;
+  /** Quick Book Nurse position, 1–5 (1 = first). null = only under "Other". */
+  quick_book_rank?: number | null;
   is_active: boolean;
 }
 

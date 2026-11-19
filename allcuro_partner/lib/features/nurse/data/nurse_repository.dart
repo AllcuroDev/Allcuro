@@ -29,7 +29,7 @@ class NurseRepository {
   Future<List<Shift>> getShifts() => _service.fetchShifts();
   Future<List<Shift>> shifts() => _service.fetchShifts();
 
-  Future<NurseVisit> getActiveVisit() => _service.fetchActiveVisit();
+  Future<NurseVisit?> getActiveVisit() => _service.fetchActiveVisit();
 
   Future<NursePerformance> getPerformance() => _service.fetchPerformance();
 

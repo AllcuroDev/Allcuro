@@ -7,7 +7,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/surface.dart';
 import '../../../core/ui/tappable.dart';
 import '../../../core/verification_status.dart';
+import '../../../core/router/app_routes.dart';
+import '../../auth/data/auth_service.dart';
 import '../../auth/presentation/auth_view_model.dart';
+import '../../auth/presentation/onboarding_view_model.dart';
 
 class ProfileScreen extends ConsumerWidget {
   final VoidCallback? onBack;
@@ -22,16 +25,17 @@ class ProfileScreen extends ConsumerWidget {
     final isCentre = session?.role == ProviderRole.centre;
     final isClinician = session?.role == ProviderRole.clinician;
     final identity = session?.practitionerIdentity;
-    final practitionerName = identity == null
-        ? (isClinician ? 'Dr. Arjun Rao' : 'Priya Sharma')
-        : (identity.profession == 'doctor' ? 'Dr. ${identity.fullName}' : identity.fullName);
-    final initials = practitionerName
-        .replaceFirst('Dr. ', '')
-        .split(' ')
-        .where((w) => w.isNotEmpty)
-        .take(2)
-        .map((w) => w[0].toUpperCase())
-        .join();
+    final onboarding = ref.watch(partnerOnboardingProvider);
+    final displayName = session?.displayName ?? 'Partner';
+    final practitionerName =
+        identity?.profession == 'doctor' ? 'Dr. $displayName' : displayName;
+    final initials = session?.initials ?? 'P';
+    final roleLabel = isCentre
+        ? 'Homecare Centre Partner'
+        : (isClinician
+            ? (identity?.profession == 'physiotherapist' ? 'Physiotherapist' : 'Doctor')
+            : 'Nurse');
+    final qualification = identity?.qualification ?? '';
 
     return Scaffold(
       backgroundColor: AppColors.card,
@@ -75,7 +79,7 @@ class ProfileScreen extends ConsumerWidget {
                           shape: BoxShape.circle,
                         ),
                         child: Text(
-                          isCentre ? 'SC' : initials,
+                          initials,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -89,9 +93,7 @@ class ProfileScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isCentre
-                                  ? 'Sanjeevani Elder Care Sanctuary'
-                                  : practitionerName,
+                              isCentre ? displayName : practitionerName,
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
@@ -99,11 +101,7 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                             ),
                             Text(
-                              isCentre
-                                  ? 'Homecare Centre Partner · Bengaluru'
-                                  : (isClinician
-                                      ? 'Doctor / Physiotherapist · Bengaluru'
-                                      : 'Registered Nurse (GNM) · Bengaluru'),
+                              qualification.isEmpty ? roleLabel : '$roleLabel · $qualification',
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.mutedForeground,
@@ -119,10 +117,12 @@ class ProfileScreen extends ConsumerWidget {
                     isCentre
                         ? _CentreVerificationCard(
                             status: session.centreVerificationStatus,
+                            onboarding: onboarding,
                             onAdvance: (next) => notifier.setCentreVerificationStatus(next),
                           )
                         : _NurseVerificationCard(
                             status: session.practitionerVerificationStatus,
+                            onboarding: onboarding,
                             onAdvance: (next) => notifier.setPractitionerVerificationStatus(next),
                           ),
                   ],
@@ -175,9 +175,10 @@ class _StatusBadge extends StatelessWidget {
 
 class _NurseVerificationCard extends StatelessWidget {
   final NurseVerificationStatus status;
+  final PartnerOnboardingState onboarding;
   final ValueChanged<NurseVerificationStatus> onAdvance;
 
-  const _NurseVerificationCard({required this.status, required this.onAdvance});
+  const _NurseVerificationCard({required this.status, required this.onboarding, required this.onAdvance});
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +203,7 @@ class _NurseVerificationCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Complete remaining profile modules anytime. Verified profiles receive 3x more bookings.',
+            'Complete the remaining profile modules, then submit for ALLCURO review.',
             style: TextStyle(fontSize: 12.5, color: AppColors.mutedForeground, height: 1.35),
           ),
           const SizedBox(height: 16),
@@ -212,7 +213,7 @@ class _NurseVerificationCard extends StatelessWidget {
             icon: Icons.folder_shared_outlined,
             title: 'Document Vault',
             subtitle: 'Degree certificates & HPR registry',
-            isComplete: true,
+            isComplete: onboarding.nurseDocsDone,
             onTap: () => context.push('/nurse/documents'),
           ),
           const SizedBox(height: 8),
@@ -220,27 +221,27 @@ class _NurseVerificationCard extends StatelessWidget {
             icon: Icons.health_and_safety_outlined,
             title: 'Medical Fitness & TB Report',
             subtitle: 'Upload annual fitness self-declaration',
-            isComplete: false,
+            isComplete: onboarding.nurseMedicalFitnessComplete,
             onTap: () => context.push('/nurse/documents'),
           ),
           const SizedBox(height: 8),
           _SetupActionTile(
             icon: Icons.account_balance_outlined,
             title: 'Bank Account & Payout Setup',
-            subtitle: 'Direct Razorpay Route deposits',
-            isComplete: true,
-            onTap: () => context.push('/nurse/earnings'),
+            subtitle: 'Where your payouts will be sent',
+            isComplete: onboarding.nurseBankDone,
+            onTap: () => context.push(AppRoutes.bankAccount),
           ),
           const SizedBox(height: 8),
           _SetupActionTile(
             icon: Icons.psychology_outlined,
             title: 'Skills & Specialisations',
-            subtitle: 'ICU, Tracheostomy, Palliative Care tags',
-            isComplete: true,
+            subtitle: onboarding.nurseSkills.isEmpty ? 'Pick the care you are experienced in' : onboarding.nurseSkills.join(', '),
+            isComplete: onboarding.nurseSkillsDone,
             onTap: () => context.push('/nurse/availability'),
           ),
 
-          if (status == NurseVerificationStatus.underReview) ...[
+          if (AuthService.isDemo && status == NurseVerificationStatus.underReview) ...[
             const SizedBox(height: 14),
             TextButton(
               onPressed: () => onAdvance(NurseVerificationStatus.verified),
@@ -259,9 +260,10 @@ class _NurseVerificationCard extends StatelessWidget {
 
 class _CentreVerificationCard extends StatelessWidget {
   final CentreVerificationStatus status;
+  final PartnerOnboardingState onboarding;
   final ValueChanged<CentreVerificationStatus> onAdvance;
 
-  const _CentreVerificationCard({required this.status, required this.onAdvance});
+  const _CentreVerificationCard({required this.status, required this.onboarding, required this.onAdvance});
 
   @override
   Widget build(BuildContext context) {
@@ -308,7 +310,7 @@ class _CentreVerificationCard extends StatelessWidget {
             icon: Icons.gavel_outlined,
             title: 'Compliance & Legal NOCs',
             subtitle: 'CEA, Fire Safety, Biomedical waste clearance',
-            isComplete: false,
+            isComplete: onboarding.centreDocsDone,
             onTap: () => context.push('/centre/compliance'),
           ),
           const SizedBox(height: 8),
@@ -316,7 +318,7 @@ class _CentreVerificationCard extends StatelessWidget {
             icon: Icons.people_outline_rounded,
             title: 'Staff Roster & Duty Nurses',
             subtitle: 'Manage nurse-to-patient staff ratios',
-            isComplete: true,
+            isComplete: onboarding.centreStaffDone,
             onTap: () => context.push('/centre/staff'),
           ),
           const SizedBox(height: 8),
@@ -324,7 +326,7 @@ class _CentreVerificationCard extends StatelessWidget {
             icon: Icons.hotel_outlined,
             title: 'Room Inventory & Pricing',
             subtitle: 'AC private rooms, packages and photos',
-            isComplete: true,
+            isComplete: onboarding.centreRoomsDone,
             onTap: () => context.push('/centre/rooms'),
           ),
           const SizedBox(height: 8),
@@ -332,11 +334,11 @@ class _CentreVerificationCard extends StatelessWidget {
             icon: Icons.storefront_outlined,
             title: 'Public Listing Management',
             subtitle: 'Facility amenities, photos and brochure',
-            isComplete: true,
+            isComplete: false,
             onTap: () => context.push('/centre/listing'),
           ),
 
-          if (next != null && nextLabel != null) ...[
+          if (AuthService.isDemo && next != null && nextLabel != null) ...[
             const SizedBox(height: 14),
             TextButton(
               onPressed: () => onAdvance(next),

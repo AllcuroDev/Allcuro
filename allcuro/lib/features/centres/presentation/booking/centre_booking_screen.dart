@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/content/site_contact.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_shell.dart';
+import '../../../../core/ui/empty_state.dart';
 import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/surface.dart';
 import '../../../../core/utils/currency.dart';
+import '../../../bookings/data/bookings_service.dart';
 import '../../../bookings/data/models/booking.dart';
+import '../../data/models/centre.dart';
+import '../centre_detail/centre_detail_view_model.dart';
 import '../../../bookings/presentation/bookings_view_model.dart';
 
 class RoomOption {
@@ -24,32 +29,15 @@ class RoomOption {
   });
 }
 
-const _roomOptions = [
-  RoomOption(
-    title: 'General Shared Ward',
-    pricePerDay: 1500,
-    description: '3-bed shared room with 24x7 nursing & assisted meals.',
-    icon: Icons.meeting_room_outlined,
-  ),
-  RoomOption(
-    title: 'Semi-Private Room (Twin Sharing)',
-    pricePerDay: 2200,
-    description: 'Twin sharing room with AC, private wardrobe & 1:4 nurse ratio.',
-    icon: Icons.bed_outlined,
-  ),
-  RoomOption(
-    title: 'Private Deluxe Room',
-    pricePerDay: 3500,
-    description: 'Dedicated private room, attached bath, TV & 1:2 caregiver ratio.',
-    icon: Icons.king_bed_outlined,
-  ),
-  RoomOption(
-    title: 'ICU Step-Down / High Dependency',
-    pricePerDay: 5500,
-    description: 'Continuous vitals monitoring, oxygen/BiPAP line & dedicated nurse.',
-    icon: Icons.local_hospital_outlined,
-  ),
-];
+/// Room choices come from the centre's own listing (`partners.room_types`),
+/// all at the centre's admin-set daily rate.
+List<RoomOption> _roomOptionsFor(Centre centre) {
+  final types = centre.roomTypes.isEmpty ? const ['Standard room'] : centre.roomTypes;
+  return [
+    for (final t in types)
+      RoomOption(title: t, pricePerDay: centre.pricePerDay, description: '', icon: Icons.bed_outlined),
+  ];
+}
 
 const _durations = [
   (days: 7, label: '7 Days (Short Stay)'),
@@ -68,16 +56,11 @@ class CentreBookingScreen extends ConsumerStatefulWidget {
 }
 
 class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
-  int _selectedRoomIdx = 2; // Default Private Deluxe
+  int _selectedRoomIdx = 0;
   int _selectedDurationIdx = 2; // Default 30 days
-  final _nameController = TextEditingController(text: 'Kavita Nair');
-  final _ageController = TextEditingController(text: '74');
-  final _addressController = TextEditingController(
-    text: 'Sanjeevani Elder Care, 4th Cross, 100ft Road, Indiranagar, Bengaluru',
-  );
-  final _notesController = TextEditingController(
-    text: 'Post-stroke physical rehabilitation and medication assistance.',
-  );
+  final _nameController = TextEditingController();
+  final _ageController = TextEditingController();
+  final _notesController = TextEditingController();
   String _gender = 'Female';
   bool _isBooking = false;
 
@@ -85,41 +68,57 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
   void dispose() {
     _nameController.dispose();
     _ageController.dispose();
-    _addressController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  void _submitCentreBooking() async {
+  /// Stay total from the centre's rates: the monthly package for 30 days
+  /// when one is set, otherwise the daily rate × days. 0 = price on request.
+  int _stayTotal(Centre centre, int days) =>
+      days == 30 && centre.pricePerMonth > 0 ? centre.pricePerMonth : centre.pricePerDay * days;
+
+  void _submitCentreBooking(Centre centre) async {
+    final patientName = _nameController.text.trim();
+    if (patientName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add the patient\'s name.')),
+      );
+      return;
+    }
     setState(() => _isBooking = true);
-    final room = _roomOptions[_selectedRoomIdx];
+    final rooms = _roomOptionsFor(centre);
+    final room = rooms[_selectedRoomIdx.clamp(0, rooms.length - 1)];
     final duration = _durations[_selectedDurationIdx];
-    final totalStayAmount = room.pricePerDay * duration.days;
+    final otp = newVisitOtp();
 
     final newBooking = Booking(
-      id: 'ALC-CTR-4920',
+      id: newBookingId('CTR'),
       type: BookingType.careCentre,
-      title: 'Sanjeevani Elder Care · ${room.title}',
-      when: 'Check-in: Tomorrow, 10:00 AM · ${duration.days} Days',
-      status: 'Confirmed',
-      amount: totalStayAmount,
-      otp: '7391',
+      title: '${centre.name} · ${room.title}',
+      when: 'Check-in date confirmed by the centre · ${duration.days} Days',
+      status: 'Requested',
+      amount: _stayTotal(centre, duration.days),
+      otp: otp,
       liveStatus: BookingLiveStatus.assigned,
-      patientName: _nameController.text.trim().isEmpty ? 'Kavita Nair' : _nameController.text.trim(),
-      patientAge: int.tryParse(_ageController.text) ?? 74,
+      patientName: patientName,
+      patientAge: int.tryParse(_ageController.text.trim()) ?? 0,
       patientGender: _gender,
-      address: 'Sanjeevani Elder Care Home, 4th Cross, 100ft Road, Indiranagar, Bengaluru',
-      locality: 'Indiranagar, Bengaluru',
-      providerName: 'Sanjeevani Elder Care Home',
-      providerPhone: '+91 80 4120 5500',
-      providerRating: 4.88,
-      providerQualifications: 'Field Audited · 1:3 Nurse Ratio · NABH Compliant',
+      address: [centre.locality, centre.city].where((s) => s.isNotEmpty).join(', '),
+      locality: centre.locality.isNotEmpty ? centre.locality : centre.city,
+      providerName: centre.name,
+      providerPhone: centre.phone.isNotEmpty ? centre.phone : ref.read(careDeskPhoneProvider),
+      providerRating: centre.reviews > 0 ? centre.rating : 0,
+      providerQualifications: [
+        'ALLCURO verified',
+        if (centre.staffRatio.isNotEmpty) 'Staff ratio ${centre.staffRatio}',
+        if (centre.licence.isNotEmpty) 'Licence ${centre.licence}',
+      ].join(' · '),
       roomType: room.title,
-      condition: _notesController.text.trim(),
-      formalities: const [
+      condition: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      formalities: [
         'Govt Photo ID (Aadhaar / Passport) of patient',
         'Hospital Discharge Summary & Doctor Prescription',
-        'Digital Admission Pass & Check-In OTP (7391)',
+        'Digital Admission Pass & Check-In OTP ($otp)',
         'Signed Care Agreement & Emergency Contact Consent',
       ],
     );
@@ -134,11 +133,43 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final room = _roomOptions[_selectedRoomIdx];
+    final centreAsync = ref.watch(centreDetailViewModelProvider(widget.centreId));
+    return centreAsync.when(
+      loading: () => const AppShell(
+        currentPath: '/centres',
+        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      ),
+      error: (_, _) => _unavailable(context),
+      data: (centre) => centre == null ? _unavailable(context) : _buildForm(context, centre),
+    );
+  }
+
+  Widget _unavailable(BuildContext context) {
+    return AppShell(
+      currentPath: '/centres',
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          ScreenHeader(
+            title: 'Care Centre Admission',
+            subtitle: 'Centre not available',
+            onBack: () => context.canPop() ? context.pop() : context.go('/centres'),
+          ),
+          const EmptyState(
+            icon: Icons.apartment_rounded,
+            title: 'This centre is not taking bookings',
+            message: 'It may no longer be listed on ALLCURO. Our care desk can help you find another centre.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildForm(BuildContext context, Centre centre) {
+    final rooms = _roomOptionsFor(centre);
+    final room = rooms[_selectedRoomIdx.clamp(0, rooms.length - 1)];
     final duration = _durations[_selectedDurationIdx];
-    final stayTotal = room.pricePerDay * duration.days;
-    final refundableDeposit = 5000;
-    final grandTotal = stayTotal + refundableDeposit;
+    final stayTotal = _stayTotal(centre, duration.days);
 
     return AppShell(
       currentPath: '/centres',
@@ -160,7 +191,7 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: AppColors.mutedForeground),
                   ),
                   Text(
-                    inr(grandTotal),
+                    stayTotal > 0 ? inr(stayTotal) : 'On request',
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink),
                   ),
                 ],
@@ -171,7 +202,7 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width - 40 - 110),
               child: ElevatedButton(
-                onPressed: _isBooking ? null : _submitCentreBooking,
+                onPressed: _isBooking ? null : () => _submitCentreBooking(centre),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -186,7 +217,7 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
                     : const Text(
-                        'Confirm Admission & Get Pass',
+                        'Request Admission & Get Pass',
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -202,7 +233,7 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
         children: [
           ScreenHeader(
             title: 'Care Centre Admission',
-            subtitle: 'Sanjeevani Elder Care Home · Indiranagar',
+            subtitle: [centre.name, if (centre.locality.isNotEmpty) centre.locality].join(' · '),
             onBack: () {
               if (context.canPop()) {
                 context.pop();
@@ -222,7 +253,7 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5, color: AppColors.ink),
                 ),
                 const SizedBox(height: 10),
-                ..._roomOptions.asMap().entries.map((entry) {
+                ...rooms.asMap().entries.map((entry) {
                   final idx = entry.key;
                   final r = entry.value;
                   final isSelected = _selectedRoomIdx == idx;
@@ -265,11 +296,14 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
                                         child: Text(r.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink)),
                                       ),
                                       const SizedBox(width: 8),
+                                      if (r.pricePerDay > 0)
                                       Text('${inr(r.pricePerDay)} / day', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.ink)),
                                     ],
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(r.description, style: const TextStyle(fontSize: 11.5, color: AppColors.mutedForeground, height: 1.3)),
+                                  if (r.description.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(r.description, style: const TextStyle(fontSize: 11.5, color: AppColors.mutedForeground, height: 1.3)),
+                                  ],
                                 ],
                               ),
                             ),
@@ -419,11 +453,16 @@ class _CentreBookingScreenState extends ConsumerState<CentreBookingScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _PriceSummaryRow(label: '${room.title} (${duration.days} days)', amount: inr(stayTotal)),
-                      const SizedBox(height: 6),
-                      _PriceSummaryRow(label: 'Refundable Security Escrow Deposit', amount: inr(refundableDeposit)),
+                      _PriceSummaryRow(
+                        label: '${room.title} (${duration.days} days)',
+                        amount: stayTotal > 0 ? inr(stayTotal) : 'On request',
+                      ),
                       const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1, color: AppColors.border)),
-                      _PriceSummaryRow(label: 'Total Payable', amount: inr(grandTotal), isBold: true),
+                      _PriceSummaryRow(
+                        label: 'Estimated total (confirmed by the centre)',
+                        amount: stayTotal > 0 ? inr(stayTotal) : 'On request',
+                        isBold: true,
+                      ),
                     ],
                   ),
                 ),

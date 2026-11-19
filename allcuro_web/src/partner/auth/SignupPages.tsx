@@ -11,11 +11,9 @@ import {
   usePartnerSession,
 } from '../session'
 import { ChipGroup, PField, PIcon } from '../ui'
-import { AuthWizard, ChoiceChips, ConfirmDialog, ConsentBox, LockedField, SectionLabel, StepHeader, SummaryList, VerifiedCard } from './AuthUi'
+import { AuthWizard, ChoiceChips, ConfirmDialog, ConsentBox, LockedField, SectionLabel, StepHeader, SummaryList } from './AuthUi'
 import {
-  CENTRE_DEFAULTS,
   CENTRE_TYPE_OPTIONS,
-  NURSE_DEFAULT_SKILLS,
   OWNERSHIP_TYPE_OPTIONS,
   REGISTRATION_LABELS,
   SPECIALISATION_OPTIONS,
@@ -79,19 +77,19 @@ export function NurseSignupPage() {
   const identity = practitionerIdentity(s)
   const w = useWizardSteps(3)
 
-  // Demo defaults from NurseSignupData, overwritten by the verified identity.
-  const fullName = identity?.fullName ?? 'Priya Sharma'
-  const dob = identity?.dob ?? '1996-05-14'
-  const gender = identity?.gender ?? 'Female'
-  const address = identity?.address ?? 'Indiranagar 100ft Road'
-  const qualification = identity?.qualification ?? 'GNM'
+  // Everything here comes from the identity step — never a placeholder person.
+  const fullName = identity?.fullName ?? ''
+  const dob = identity?.dob ?? ''
+  const gender = identity?.gender ?? ''
+  const address = identity?.address ?? ''
+  const qualification = identity?.qualification ?? ''
   const registrationNumber = identity?.registrationNumber ?? ''
   const council = identity?.council ?? ''
 
-  const [city, setCity] = useState((s.signup.city as string | undefined) ?? 'Bengaluru')
-  const [experienceYears, setExperienceYears] = useState('5')
-  const [previousEmployer, setPreviousEmployer] = useState('Manipal Hospital')
-  const [policeConsent, setPoliceConsent] = useState(true)
+  const [city, setCity] = useState((s.signup.city as string | undefined) ?? '')
+  const [experienceYears, setExperienceYears] = useState('')
+  const [previousEmployer, setPreviousEmployer] = useState('')
+  const [policeConsent, setPoliceConsent] = useState(false)
 
   const canContinue =
     w.step === 0 ? fullName.trim() !== '' && city.trim() !== '' : w.step === 1 ? qualification !== '' && experienceYears.trim() !== '' : policeConsent
@@ -109,7 +107,7 @@ export function NurseSignupPage() {
         experienceYears: experienceYears.trim(),
         previousEmployer: previousEmployer.trim(),
         policeConsent,
-        skills: (s.signup.skills as string[] | undefined) ?? NURSE_DEFAULT_SKILLS,
+        ...(Array.isArray(s.signup.skills) ? { skills: s.signup.skills } : {}),
       })
       setPractitionerStatus('onboarding')
     })
@@ -129,12 +127,11 @@ export function NurseSignupPage() {
       >
         {w.step === 0 && (
           <>
-            <StepHeader title="Tell us about yourself" subtitle="Your identity details come from Aadhaar and can't be changed." />
-            <VerifiedCard
-              title="Verified from Aadhaar"
+            <StepHeader title="Tell us about yourself" subtitle="These details come from your identity step. ALLCURO checks them before approval." />
+            <SummaryList
               rows={[
                 ['Full name', fullName],
-                ['Date of birth', formatDob(dob)],
+                ['Date of birth', dob ? formatDob(dob) : ''],
                 ['Gender', gender],
                 ['Address', address],
               ]}
@@ -194,7 +191,7 @@ export function ClinicianSignupPage() {
   const registrationNumber = identity?.registrationNumber ?? ''
   const optionsFor = profession ?? 'Doctor'
 
-  const [city, setCity] = useState((s.signup.city as string | undefined) ?? 'Bengaluru')
+  const [city, setCity] = useState((s.signup.city as string | undefined) ?? '')
   const [specialisations, setSpecialisations] = useState<string[]>([])
   const [experienceYears, setExperienceYears] = useState('')
   const [consent, setConsent] = useState(false)
@@ -240,9 +237,8 @@ export function ClinicianSignupPage() {
       >
         {w.step === 0 && (
           <>
-            <StepHeader title="Tell us about yourself" subtitle="Your identity details come from Aadhaar and can't be changed." />
-            <VerifiedCard
-              title="Verified from Aadhaar"
+            <StepHeader title="Tell us about yourself" subtitle="These details come from your identity step. ALLCURO checks them before approval." />
+            <SummaryList
               rows={[
                 ...(profession ? ([['I am a', profession]] as [string, string][]) : []),
                 ['Full name', fullName],
@@ -298,13 +294,14 @@ export function ClinicianSignupPage() {
 /** centre/presentation/signup — Entity details → Business email → Review & submit. */
 export function CentreSignupPage() {
   const w = useWizardSteps(3)
-  const d = CENTRE_DEFAULTS
+  const saved = usePartnerSession().signup
+  const text = (k: string) => (typeof saved[k] === 'string' ? (saved[k] as string) : '')
 
-  const [centreName, setCentreName] = useState(d.centreName)
-  const [centreType, setCentreType] = useState<string | null>(d.centreType)
-  const [yearEstablished, setYearEstablished] = useState(d.yearEstablished)
-  const [ownershipType, setOwnershipType] = useState<string | null>(d.ownershipType)
-  const [businessEmail, setBusinessEmail] = useState(d.businessEmail)
+  const [centreName, setCentreName] = useState(text('centreName'))
+  const [centreType, setCentreType] = useState<string | null>(text('centreType') || null)
+  const [yearEstablished, setYearEstablished] = useState(text('yearEstablished'))
+  const [ownershipType, setOwnershipType] = useState<string | null>(text('ownershipType') || null)
+  const [businessEmail, setBusinessEmail] = useState(text('businessEmail'))
 
   const year = Number(yearEstablished)
   const yearError = yearEstablished && (year < 1900 || year > new Date().getFullYear()) ? 'Enter a year between 1900 and this year' : null
@@ -322,13 +319,6 @@ export function CentreSignupPage() {
         yearEstablished: yearEstablished.trim(),
         ownershipType,
         businessEmail: businessEmail.trim(),
-        staffRatio: d.staffRatio,
-        sampleFoodMenu: d.sampleFoodMenu,
-        staffCount: d.staff.length,
-        photoCount: d.photoCount,
-        pricePerPackage: d.pricePerPackage,
-        servicesIncluded: d.servicesIncluded,
-        roomTypes: d.roomTypes,
       })
       setCentreStatus('onboarding')
     })
@@ -348,7 +338,7 @@ export function CentreSignupPage() {
           <>
             <StepHeader title="Tell us about your centre" />
             <PField label="Centre name">
-              <input value={centreName} onChange={(e) => setCentreName(e.target.value)} autoComplete="organization" />
+              <input value={centreName} onChange={(e) => setCentreName(e.target.value)} placeholder="As on your licence" autoComplete="organization" />
             </PField>
             <div>
               <SectionLabel id="pa-ctype">Centre type</SectionLabel>
@@ -392,12 +382,10 @@ export function CentreSignupPage() {
                 ['Type', centreType ?? '—'],
                 ['Ownership', ownershipType ?? '—'],
                 ['Business email', businessEmail],
-                ['Staff on payroll', String(d.staff.length)],
-                ['Site visit', '—'],
-                ['Photos', String(d.photoCount)],
+                ['Year established', yearEstablished],
               ]}
             />
-            <InfoNote>You can explore the dashboard while your documents are reviewed and the site visit is scheduled.</InfoNote>
+            <InfoNote>Next, add your rooms, staff and compliance documents from the dashboard, then submit them for review.</InfoNote>
           </>
         )}
       </AuthWizard>

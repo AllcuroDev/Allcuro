@@ -8,7 +8,8 @@ import 'models/pricing_breakdown.dart';
 class CheckoutRepository {
   const CheckoutRepository();
 
-  static const _discount = 480;
+  /// Catalog prices already carry the admin's discount; no extra promo here.
+  static const _discount = 0;
   static const _fee = 99;
   static const _gstRate = 0.18;
 

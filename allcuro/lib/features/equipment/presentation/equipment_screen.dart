@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/allcuro_chip.dart';
 import '../../../core/ui/app_shell.dart';
+import '../../../core/ui/empty_state.dart';
+import '../../../core/ui/partner_avatar.dart';
 import '../../../core/ui/screen_header.dart';
 import '../../../core/ui/surface.dart';
 import '../../../core/utils/currency.dart';
@@ -45,8 +47,16 @@ class EquipmentScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            data: (data) => Column(
+            data: (data) => data.equipment.isEmpty
+                ? const EmptyState(
+                    icon: Icons.medical_services_outlined,
+                    title: 'No equipment listed yet',
+                    message: 'Our rental catalogue is being set up. '
+                        'Call our care desk and we will arrange what you need.',
+                  )
+                : Column(
               children: [
+                if (data.categories.isNotEmpty)
                 SizedBox(
                   height: 40,
                   child: ListView.separated(
@@ -100,11 +110,11 @@ class _EquipmentCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.xl),
-                child: Image.asset(
-                  e.photo,
-                  fit: BoxFit.contain,
+                child: NetworkPhoto(
+                  url: e.photo,
                   width: 90,
                   height: 90,
+                  icon: Icons.medical_services_outlined,
                 ),
               ),
             ),
@@ -137,6 +147,7 @@ class _EquipmentCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (e.condition.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 6,
@@ -194,7 +205,11 @@ class _EquipmentCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'Deposit ${inr(e.deposit)}',
+                          !e.inStock
+                              ? 'Out of stock'
+                              : e.deposit > 0
+                                  ? 'Deposit ${inr(e.deposit)}'
+                                  : 'No deposit',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -206,8 +221,10 @@ class _EquipmentCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () => context.push(
-                          '/checkout?item=${Uri.encodeComponent(e.name)}',
+                        onPressed: !e.inStock ? null : () => context.push(
+                          '/checkout?item=${Uri.encodeComponent(e.name)}'
+                          '&price=${e.perMonth > 0 ? e.perMonth : e.perDay}'
+                          '&unit=${e.perMonth > 0 ? 'month' : 'day'}',
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,

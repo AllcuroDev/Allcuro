@@ -4,7 +4,7 @@ part 'equipment.freezed.dart';
 part 'equipment.g.dart';
 
 @freezed
-class Equipment with _$Equipment {
+abstract class Equipment with _$Equipment {
   const factory Equipment({
     required String id,
     required String name,
@@ -15,6 +15,9 @@ class Equipment with _$Equipment {
     required int deposit,
     required String condition,
     required String availableIn,
+    @Default('') String description,
+    @Default(<String>[]) List<String> features,
+    @Default(true) bool inStock,
   }) = _Equipment;
 
   factory Equipment.fromJson(Map<String, dynamic> json) => _$EquipmentFromJson(json);

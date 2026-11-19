@@ -6,7 +6,7 @@ import { EmptyState, PBody, PCard, PIcon, PPageHead } from '../ui'
 import { ConfirmDialog } from './CentreDialog'
 import { STAFF_ROLE_LABEL, type StaffMember } from './data'
 import { StaffDialog } from './StaffDialog'
-import { removeStaff, renewStaffCertificate, useStaff } from './state'
+import { removeStaff, useStaff } from './state'
 import './centre.css'
 
 // Staff & in-house care roster (features/centre/presentation/staff/staff_management_screen.dart).
@@ -78,22 +78,14 @@ export function CentreStaffPage() {
                     <span className="p-muted pc-small">
                       {m.qualification} · Ratio {m.ratio}
                     </span>
-                    <span className="pc-rate">{inr(m.shiftRate)} / shift</span>
+                    {m.shiftRate > 0 && <span className="pc-rate">{inr(m.shiftRate)} / shift</span>}
                   </div>
-                  <span className={`p-pill ${m.certificateExpiring ? 'is-warn' : 'is-ok'}`}>{m.certificateExpiring ? 'Renewal Due' : 'Certified'}</span>
+                  {m.certificateExpiring ? (
+                    <span className="p-pill is-warn">Renewal Due</span>
+                  ) : m.isCertified ? (
+                    <span className="p-pill is-ok">Certified</span>
+                  ) : null}
                   <div className="pc-card-actions">
-                    {m.certificateExpiring && (
-                      <button
-                        type="button"
-                        className="p-btn p-btn-ghost p-btn-sm"
-                        onClick={() => {
-                          renewStaffCertificate(m.id)
-                          toast(`Renewed certificate uploaded for ${m.name}`)
-                        }}
-                      >
-                        <PIcon name="upload" size={16} /> Renew
-                      </button>
-                    )}
                     <button type="button" className="p-btn p-btn-ghost p-btn-sm" onClick={() => setEditing(m)} aria-label={`Edit ${m.name}`}>
                       <PIcon name="edit" size={16} /> Edit
                     </button>

@@ -143,7 +143,7 @@ export function EquipmentCheckoutPage({ id }: { id: string }) {
       locality: current.locality,
       providerName: 'ALLCURO Equipment Desk',
       providerPhone: '+91 80 4120 5500',
-      providerRating: 4.8,
+      providerRating: 0,
       providerQualifications: `${item.condition} · Sanitised & demonstrated on delivery`,
       formalities: [],
       payment,

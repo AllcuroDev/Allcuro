@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/allcuro_chip.dart';
 import '../../../../core/ui/app_shell.dart';
+import '../../../../core/ui/empty_state.dart';
+import '../../../../core/ui/partner_avatar.dart';
 import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/surface.dart';
 import '../../../../core/utils/currency.dart';
@@ -35,20 +37,22 @@ class CentresListScreen extends ConsumerWidget {
         children: [
           ScreenHeader(
             title: 'Home Care Centres',
-            subtitle: 'Physically inspected beds with 24/7 nursing in Bengaluru',
+            subtitle: 'Physically inspected centres with 24/7 nursing',
             onBack: () => context.go('/'),
           ),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: _filters.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, i) => AllcuroChip(_filters[i]),
+          if (centresAsync.valueOrNull?.isNotEmpty ?? false) ...[
+            SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: _filters.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, i) => AllcuroChip(_filters[i]),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             child: centresAsync.when(
@@ -67,9 +71,16 @@ class CentresListScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              data: (centres) => Column(
-                children: centres.map((c) => _CentreCard(centre: c)).toList(),
-              ),
+              data: (centres) => centres.isEmpty
+                  ? const EmptyState(
+                      icon: Icons.apartment_rounded,
+                      title: 'No care centres listed yet',
+                      message: 'We are inspecting and onboarding care centres. '
+                          'Call our care desk and we will help you find a bed.',
+                    )
+                  : Column(
+                      children: centres.map((c) => _CentreCard(centre: c)).toList(),
+                    ),
             ),
           ),
         ],
@@ -96,11 +107,11 @@ class _CentreCard extends StatelessWidget {
           children: [
             Stack(
               children: [
-                Image.asset(
-                  c.photo,
+                NetworkPhoto(
+                  url: c.photo,
                   height: 170,
                   width: double.infinity,
-                  fit: BoxFit.cover,
+                  icon: Icons.apartment_rounded,
                 ),
                 Positioned(
                   left: 12,
@@ -142,7 +153,7 @@ class _CentreCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (c.bedsLeft <= 3)
+                if (c.bedsLeft > 0 && c.bedsLeft <= 3)
                   Positioned(
                     right: 12,
                     bottom: 12,
@@ -191,7 +202,9 @@ class _CentreCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${c.type} · ${c.locality}',
+                              [c.type, c.locality.isNotEmpty ? c.locality : c.city]
+                                  .where((s) => s.isNotEmpty)
+                                  .join(' · '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -202,6 +215,7 @@ class _CentreCard extends StatelessWidget {
                           ],
                         ),
                       ),
+                      if (c.reviews > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -217,7 +231,7 @@ class _CentreCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 3),
                             Text(
-                              '${c.rating}',
+                              c.rating.toStringAsFixed(1),
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
@@ -237,7 +251,10 @@ class _CentreCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'Staff ratio ${c.staffRatio} · Est. ${c.since}',
+                          [
+                            if (c.staffRatio.isNotEmpty) 'Staff ratio ${c.staffRatio}',
+                            if (c.since > 0) 'Est. ${c.since}',
+                          ].join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -247,6 +264,7 @@ class _CentreCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (c.pricePerDay > 0)
                       Text.rich(
                         TextSpan(
                           text: inr(c.pricePerDay),

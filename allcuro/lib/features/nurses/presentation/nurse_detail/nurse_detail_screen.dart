@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/allcuro_chip.dart';
 import '../../../../core/ui/app_shell.dart';
+import '../../../../core/ui/partner_avatar.dart';
 import '../../../../core/ui/surface.dart';
 import '../../../../core/ui/tappable.dart';
 import '../../../../core/utils/currency.dart';
@@ -126,6 +127,12 @@ class _NurseDetail extends ConsumerWidget {
                       color: AppColors.mutedForeground,
                     ),
                   ),
+                  if (nurse.shifts.isEmpty)
+                    const Text(
+                      'Rate shared by care desk',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink),
+                    )
+                  else
                   Text.rich(
                     TextSpan(
                       text: inr(nurse.shifts.first.price),
@@ -134,9 +141,9 @@ class _NurseDetail extends ConsumerWidget {
                         fontWeight: FontWeight.w800,
                         color: AppColors.ink,
                       ),
-                      children: const [
+                      children: [
                         TextSpan(
-                          text: ' / shift',
+                          text: nurse.shifts.first.unit.isEmpty ? ' / visit' : ' ${nurse.shifts.first.unit}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -205,14 +212,11 @@ class _NurseDetail extends ConsumerWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadius.xxl),
-                      child: Image.asset(
-                        nurse.photo,
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                      ),
+                    PartnerAvatar(
+                      name: nurse.name,
+                      photoUrl: nurse.photo,
+                      size: 80,
+                      radius: AppRadius.xxl,
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -230,13 +234,18 @@ class _NurseDetail extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            '${nurse.level} · ${nurse.experience} yrs',
+                            [
+                              if (nurse.level.isNotEmpty) nurse.level,
+                              if (nurse.experience > 0) '${nurse.experience} yrs',
+                              if (nurse.city.isNotEmpty) nurse.city,
+                            ].join(' · '),
                             style: const TextStyle(
                               fontSize: 14,
                               color: AppColors.mutedForeground,
                             ),
                           ),
                           const SizedBox(height: 4),
+                          if (nurse.allcuroId.isNotEmpty)
                           Text(
                             'ID ${nurse.allcuroId}',
                             style: const TextStyle(
@@ -252,6 +261,12 @@ class _NurseDetail extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (nurse.reviews == 0)
+                  const Text(
+                    'New on ALLCURO · no reviews yet',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.mutedForeground),
+                  )
+                else
                 Row(
                   children: [
                     const Icon(
@@ -261,7 +276,7 @@ class _NurseDetail extends ConsumerWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${nurse.rating}',
+                      nurse.rating.toStringAsFixed(1),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -324,6 +339,15 @@ class _NurseDetail extends ConsumerWidget {
                         .toList(),
                   ),
                 ),
+                if (nurse.bio.isNotEmpty)
+                  _Section(
+                    title: 'About',
+                    child: Text(
+                      nurse.bio,
+                      style: const TextStyle(fontSize: 13.5, height: 1.45, color: AppColors.ink),
+                    ),
+                  ),
+                if (nurse.tags.isNotEmpty)
                 _Section(
                   title: 'Specialisations',
                   child: Wrap(
@@ -332,6 +356,7 @@ class _NurseDetail extends ConsumerWidget {
                     children: nurse.tags.map(AllcuroChip.new).toList(),
                   ),
                 ),
+                if (nurse.languages.isNotEmpty)
                 _Section(
                   title: 'Languages',
                   child: Wrap(
@@ -340,8 +365,9 @@ class _NurseDetail extends ConsumerWidget {
                     children: nurse.languages.map(AllcuroChip.new).toList(),
                   ),
                 ),
+                if (nurse.shifts.isNotEmpty)
                 _Section(
-                  title: 'Shift availability',
+                  title: 'Rates',
                   child: Surface(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
@@ -357,7 +383,8 @@ class _NurseDetail extends ConsumerWidget {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
+                                  Expanded(
+                                    child: Row(
                                     children: [
                                       Container(
                                         width: 8,
@@ -370,19 +397,25 @@ class _NurseDetail extends ConsumerWidget {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      Text(
-                                        nurse.shifts[i].label,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: AppColors.ink,
+                                      Flexible(
+                                        child: Text(
+                                          nurse.shifts[i].unit.isEmpty
+                                              ? nurse.shifts[i].label
+                                              : '${nurse.shifts[i].label} · ${nurse.shifts[i].unit}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: AppColors.ink,
+                                          ),
                                         ),
                                       ),
+                                      const SizedBox(width: 8),
                                     ],
+                                  ),
                                   ),
                                   Text(
                                     nurse.shifts[i].available
                                         ? inr(nurse.shifts[i].price)
-                                        : 'Booked',
+                                        : 'Unavailable',
                                     style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
@@ -398,8 +431,9 @@ class _NurseDetail extends ConsumerWidget {
                     ),
                   ),
                 ),
+                if (nurse.highlights.isNotEmpty)
                 _Section(
-                  title: 'What families say',
+                  title: 'Highlights',
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 8,

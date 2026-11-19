@@ -38,13 +38,6 @@ export function searchMedicines(query: string, category: MedicineCategory | null
 /** Whole-number % off MRP, e.g. 12. */
 export const percentOff = (x: Pick<Medicine, 'mrp' | 'price'>) => Math.round(((x.mrp - x.price) / x.mrp) * 100)
 
-/** What a pharmacist "reads" from an uploaded prescription in demo mode. */
-export const PRESCRIPTION_DEMO_ITEMS: { id: string; qty: number }[] = [
-  { id: 'metformin-500', qty: 2 },
-  { id: 'amlodipine-5', qty: 1 },
-  { id: 'pantoprazole-40', qty: 1 },
-]
-
 export const MIN_QTY = 1
 export const MAX_QTY = 10
 export const FREE_DELIVERY_MIN = 499

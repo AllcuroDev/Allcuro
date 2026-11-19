@@ -4,7 +4,7 @@ import { usePartnerSession } from '../session'
 import { EmptyState, PBody, PCard, PIcon, PSectionTitle } from '../ui'
 import type { PlacementRequest } from './data'
 import { useBusy } from './hooks'
-import { acceptRequest, bedCounts, declineRequest, restoreDemoRequests, useRequests, useRooms, waitlistRequest } from './state'
+import { acceptRequest, bedCounts, declineRequest, useRequests, useRooms, waitlistRequest } from './state'
 import './centre.css'
 
 // Placement requests (features/centre/presentation/requests/centre_requests_screen.dart):
@@ -14,7 +14,7 @@ import './centre.css'
 export function CentreRequestsPage() {
   const req = useRequests()
   const rooms = useRooms()
-  const { vacant } = bedCounts(rooms)
+  const { vacant, total } = bedCounts(rooms)
   const s = usePartnerSession()
   const [busy, run] = useBusy()
 
@@ -44,14 +44,18 @@ export function CentreRequestsPage() {
       {s.centreStatus !== 'verified' && (
         <div className="p-note is-info" role="note">
           <PIcon name="clock" size={18} />
-          <span>Your centre isn&apos;t live yet. These are sample requests — real families can book once ALLCURO verifies your facility.</span>
+          <span>Your centre isn&apos;t live yet. Families can send placement requests once ALLCURO verifies your facility.</span>
         </div>
       )}
 
       <div className={`p-note ${vacant > 0 ? 'is-ok' : ''}`} role="status">
         <PIcon name="bed" size={18} />
         <span>
-          {vacant > 0 ? `${vacant} bed${vacant === 1 ? '' : 's'} vacant right now.` : 'All beds are occupied — consider waitlisting new requests.'}
+          {total === 0
+            ? 'No beds added yet — add your rooms so families can see availability.'
+            : vacant > 0
+              ? `${vacant} bed${vacant === 1 ? '' : 's'} vacant right now.`
+              : 'All beds are occupied — consider waitlisting new requests.'}
         </span>
       </div>
 
@@ -59,13 +63,8 @@ export function CentreRequestsPage() {
         <PCard>
           <EmptyState
             icon="clipboard"
-            title="No placement requests right now"
-            text="New requests from families appear here."
-            action={
-              <button type="button" className="p-btn p-btn-outline p-btn-sm" onClick={restoreDemoRequests}>
-                Load sample requests
-              </button>
-            }
+            title="No placement requests yet"
+            text="You’ll see them here once families start booking."
           />
         </PCard>
       ) : (

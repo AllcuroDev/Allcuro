@@ -9,8 +9,6 @@ class EquipmentRepository {
   const EquipmentRepository(this._service);
 
   Future<List<Equipment>> getAll() => _service.fetchAll();
-
-  Future<List<String>> getCategories() => _service.fetchCategories();
 }
 
 final equipmentServiceProvider = Provider<EquipmentService>((ref) => const EquipmentService());

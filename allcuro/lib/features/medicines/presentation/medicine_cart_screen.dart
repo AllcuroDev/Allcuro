@@ -1,15 +1,15 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/content/site_contact.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/app_shell.dart';
 import '../../../core/ui/screen_header.dart';
 import '../../../core/utils/currency.dart';
 import '../../auth/presentation/auth_view_model.dart';
 import '../../auth/presentation/quick_login_sheet.dart';
+import '../../bookings/data/bookings_service.dart';
 import '../../bookings/data/models/booking.dart';
 import '../../bookings/presentation/bookings_view_model.dart';
 import '../../location/presentation/location_sheet.dart';
@@ -59,6 +59,12 @@ class _MedicineCartScreenState extends ConsumerState<MedicineCartScreen> {
   }
 
   Future<void> _choosePayment() async {
+    // A prescription-only order has no price yet: the pharmacist reviews it,
+    // calls with the total, and the customer pays on delivery.
+    if (ref.read(medicineCartProvider).isPrescriptionOnly) {
+      await _placeOrder(_PayMethod.cod);
+      return;
+    }
     final total = ref.read(medicineCartProvider).total;
     final method = await showModalBottomSheet<_PayMethod>(
       context: context,
@@ -71,29 +77,31 @@ class _MedicineCartScreenState extends ConsumerState<MedicineCartScreen> {
 
   Future<void> _placeOrder(_PayMethod method) async {
     setState(() => _placing = true);
-    // Simulated gateway, like the rest of the demo checkout.
+    // No payment gateway is wired up yet; the order is recorded on the device.
     await Future.delayed(const Duration(milliseconds: 900));
 
     final cart = ref.read(medicineCartProvider);
     final address = ref.read(locationViewModelProvider).currentAddress;
     final auth = ref.read(authViewModelProvider);
-    final rng = Random();
-    final id = 'ALC-MED-${10000 + rng.nextInt(90000)}';
+    final id = newBookingId('MED');
+    final rxOnly = cart.isPrescriptionOnly;
 
     final booking = Booking(
       id: id,
       type: BookingType.medicine,
-      title: 'Medicine order · ${cart.itemCount} item${cart.itemCount == 1 ? '' : 's'}',
-      when: 'Delivery today, within 3 hrs',
-      status: 'Confirmed',
+      title: rxOnly
+          ? 'Prescription order · pharmacist review'
+          : 'Medicine order · ${cart.itemCount} item${cart.itemCount == 1 ? '' : 's'}',
+      when: rxOnly ? 'Our pharmacist will call you to confirm' : 'Delivery today, within 3 hrs',
+      status: rxOnly ? 'Under review' : 'Confirmed',
       amount: cart.total,
-      otp: '${1000 + rng.nextInt(9000)}',
+      otp: newVisitOtp(),
       liveStatus: BookingLiveStatus.assigned,
-      patientName: auth.userProfile['name'] ?? 'Customer',
+      patientName: auth.userProfile['name'] ?? '',
       address: address.fullAddress,
       locality: address.shortAddress,
       providerName: 'ALLCURO Partner Pharmacy',
-      providerPhone: '+91 80 4120 5500',
+      providerPhone: ref.read(careDeskPhoneProvider),
       providerQualifications: 'Licensed pharmacy · ${method.label}',
       vitalsSummary: null,
       condition: null,
@@ -115,18 +123,18 @@ class _MedicineCartScreenState extends ConsumerState<MedicineCartScreen> {
   Widget build(BuildContext context) {
     final cart = ref.watch(medicineCartProvider);
     final address = ref.watch(locationViewModelProvider).currentAddress;
-    final reviewing = cart.prescriptionStatus == PrescriptionStatus.reviewing;
+    final rxOnly = cart.isPrescriptionOnly;
 
     return AppShell(
       currentPath: '/medicines/cart',
-      bottomBar: cart.lines.isEmpty && !reviewing
+      bottomBar: cart.lines.isEmpty && !rxOnly
           ? null
           : _PayBar(
               total: cart.total,
               enabled: cart.canCheckout && !_placing,
               busy: _placing,
-              hint: reviewing
-                  ? 'Waiting for the pharmacist…'
+              hint: rxOnly
+                  ? 'Pharmacist will call with the price · pay on delivery'
                   : cart.needsPrescription
                       ? 'Upload a prescription to order Rx medicines'
                       : null,
@@ -137,10 +145,13 @@ class _MedicineCartScreenState extends ConsumerState<MedicineCartScreen> {
         children: [
           ScreenHeader(
             title: 'Your cart',
-            subtitle: cart.lines.isEmpty ? 'Nothing added yet' : '${cart.itemCount} items · delivered today',
+            subtitle: rxOnly
+                ? 'Prescription attached · pharmacist will call'
+                : cart.lines.isEmpty
+                    ? 'Nothing added yet' : '${cart.itemCount} items · delivered today',
             onBack: () => context.canPop() ? context.pop() : context.go('/medicines'),
           ),
-          if (cart.lines.isEmpty && !reviewing)
+          if (cart.lines.isEmpty && !rxOnly)
             _EmptyCart(onBrowse: () => context.canPop() ? context.pop() : context.go('/medicines'))
           else ...[
             Padding(

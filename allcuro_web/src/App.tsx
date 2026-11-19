@@ -4,7 +4,7 @@ import { Header } from './components/Header'
 import { Hero, TrustBand } from './components/Hero'
 import { CentresAndAdvice, ExpressBanner } from './components/HomeSections'
 import { LoginDialog } from './components/LoginDialog'
-import { CallBand, Faq, Footer, HowItWorks, MoreCare } from './components/Sections'
+import { CallBand, Faq, Footer, HowItWorks } from './components/Sections'
 import { Toaster } from './components/ui'
 import { ALL_SLUG, categories } from './data/categories'
 import { centreById, equipmentById, nurseById } from './data/providers'
@@ -37,7 +37,6 @@ function Home() {
       <CentresAndAdvice />
       <TrustBand />
       <HowItWorks />
-      <MoreCare />
       <Faq />
       <CallBand />
       <ActiveVisitBar />

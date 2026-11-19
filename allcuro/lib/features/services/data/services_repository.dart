@@ -14,10 +14,9 @@ final servicesCatalogProvider = FutureProvider<List<MasterServiceItem>>((ref) as
   try {
     final rows = await client
         .from('services')
-        .select(
-          'id, name, category_id, subcategory, description, includes, not_included, '
-          'duration, professional, price, notes, badge, icon, image_url, extra_category_ids',
-        )
+        // '*' so a newly added column (e.g. quick_book_rank) never breaks the load.
+        .select('*')
+        .eq('is_active', true)
         .order('sort_order');
     if (rows.isEmpty) return MasterServicesCatalog.bundledServices;
     final live = rows.map(_fromRow).toList();
@@ -52,5 +51,8 @@ MasterServiceItem _fromRow(Map<String, dynamic> r) {
     iconKey: text('icon'),
     imageUrl: r['image_url'] as String?,
     badge: text('badge'),
+    priceFrom: r['price_from'] as num?,
+    discountPercent: (r['discount_percent'] as num?) ?? 0,
+    quickBookRank: (r['quick_book_rank'] as num?)?.toInt(),
   );
 }

@@ -349,6 +349,11 @@ grant select, insert, update, delete on public.partner_offerings to authenticate
 -- ------------------------------------------------------------------------------
 alter table public.services add column if not exists discount_percent numeric(5, 2) not null default 0;
 
+-- Quick Book Nurse: the admin picks up to five services shown first, in this
+-- order (1 = first). null = only under "Other services".
+alter table public.services add column if not exists quick_book_rank smallint
+    check (quick_book_rank between 1 and 5);
+
 -- ------------------------------------------------------------------------------
 -- 4. PUBLIC VIEWS — what customers (anon) can read. Approved partners only.
 --    These run as the view owner, so they bypass partners' RLS on purpose and

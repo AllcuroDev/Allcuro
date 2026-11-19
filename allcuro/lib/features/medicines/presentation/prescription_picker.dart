@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +8,7 @@ import 'medicine_cart_view_model.dart';
 const _maxBytes = 10 * 1024 * 1024;
 
 /// Lets the user pick a prescription (photo or PDF), checks its size and
-/// starts the pharmacist review. Returns true when a file was attached.
+/// attaches it to the order. Returns true when a file was attached.
 Future<bool> pickPrescription(BuildContext context, WidgetRef ref) async {
   final source = await showModalBottomSheet<FileType>(
     context: context,
@@ -41,11 +39,12 @@ Future<bool> pickPrescription(BuildContext context, WidgetRef ref) async {
   final isPdf = (file.extension ?? '').toLowerCase() == 'pdf';
   final preview = isPdf ? null : await file.readAsBytes();
 
-  unawaited(
-    ref.read(medicineCartProvider.notifier).attachPrescription(
-          PrescriptionFile(name: file.name, sizeBytes: size, isPdf: isPdf, previewBytes: preview),
-        ),
-  );
+  ref.read(medicineCartProvider.notifier).attachPrescription(
+        PrescriptionFile(name: file.name, sizeBytes: size, isPdf: isPdf, previewBytes: preview),
+      );
+  if (context.mounted) {
+    _snack(context, 'Prescription attached. Our pharmacist will review it and call you.');
+  }
   return true;
 }
 
@@ -90,7 +89,7 @@ class _SourceSheet extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               const Text(
-                'A licensed pharmacist reads it and adds your medicines to the cart. '
+                'A licensed pharmacist reviews it and calls you to confirm your medicines. '
                 'Make sure the doctor\'s name, date and medicines are clearly visible.',
                 style: TextStyle(fontSize: 12.5, height: 1.4, color: AppColors.mutedForeground),
               ),

@@ -40,7 +40,7 @@ class _NurseScheduleScreenState extends ConsumerState<NurseScheduleScreen> {
       currentIndex: 2,
       onTabSelected: widget.onTabSelected,
       onProfileTap: widget.onProfileTap,
-      initials: 'PS',
+      initials: ref.watch(authViewModelProvider).valueOrNull?.initials ?? 'P',
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -72,7 +72,11 @@ class _NurseScheduleScreenState extends ConsumerState<NurseScheduleScreen> {
             data: (shifts) {
               final filtered = shifts.where((s) => s.status == _filter).toList();
               if (filtered.isEmpty) {
-                return const EmptyState(message: 'No shifts here yet');
+                return const EmptyState(
+                  icon: Icons.event_available_outlined,
+                  title: 'No shifts yet',
+                  message: 'Bookings you accept will show up on your schedule here.',
+                );
               }
               return Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),

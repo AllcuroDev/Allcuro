@@ -62,6 +62,12 @@ export interface PartnerSession {
   adminNote: string
   /** public.partners ids, per role. */
   partnerIds: Partial<Record<ProviderRole, string>>
+  /** Admin-maintained fields of the active role's row (read-only for the partner). */
+  photoUrl: string | null
+  rating: number | null
+  reviewCount: number
+  /** ISO timestamp of the centre's site visit, once an admin schedules it. */
+  siteVisitAt: string | null
 }
 
 const initial: PartnerSession = {
@@ -78,6 +84,10 @@ const initial: PartnerSession = {
   signup: {},
   adminNote: '',
   partnerIds: {},
+  photoUrl: null,
+  rating: null,
+  reviewCount: 0,
+  siteVisitAt: null,
 }
 
 export const partnerSession = persistedStore<PartnerSession>('partner.session', initial)
@@ -146,7 +156,21 @@ interface PartnerRow {
   identity: Partial<VerifiedIdentity> | null
   bank: PartnerSession['bank']
   details: Record<string, unknown> | null
+  photo_url?: string | null
+  rating?: number | string | null
+  review_count?: number | null
+  site_visit_at?: string | null
 }
+
+const ROW_COLUMNS = 'id, role, status, display_name, admin_note, identity, bank, details, photo_url, rating, review_count, site_visit_at'
+
+/** The admin-maintained, read-only bits of a row. */
+const rowExtras = (r: PartnerRow) => ({
+  photoUrl: r.photo_url ?? null,
+  rating: r.rating == null ? null : Number(r.rating),
+  reviewCount: r.review_count ?? 0,
+  siteVisitAt: r.site_visit_at ?? null,
+})
 
 const kindFor = (role: ProviderRole, identity: VerifiedIdentity | null) =>
   role === 'centre'
@@ -159,6 +183,13 @@ const kindFor = (role: ProviderRole, identity: VerifiedIdentity | null) =>
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '')
 const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
+
+/** Bed totals from the rooms the centre added (details.rooms). */
+function beds(g: Record<string, unknown>) {
+  const rooms = Array.isArray(g.rooms) ? (g.rooms as { beds?: { occupied?: boolean }[] }[]) : []
+  const all = rooms.flatMap((r) => (Array.isArray(r.beds) ? r.beds : []))
+  return { total: all.length, free: all.filter((b) => !b.occupied).length }
+}
 
 /** The row for `role`, built from the session (the wizard bag holds most answers). */
 function rowFor(s: PartnerSession, role: ProviderRole) {
@@ -187,6 +218,9 @@ function rowFor(s: PartnerSession, role: ProviderRole) {
       food_menu: str(g.sampleFoodMenu),
       services_included: strs(g.servicesIncluded),
       room_types: strs(g.roomTypes),
+      total_beds: beds(g).total,
+      beds_available: beds(g).free,
+      is_available: g.acceptingPlacements !== false,
     }
   return {
     ...base,
@@ -229,7 +263,7 @@ function push(role: ProviderRole | null = partnerSession.get().role) {
     const { data, error } = await db
       .from('partners')
       .upsert({ user_id: userId, ...rowFor(s, role) }, { onConflict: 'user_id,role' })
-      .select('id, role, status, display_name, admin_note, identity, bank, details')
+      .select(ROW_COLUMNS)
       .single<PartnerRow>()
     if (error) {
       console.warn('Partner profile not saved:', error.message)
@@ -247,7 +281,7 @@ function applyRow(r: PartnerRow) {
     if (r.role === 'centre') next.centreStatus = fromDbStatus(r.status, true)
     else if (r.role === 'clinician') next.clinicianStatus = fromDbStatus(r.status, false)
     else next.nurseStatus = fromDbStatus(r.status, false)
-    if (r.role === s.role) next.adminNote = r.admin_note ?? ''
+    if (r.role === s.role) Object.assign(next, { adminNote: r.admin_note ?? '', ...rowExtras(r) })
     return next
   })
 }
@@ -263,7 +297,7 @@ export async function refreshPartner() {
   }
   const { data } = await supabase
     .from('partners')
-    .select('id, role, status, display_name, admin_note, identity, bank, details')
+    .select(ROW_COLUMNS)
     .eq('user_id', userId)
   const rows = (data ?? []) as PartnerRow[]
   partnerSession.set((s) => {
@@ -295,6 +329,9 @@ export async function refreshPartner() {
       next.bank = active.bank ?? next.bank
       next.signup = { ...(active.details ?? {}), ...next.signup }
       next.adminNote = active.admin_note ?? ''
+      Object.assign(next, rowExtras(active))
+    } else {
+      Object.assign(next, { photoUrl: null, rating: null, reviewCount: 0, siteVisitAt: null })
     }
     return next
   })
@@ -367,6 +404,43 @@ export const setPartnerName = (name: string) => {
 export const saveSignup = (patch: Record<string, unknown>) => {
   partnerSession.set((s) => ({ ...s, signup: { ...s.signup, ...patch } }))
   void push()
+}
+
+// ---------------------------------------------------------------- documents
+
+/** A KYC / compliance file the partner uploaded, kept in partners.details.documents by document id. */
+export interface UploadedDoc {
+  fileName: string
+  /** Object path in the private kyc-documents bucket; null when built without Supabase. */
+  path: string | null
+  /** ISO timestamp. */
+  uploadedAt: string
+}
+
+export function uploadedDocs(s: PartnerSession): Record<string, UploadedDoc> {
+  const raw = s.signup.documents
+  return raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, UploadedDoc>) : {}
+}
+
+/**
+ * Uploads a document to the private kyc-documents bucket (under the user's own
+ * folder, as the storage policy requires) and records it on the partner row so
+ * the admin can review it. Throws when the upload fails.
+ */
+export async function uploadPartnerDocument(docId: string, file: File) {
+  let path: string | null = null
+  if (supabase) {
+    const { data: auth } = await supabase.auth.getSession()
+    const userId = auth.session?.user.id
+    if (!userId) throw new PartnerAuthError('Please log in again to upload documents.')
+    const role = partnerSession.get().role ?? 'partner'
+    const ext = file.name.includes('.') ? file.name.split('.').pop()!.toLowerCase() : 'bin'
+    path = `${userId}/${role}/${docId}-${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('kyc-documents').upload(path, file, { upsert: true, contentType: file.type || undefined })
+    if (error) throw new Error(`Upload failed: ${error.message}`)
+  }
+  const doc: UploadedDoc = { fileName: file.name, path, uploadedAt: new Date().toISOString() }
+  saveSignup({ documents: { ...uploadedDocs(partnerSession.get()), [docId]: doc } })
 }
 
 export const saveBank = (bank: PartnerSession['bank']) => {

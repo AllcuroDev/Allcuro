@@ -40,7 +40,7 @@ export function BrandScreen({ children, className = '' }: { children: ReactNode;
 function PartnerShowcase() {
   return (
     <aside className="pa-showcase" aria-hidden="true">
-      <p className="pa-showcase-eyebrow">Inside the partner app</p>
+      <p className="pa-showcase-eyebrow">Inside the partner app · example preview</p>
       <div className="pa-show-card pa-show-request">
         <div className="pa-show-row">
           <span className="pa-show-pill">New visit request</span>

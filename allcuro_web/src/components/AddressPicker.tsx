@@ -26,13 +26,20 @@ export function AddressPicker({ onClose }: { onClose: () => void }) {
   const [detecting, setDetecting] = useState(false)
   const [form, setForm] = useState({ houseNo: '', landmark: '', locality: '', tag: 'home' as AddressTag })
   const [error, setError] = useState('')
+  const [gpsError, setGpsError] = useState('')
 
   const useGps = async () => {
     setDetecting(true)
-    await detectGpsLocation()
-    setDetecting(false)
-    toast('📍 Location updated to your current position')
-    onClose()
+    setGpsError('')
+    try {
+      await detectGpsLocation()
+      toast('📍 Location updated to your current position')
+      onClose()
+    } catch (e) {
+      setGpsError(e instanceof Error ? e.message : 'We couldn’t get your location.')
+    } finally {
+      setDetecting(false)
+    }
   }
 
   const save = () => {
@@ -59,6 +66,11 @@ export function AddressPicker({ onClose }: { onClose: () => void }) {
           <small>Fastest nurse dispatch in your area</small>
         </span>
       </button>
+      {gpsError && (
+        <p className="form-error" role="alert">
+          {gpsError}
+        </p>
+      )}
 
       {!adding ? (
         <button type="button" className="addr-action" onClick={() => setAdding(true)}>

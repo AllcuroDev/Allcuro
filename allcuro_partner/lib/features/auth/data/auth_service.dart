@@ -36,6 +36,8 @@ class AuthService {
   static const _centreStatusKey = 'auth.centre_verification_status';
   static const _nurseIdentityKey = 'auth.nurse_identity';
   static const _clinicianIdentityKey = 'auth.clinician_identity';
+  static const _centreNameKey = 'auth.centre_display_name';
+  static const _centreSiteVisitKey = 'auth.centre_site_visit_at';
 
   static const demoOtp = PhoneAuth.demoOtp;
   static bool get isDemo => PhoneAuth.isDemo;
@@ -83,7 +85,10 @@ class AuthService {
     if (client == null || userId == null) return;
     final List<dynamic> rows;
     try {
-      rows = await client.from('partners').select('role, status').eq('user_id', userId);
+      rows = await client
+          .from('partners')
+          .select('role, status, display_name, site_visit_at')
+          .eq('user_id', userId);
     } catch (_) {
       return; // Offline — keep the cached statuses.
     }
@@ -92,6 +97,9 @@ class AuthService {
       switch (row['role']) {
         case 'centre':
           await setCentreVerificationStatus(_centreStatusFromDb(status));
+          final name = (row['display_name'] as String? ?? '').trim();
+          if (name.isNotEmpty) await setCentreName(name);
+          await _setCentreSiteVisitAt(DateTime.tryParse(row['site_visit_at'] as String? ?? ''));
         case 'clinician':
           await setClinicianVerificationStatus(_nurseStatusFromDb(status));
         case 'nurse':
@@ -184,6 +192,33 @@ class AuthService {
     await prefs.setString(_centreStatusKey, status.name);
   }
 
+  /// The centre's name as entered at sign-up (or saved in `public.partners`).
+  Future<String?> getCentreName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString(_centreNameKey)?.trim();
+    return (name == null || name.isEmpty) ? null : name;
+  }
+
+  Future<void> setCentreName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_centreNameKey, name.trim());
+  }
+
+  /// When ALLCURO has scheduled the centre's site visit (admin-set), if at all.
+  Future<DateTime?> getCentreSiteVisitAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    return DateTime.tryParse(prefs.getString(_centreSiteVisitKey) ?? '')?.toLocal();
+  }
+
+  Future<void> _setCentreSiteVisitAt(DateTime? at) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (at == null) {
+      await prefs.remove(_centreSiteVisitKey);
+    } else {
+      await prefs.setString(_centreSiteVisitKey, at.toUtc().toIso8601String());
+    }
+  }
+
   Future<VerifiedIdentity?> getNurseIdentity() => _readIdentity(_nurseIdentityKey);
 
   Future<void> setNurseIdentity(VerifiedIdentity identity) => _writeIdentity(_nurseIdentityKey, identity);
@@ -225,5 +260,7 @@ class AuthService {
     await prefs.remove(_centreStatusKey);
     await prefs.remove(_nurseIdentityKey);
     await prefs.remove(_clinicianIdentityKey);
+    await prefs.remove(_centreNameKey);
+    await prefs.remove(_centreSiteVisitKey);
   }
 }

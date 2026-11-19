@@ -3,8 +3,9 @@ import { Modal } from '../../components/ui'
 import { initials, useNow } from '../../lib/format'
 import { toast } from '../../lib/toast'
 import { PR } from '../routes'
-import { PBody, PCard, PIcon, PPageHead } from '../ui'
-import { CHECKLIST_ITEMS, SOS_GPS_VISIT, checklistDone, type NurseVisit } from './data'
+import { Link } from '../../components/Link'
+import { EmptyState, PBody, PCard, PIcon, PPageHead } from '../ui'
+import { CHECKLIST_ITEMS, SOS_LOCATION_NOTE, checklistDone, type NurseVisit } from './data'
 import { SosButton } from './parts'
 import {
   checkInVisit,
@@ -13,7 +14,6 @@ import {
   formatTimer,
   logVitals,
   mapsUrl,
-  resetDemoVisit,
   setChecklistItem,
   setVisitStatus,
   telUrl,
@@ -31,6 +31,28 @@ const statusTone = (v: NurseVisit) => (v.status === 'completed' ? 'is-ok' : v.st
 export function NurseVisitExecutionPage() {
   const visit = visitStore.use()
 
+  if (!visit) {
+    return (
+      <>
+        <PPageHead back={PR.nurseHome} title="Visit" />
+        <PBody narrow>
+          <PCard>
+            <EmptyState
+              icon="pin"
+              title="No active visit"
+              text="When you start a booked visit, your check-in, vitals and checklist will be here."
+              action={
+                <Link to={PR.nurseSchedule} className="p-btn p-btn-outline p-btn-sm">
+                  Open schedule
+                </Link>
+              }
+            />
+          </PCard>
+        </PBody>
+      </>
+    )
+  }
+
   return (
     <>
       <PPageHead
@@ -45,7 +67,7 @@ export function NurseVisitExecutionPage() {
         aside={
           <SosButton
             text="Triggering SOS will broadcast your live GPS location to ALLCURO Emergency Response HQ and dial 24x7 clinical support."
-            gps={SOS_GPS_VISIT}
+            gps={SOS_LOCATION_NOTE}
             callLabel="Call Allcuro SOS Desk"
             sentMessage="SOS Alert Dispatched! ALLCURO Team is dialing you."
           />
@@ -191,7 +213,7 @@ function TimerCard({ visit }: { visit: NurseVisit }) {
     : isCompleted
       ? visit.checkInTime && visit.checkOutTime
         ? formatDuration(visit.checkOutTime - visit.checkInTime)
-        : '08 hrs 15 mins'
+        : '—'
       : 'Not checked in yet'
   return (
     <PCard as="section" className="pn-rowcard">
@@ -225,25 +247,34 @@ function TimerCard({ visit }: { visit: NurseVisit }) {
 
 function VitalsCard({ visit }: { visit: NurseVisit }) {
   const v = visit.vitalsLog
-  const [bp, setBp] = useState(v?.bloodPressure ?? '120/80')
-  const [pulse, setPulse] = useState(String(v?.pulse ?? 74))
-  const [sugar, setSugar] = useState(String(v?.bloodSugar ?? 112))
-  const [temp, setTemp] = useState(String(v?.temperature ?? 98.4))
-  const [spo2, setSpo2] = useState(String(v?.spO2 ?? 99))
+  const [bp, setBp] = useState(v?.bloodPressure ?? '')
+  const [pulse, setPulse] = useState(v ? String(v.pulse) : '')
+  const [sugar, setSugar] = useState(v ? String(v.bloodSugar) : '')
+  const [temp, setTemp] = useState(v ? String(v.temperature) : '')
+  const [spo2, setSpo2] = useState(v ? String(v.spO2) : '')
   const [busy, setBusy] = useState(false)
 
+  // Never fill in a reading the nurse didn't take.
+  const complete =
+    /^\d{2,3}\/\d{2,3}$/.test(bp.trim()) &&
+    parseInt(pulse, 10) > 0 &&
+    parseInt(sugar, 10) > 0 &&
+    parseFloat(temp) > 0 &&
+    parseInt(spo2, 10) > 0
+
   const save = async () => {
+    if (!complete) return
     setBusy(true)
     await logVitals({
-      bloodPressure: bp.trim() || '120/80',
-      pulse: parseInt(pulse, 10) || 72,
-      bloodSugar: parseInt(sugar, 10) || 110,
-      temperature: parseFloat(temp) || 98.6,
-      spO2: parseInt(spo2, 10) || 99,
+      bloodPressure: bp.trim(),
+      pulse: parseInt(pulse, 10),
+      bloodSugar: parseInt(sugar, 10),
+      temperature: parseFloat(temp),
+      spO2: parseInt(spo2, 10),
       loggedAt: Date.now(),
     })
     setBusy(false)
-    toast('Vitals recorded & synced to patient app!')
+    toast('Vitals recorded.')
   }
 
   const cells: { label: string; value: string; set: (s: string) => void; hint: string; mode: 'numeric' | 'decimal' | 'text' }[] = [
@@ -270,7 +301,7 @@ function VitalsCard({ visit }: { visit: NurseVisit }) {
             <input value={c.value} placeholder={c.hint} inputMode={c.mode} onChange={(e) => c.set(e.target.value)} />
           </label>
         ))}
-        <button type="button" className="p-btn pn-soft-btn" onClick={save} disabled={busy}>
+        <button type="button" className="p-btn pn-soft-btn" onClick={save} disabled={busy || !complete}>
           {busy ? 'Saving…' : 'Save Vitals'}
         </button>
       </div>
@@ -318,18 +349,8 @@ function ActionFooter({ visit }: { visit: NurseVisit }) {
         </span>
         <div className="p-row-grow">
           <strong>Shift Completed Successfully</strong>
-          <span className="p-muted pn-small">Payment verified &amp; report filed with Allcuro ops.</span>
+          <span className="p-muted pn-small">Your visit report has been saved.</span>
         </div>
-        <button
-          type="button"
-          className="p-btn p-btn-ghost p-btn-sm"
-          onClick={() => {
-            resetDemoVisit()
-            toast('Demo visit reset.', 'info')
-          }}
-        >
-          Reset demo
-        </button>
       </div>
     )
   }
@@ -338,12 +359,12 @@ function ActionFooter({ visit }: { visit: NurseVisit }) {
       <button type="button" className="p-btn p-btn-primary p-btn-block pn-big-btn" onClick={() => setOtpOpen(true)} aria-haspopup="dialog">
         <PIcon name="shield" size={18} /> Complete Visit &amp; Enter Patient OTP
       </button>
-      {otpOpen && <OtpDialog visit={visit} onClose={() => setOtpOpen(false)} />}
+      {otpOpen && <OtpDialog onClose={() => setOtpOpen(false)} />}
     </>
   )
 }
 
-function OtpDialog({ visit, onClose }: { visit: NurseVisit; onClose: () => void }) {
+function OtpDialog({ onClose }: { onClose: () => void }) {
   const id = useId()
   const [otp, setOtp] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -360,7 +381,7 @@ function OtpDialog({ visit, onClose }: { visit: NurseVisit; onClose: () => void 
     setBusy(false)
     if (ok) {
       onClose()
-      toast(`Shift completed! ${visit.payAmount} credited to earnings ledger.`)
+      toast('Visit completed.')
     } else {
       setError('Invalid OTP. Please verify with patient.')
     }
@@ -376,12 +397,6 @@ function OtpDialog({ visit, onClose }: { visit: NurseVisit; onClose: () => void 
           <h2 id={id}>Complete Visit &amp; Check-Out</h2>
           <p className="p-muted pn-small">Ask the patient / family for their 4-digit completion OTP</p>
         </div>
-      </div>
-      <div className="pn-gps pn-demo">
-        <PIcon name="help" size={18} />
-        <span>
-          Demo OTP for {visit.patientName}: {visit.expectedOtp}
-        </span>
       </div>
       <form
         onSubmit={(e) => {

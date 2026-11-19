@@ -71,9 +71,9 @@ class _ProfileBody extends StatelessWidget {
     final displayPhone = userProfile['phone'] != null && userProfile['phone']!.isNotEmpty
         ? '+91 ${userProfile['phone']}'
         : profile.phone;
-    final displayEmail = userProfile['email'] ?? profile.email;
-    final displayEmergency = userProfile['emergencyContact'] ?? '+91 98450 12345 (Family)';
-    final displayLocation = userProfile['city'] ?? 'Indiranagar, Bengaluru';
+    final displayEmail = userProfile['email'] ?? (profile.email.isEmpty ? 'Not added' : profile.email);
+    final displayEmergency = userProfile['emergencyContact'] ?? 'Not added';
+    final displayLocation = userProfile['city'] ?? 'Not added';
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -126,7 +126,7 @@ class _ProfileBody extends StatelessWidget {
                   child: Text(
                     displayName.isNotEmpty
                         ? displayName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join()
-                        : 'AK',
+                        : '?',
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
@@ -137,7 +137,7 @@ class _ProfileBody extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Text(
-                displayName,
+                displayName.isEmpty ? 'Your profile' : displayName,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 24,

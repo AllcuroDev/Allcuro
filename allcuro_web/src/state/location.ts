@@ -1,4 +1,4 @@
-import { delay, persistedStore } from '../lib/store'
+import { persistedStore } from '../lib/store'
 
 // Saved care addresses, mirroring allcuro/lib/features/location
 // (UserAddress + LocationViewModel).
@@ -14,45 +14,37 @@ export interface UserAddress {
   tag: AddressTag
 }
 
-export const fullAddress = (a: UserAddress) => `${a.addressLine}, ${a.locality}`
+export const fullAddress = (a: UserAddress) => [a.addressLine, a.locality].filter(Boolean).join(', ')
 
-const initialAddresses: UserAddress[] = [
-  {
-    id: 'addr-1',
-    title: 'Home',
-    addressLine: 'Flat 402, Green Glen Palms, 12th Main',
-    locality: 'Indiranagar, Bengaluru',
-    arrivalTime: '44 mins',
-    tag: 'home',
-  },
-  {
-    id: 'addr-2',
-    title: "Parents' Home",
-    addressLine: 'Sanjeevani Villa, 4th Cross, 100ft Road',
-    locality: 'Indiranagar, Bengaluru',
-    arrivalTime: '38 mins',
-    tag: 'parents',
-  },
-  {
-    id: 'addr-3',
-    title: 'Work / Office',
-    addressLine: 'Prestige Tech Park, Outer Ring Road',
-    locality: 'Marathahalli, Bengaluru',
-    arrivalTime: '52 mins',
-    tag: 'work',
-  },
-]
+/** Shown until the visitor adds an address or uses their location. */
+export const UNSET_ADDRESS: UserAddress = {
+  id: 'unset',
+  title: 'Set your location',
+  addressLine: 'Add your address',
+  locality: '',
+  arrivalTime: '',
+  tag: 'other',
+}
 
 interface LocationState {
   currentId: string
   saved: UserAddress[]
 }
 
-const store = persistedStore<LocationState>('location', { currentId: 'addr-1', saved: initialAddresses })
+const store = persistedStore<LocationState>('location', { currentId: '', saved: [] })
+
+// Older builds seeded three sample addresses; drop them from saved browsers.
+const OLD_SAMPLE_LINES = new Set([
+  'Flat 402, Green Glen Palms, 12th Main',
+  'Sanjeevani Villa, 4th Cross, 100ft Road',
+  'Prestige Tech Park, Outer Ring Road',
+])
+if (store.get().saved.some((a) => OLD_SAMPLE_LINES.has(a.addressLine)))
+  store.set((s) => ({ ...s, saved: s.saved.filter((a) => !OLD_SAMPLE_LINES.has(a.addressLine)) }))
 
 export function useLocation() {
   const { currentId, saved } = store.use()
-  return { current: saved.find((a) => a.id === currentId) ?? saved[0], saved }
+  return { current: saved.find((a) => a.id === currentId) ?? saved[0] ?? UNSET_ADDRESS, saved }
 }
 
 export const selectAddress = (id: string) => store.set((s) => ({ ...s, currentId: id }))
@@ -74,23 +66,32 @@ export function addAddress({
     id: `addr-${Date.now()}`,
     title: TITLES[tag],
     addressLine: landmark.trim() ? `${houseNo.trim()}, ${landmark.trim()}` : houseNo.trim(),
-    locality: locality.trim() || 'Indiranagar, Bengaluru',
-    arrivalTime: '44 mins',
+    locality: locality.trim(),
+    arrivalTime: '',
     tag,
   }
   store.set((s) => ({ currentId: address.id, saved: [address, ...s.saved] }))
   return address
 }
 
-/** Simulated GPS fix, as in the app — there is no reverse-geocoding service yet. */
+/**
+ * The browser's real location. There is no reverse-geocoding service yet, so
+ * the address shows the coordinates; the visitor can still add a full address.
+ * Throws with a readable message when location is unavailable or denied.
+ */
 export async function detectGpsLocation() {
-  await delay(700)
+  if (!('geolocation' in navigator)) throw new Error('Your browser can’t share its location. Please add the address instead.')
+  const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 }),
+  ).catch(() => {
+    throw new Error('We couldn’t get your location. Allow location access, or add the address instead.')
+  })
   const gps: UserAddress = {
     id: 'gps',
     title: 'Current Location',
-    addressLine: '12th Main Road, HAL 2nd Stage',
-    locality: 'Indiranagar, Bengaluru',
-    arrivalTime: '44 mins',
+    addressLine: 'Current location',
+    locality: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`,
+    arrivalTime: '',
     tag: 'other',
   }
   store.set((s) => ({ currentId: gps.id, saved: [gps, ...s.saved.filter((a) => a.id !== gps.id)] }))

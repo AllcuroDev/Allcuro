@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { toast } from '../../lib/toast'
 import { PR } from '../routes'
+import { uploadPartnerDocument } from '../session'
 import { PBody, PIcon, PPageHead } from '../ui'
 import { CentreDialog } from './CentreDialog'
 import type { ComplianceDoc } from './data'
-import { markDocUploaded, useCompliance } from './state'
+import { useCompliance } from './state'
 import './centre.css'
 
 // Regulatory & KYC compliance (features/centre/presentation/compliance/compliance_screen.dart):
@@ -41,9 +42,7 @@ export function CentreCompliancePage() {
                 </span>
                 <div className="p-row-grow">
                   <h3>{doc.title}</h3>
-                  <span className="p-muted pc-small pc-doc-meta">
-                    {doc.fileName} · {doc.expiry}
-                  </span>
+                  <span className="p-muted pc-small pc-doc-meta">{doc.isUploaded ? `${doc.fileName} · ${doc.expiry}` : doc.expiry}</span>
                   {doc.isUploaded && !doc.isVerified && <span className="pc-small pc-doc-pending">Awaiting ALLCURO verification</span>}
                   <button type="button" className="p-btn p-btn-ghost p-btn-sm pc-link-btn" onClick={() => setUploading(doc)}>
                     <PIcon name="upload" size={15} /> {doc.isUploaded ? 'Re-upload / Update' : 'Upload Document'}
@@ -64,27 +63,36 @@ export function CentreCompliancePage() {
 function UploadDialog({ doc, onClose }: { doc: ComplianceDoc; onClose: () => void }) {
   const input = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
-  const onFile = (file: File | undefined) => {
+  const onFile = async (file: File | undefined) => {
     if (!file) return
     if (file.size > MAX_MB * 1024 * 1024) {
       setError(`That file is larger than ${MAX_MB} MB.`)
       return
     }
-    markDocUploaded(doc.id, file.name)
-    toast(`Uploaded new file for ${doc.title}`)
-    onClose()
+    setBusy(true)
+    setError(null)
+    try {
+      await uploadPartnerDocument(doc.id, file)
+      toast(`Uploaded ${doc.title}`)
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Upload failed.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
     <CentreDialog title={`Upload ${doc.title.split('(')[0].trim()}`} onClose={onClose}>
       <p className="pc-dialog-text">Upload PDF, JPG or PNG certificate (Max {MAX_MB}MB). Verified by ALLCURO compliance operations.</p>
-      <button type="button" className="pc-choose" onClick={() => input.current?.click()}>
+      <button type="button" className="pc-choose" disabled={busy} onClick={() => input.current?.click()}>
         <span className="pc-summary-icon">
           <PIcon name="upload" size={20} />
         </span>
         <span className="p-row-grow">
-          <strong>Choose Document from Device</strong>
+          <strong>{busy ? 'Uploading…' : 'Choose Document from Device'}</strong>
           <span className="p-muted pc-small">Select file from local storage</span>
         </span>
         <PIcon name="chevron" size={18} />
@@ -97,7 +105,7 @@ function UploadDialog({ doc, onClose }: { doc: ComplianceDoc; onClose: () => voi
         tabIndex={-1}
         aria-hidden="true"
         onChange={(e) => {
-          onFile(e.target.files?.[0])
+          void onFile(e.target.files?.[0])
           e.target.value = ''
         }}
       />

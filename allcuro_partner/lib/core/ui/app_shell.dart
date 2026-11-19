@@ -55,12 +55,12 @@ class ProviderShell extends StatelessWidget {
     required this.child,
     this.onProfileTap,
     this.onNotificationsTap,
-    this.initials = 'PS',
+    this.initials = 'P',
     this.bottomBar,
-    this.address = 'Indiranagar Hub, Bengaluru',
+    this.address = '',
     this.onAddressTap,
-    this.statusBadge = '🟢 On-Duty',
-    this.notificationCount = 2,
+    this.statusBadge = '',
+    this.notificationCount = 0,
   });
 
   List<_TabItem> get _tabs =>
@@ -388,6 +388,7 @@ class _CollapsiblePartnerHeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
 
             // 4. Simple Clean Address (No border box, clean icon + text + chevron)
+            if (address.isNotEmpty)
             Positioned(
               left: addressLeft,
               top: addressTop,
@@ -434,7 +435,7 @@ class _CollapsiblePartnerHeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
 
             // 5. Duty Status Chip (Visible in expanded state)
-            if (statusOpacity > 0)
+            if (statusOpacity > 0 && statusBadge.isNotEmpty)
               Positioned(
                 right: 20,
                 top: topPadding + 62.0,

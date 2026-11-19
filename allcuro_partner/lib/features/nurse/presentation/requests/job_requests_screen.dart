@@ -35,7 +35,7 @@ class JobRequestsScreen extends ConsumerWidget {
       currentIndex: 1,
       onTabSelected: onTabSelected,
       onProfileTap: onProfileTap,
-      initials: 'PS',
+      initials: ref.watch(authViewModelProvider).valueOrNull?.initials ?? 'P',
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -47,7 +47,11 @@ class JobRequestsScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             child: requestsAsync.when(
               data: (requests) => requests.isEmpty
-                  ? const EmptyState(message: 'No pending requests right now')
+                  ? const EmptyState(
+                      icon: Icons.inbox_outlined,
+                      title: 'No visit requests yet',
+                      message: "You'll see them here once families start booking.",
+                    )
                   : Column(
                       children: requests
                           .map(

@@ -151,6 +151,8 @@ final GoRouter appRouter = GoRouter(
       path: '/checkout',
       builder: (context, state) => CheckoutScreen(
         item: state.uri.queryParameters['item'],
+        price: int.tryParse(state.uri.queryParameters['price'] ?? ''),
+        unit: state.uri.queryParameters['unit'],
       ),
     ),
     GoRoute(

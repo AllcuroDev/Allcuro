@@ -5,6 +5,7 @@ import {
   CloseIcon,
   FileIcon,
   MinusIcon,
+  PhoneIcon,
   PinIcon,
   PlusIcon,
   SearchIcon,
@@ -25,6 +26,7 @@ import {
   type Medicine,
   type MedicineCategory,
 } from '../data/medicines'
+import { site } from '../data/site'
 import { inr } from '../lib/format'
 import { toast } from '../lib/toast'
 import { navigate, useQuery } from '../router'
@@ -115,15 +117,11 @@ export function MedicinesPage() {
           </ul>
         ) : (
           <div className="empty">
-            <p>Can’t find your medicine? Upload your prescription and our pharmacist will add it.</p>
+            <p>Can’t find your medicine? Call us and we’ll help you order it.</p>
             <div className="row-actions">
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => document.getElementById(RX_INPUT_ID)?.click()}
-              >
-                <UploadIcon /> Upload prescription
-              </button>
+              <a className="btn btn-primary" href={site.phoneHref}>
+                <PhoneIcon /> Call {site.phoneDisplay}
+              </a>
               {(query || category) && (
                 <button
                   type="button"
@@ -314,8 +312,7 @@ function PrescriptionUpload({ variant }: { variant: 'card' | 'panel' }) {
     const problem = prescriptionProblem(file)
     setError(problem ?? '')
     if (problem) return
-    void attachPrescription(file).then(() => toast('💊 Your pharmacist added the medicines from your prescription'))
-    if (variant === 'card') navigate('/medicines/cart')
+    void attachPrescription(file).then(() => toast('Prescription attached. Add the medicines from it to your cart.'))
   }
 
   const onDrop = (e: DragEvent) => {
@@ -365,28 +362,22 @@ function PrescriptionUpload({ variant }: { variant: 'card' | 'panel' }) {
         {...dropProps}
       >
         <span className="rx-card-icon" aria-hidden="true">
-          <FileIcon size={28} />
+          <FileIcon size={22} />
         </span>
         <div className="rx-card-text">
-          <h2 id="rx-card-title">Have a prescription? Upload it.</h2>
-          <p>
-            Take a photo or upload a PDF. Our pharmacist reads it and adds the medicines for you. A licensed pharmacist
-            verifies every prescription before dispatch.
-          </p>
+          <h2 id="rx-card-title">Have a prescription?</h2>
+          <p>Attach it to your order. Our pharmacist checks it before dispatch.</p>
           {prescription && (
             <p className="rx-card-attached">
-              <ShieldIcon size={16} /> Attached: {prescription.name} · <Link to="/medicines/cart">View cart</Link>
+              <ShieldIcon size={14} /> {prescription.name} · <Link to="/medicines/cart">View cart</Link>
             </p>
           )}
           {errorNote}
         </div>
-        <div className="rx-card-actions">
-          {input}
-          <button ref={buttonRef} type="button" className="btn btn-primary btn-lg" onClick={openPicker} disabled={!!reviewing}>
-            <UploadIcon /> {prescription ? 'Upload another' : 'Upload prescription'}
-          </button>
-          <span className="rx-drop-hint">or drag & drop a photo or PDF here · up to 10 MB</span>
-        </div>
+        {input}
+        <button ref={buttonRef} type="button" className="rx-card-btn" onClick={openPicker} disabled={!!reviewing}>
+          <UploadIcon size={16} /> {prescription ? 'Upload another' : 'Upload'}
+        </button>
       </section>
     )
   }
@@ -401,7 +392,7 @@ function PrescriptionUpload({ variant }: { variant: 'card' | 'panel' }) {
           <div className="rx-file" role="status">
             <RxThumb preview={reviewing.preview} />
             <div>
-              <strong>Pharmacist is reading your prescription…</strong>
+              <strong>Attaching your prescription…</strong>
               <span>
                 {reviewing.name} · {fileSize(reviewing.size)}
               </span>
@@ -415,7 +406,7 @@ function PrescriptionUpload({ variant }: { variant: 'card' | 'panel' }) {
               <div>
                 <strong className="rx-name">{prescription.name}</strong>
                 <span>
-                  {fileSize(prescription.size)} · Read by our pharmacist — medicines added to your cart
+                  {fileSize(prescription.size)} · Attached to your order
                 </span>
               </div>
             </div>
@@ -494,7 +485,7 @@ export function MedicineCartPage() {
       locality: current.locality,
       providerName: 'ALLCURO Pharmacy Desk',
       providerPhone: '+91 80 4120 5500',
-      providerRating: 4.8,
+      providerRating: 0,
       providerQualifications: 'Licensed pharmacy · Pharmacist verified',
       formalities: [],
       payment,
@@ -550,7 +541,7 @@ export function MedicineCartPage() {
             </ul>
           ) : (
             <div className="empty">
-              <p>{cart.reviewing ? 'Your pharmacist is adding medicines from your prescription…' : 'Your cart is empty.'}</p>
+              <p>{cart.prescription ? 'Prescription attached. Now add the medicines from it.' : 'Your cart is empty.'}</p>
               <div className="row-actions">
                 <Link to="/medicines" className="btn btn-primary">
                   <SearchIcon size={18} /> Search medicines

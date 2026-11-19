@@ -45,6 +45,7 @@ const newService = (categoryId: string, sortOrder: number): ServiceRecord => ({
   icon: '',
   image_url: null,
   sort_order: sortOrder,
+  quick_book_rank: null,
   is_active: true,
 });
 
@@ -351,6 +352,11 @@ export const ServicesCatalogView: React.FC = () => {
                         {s.is_active ? 'Live' : 'Hidden'}
                       </span>
                       {s.badge && <span className="catalog-badge">{s.badge}</span>}
+                      {s.quick_book_rank != null && (
+                        <span className="catalog-badge" title="Shown in Quick Book Nurse">
+                          Quick #{s.quick_book_rank}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <div className="catalog-row-actions">
@@ -401,10 +407,17 @@ export const ServicesCatalogView: React.FC = () => {
           isNew={editingService.isNew}
           categories={categories}
           takenIds={services.map((s) => s.id)}
+          allServices={services}
           onClose={() => setEditingService(null)}
           onSaved={(saved) => {
             setServices((prev) =>
-              (editingService.isNew ? [...prev, saved] : prev.map((x) => (x.id === saved.id ? saved : x))).sort(
+              (editingService.isNew ? [...prev, saved] : prev.map((x) => (x.id === saved.id ? saved : x)))
+                .map((x) =>
+                  x.id !== saved.id && saved.quick_book_rank != null && x.quick_book_rank === saved.quick_book_rank
+                    ? { ...x, quick_book_rank: null }
+                    : x,
+                )
+                .sort(
                 (a, b) => a.sort_order - b.sort_order,
               ),
             );

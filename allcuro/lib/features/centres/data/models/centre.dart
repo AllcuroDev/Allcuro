@@ -6,7 +6,7 @@ part 'centre.freezed.dart';
 part 'centre.g.dart';
 
 @freezed
-class Centre with _$Centre {
+abstract class Centre with _$Centre {
   const factory Centre({
     required String id,
     required String name,
@@ -25,6 +25,11 @@ class Centre with _$Centre {
     required int bedsLeft,
     required List<String> services,
     required List<ScoreItem> scores,
+    @Default('') String partnerId,
+    @Default('') String phone,
+    @Default('') String about,
+    @Default(<String>[]) List<String> roomTypes,
+    @Default(<String>[]) List<String> photos,
   }) = _Centre;
 
   factory Centre.fromJson(Map<String, dynamic> json) => _$CentreFromJson(json);

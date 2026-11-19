@@ -21,7 +21,9 @@ class IdentityVerificationScreen extends ConsumerWidget {
     if (s.stepIndex == 0) {
       if (d.registry != null) return ('Continue', vm.next);
       final ready =
-          d.registrationNumber.trim().isNotEmpty && (!vm.isClinician || (d.profession != null && d.council != null));
+          d.registeredName.trim().length >= 2 &&
+          d.registrationNumber.trim().isNotEmpty &&
+          (!vm.isClinician || (d.profession != null && d.council != null));
       final label = vm.isClinician ? 'Verify registration' : 'Verify NUID';
       return (label, ready ? vm.verifyRegistration : null);
     }

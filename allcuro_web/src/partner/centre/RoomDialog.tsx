@@ -12,7 +12,7 @@ export function RoomDialog({ room, onClose }: { room?: Room; onClose: () => void
   const [ward, setWard] = useState(room?.ward ?? ROOM_WARDS[0])
   const [title, setTitle] = useState(room?.roomNumber ?? '')
   const [bedCount, setBedCount] = useState(room?.beds.length ?? 2)
-  const [rate, setRate] = useState(room ? String(room.rate) : '2500')
+  const [rate, setRate] = useState(room ? String(room.rate) : '')
   const [amenities, setAmenities] = useState<string[]>(room?.amenities ?? DEFAULT_ROOM_AMENITIES)
   const [tried, setTried] = useState(false)
 

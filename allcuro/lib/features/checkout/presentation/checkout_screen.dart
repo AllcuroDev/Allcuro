@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/content/site_contact.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/app_shell.dart';
+import '../../../core/ui/empty_state.dart';
 import '../../../core/ui/screen_header.dart';
 import '../../../core/ui/surface.dart';
 import '../../../core/utils/currency.dart';
+import '../../auth/presentation/auth_view_model.dart';
+import '../../bookings/data/bookings_service.dart';
 import '../../bookings/data/models/booking.dart';
+import '../../location/presentation/location_view_model.dart';
 import '../../bookings/presentation/bookings_view_model.dart';
 import '../data/models/pricing_breakdown.dart';
 import 'checkout_view_model.dart';
@@ -23,7 +28,13 @@ const _steps = [
 class CheckoutScreen extends ConsumerStatefulWidget {
   final String? item;
 
-  const CheckoutScreen({super.key, this.item});
+  /// Base price from the live catalog; null/0 → nothing to check out.
+  final int? price;
+
+  /// 'day' or 'month' — the rental period [price] covers.
+  final String? unit;
+
+  const CheckoutScreen({super.key, this.item, this.price, this.unit});
 
   @override
   ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -35,67 +46,69 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   void _handlePayment(PricingBreakdown breakdown) async {
     setState(() => _isProcessingPayment = true);
 
-    // Simulate secure Razorpay gateway processing
+    // No payment gateway is wired up yet; the booking is recorded on the device.
     await Future.delayed(const Duration(milliseconds: 900));
 
-    final itemName = widget.item ?? 'Home Nursing Care';
-    final isCentre = itemName.toLowerCase().contains('centre') ||
-        itemName.toLowerCase().contains('rehab') ||
-        itemName.toLowerCase().contains('garden') ||
-        itemName.toLowerCase().contains('elder care') ||
-        itemName.toLowerCase().contains('sanjeevani');
-
-    final bookingId = isCentre ? 'ALC-CTR-4920' : 'ALC-NUR-8921';
-    final otp = isCentre ? '7391' : '4829';
+    final itemName = widget.item?.trim().isNotEmpty == true ? widget.item!.trim() : 'Equipment rental';
+    final address = ref.read(locationViewModelProvider).currentAddress;
+    final auth = ref.read(authViewModelProvider);
 
     final newBooking = Booking(
-      id: bookingId,
-      type: isCentre ? BookingType.careCentre : BookingType.nurse,
-      title: isCentre ? '$itemName · Deluxe Room' : '$itemName · Post-Op Care',
-      when: isCentre ? 'Check-in: Tomorrow, 10:00 AM · 30 Days' : 'Today · 08:00 AM – 08:00 PM',
-      status: isCentre ? 'Confirmed' : 'In Progress',
+      id: newBookingId('EQP'),
+      type: BookingType.equipment,
+      title: itemName,
+      when: widget.unit == 'day' ? 'Daily rental · delivery date confirmed on call' : 'Monthly rental · delivery date confirmed on call',
+      status: 'Confirmed',
       amount: breakdown.total,
-      otp: otp,
-      liveStatus: isCentre ? BookingLiveStatus.assigned : BookingLiveStatus.enRoute,
-      patientName: 'Ramesh Iyer',
-      patientAge: 68,
-      patientGender: 'Male',
-      address: 'Flat 402, Green Glen Palms, 12th Main, Indiranagar, Bengaluru',
-      locality: 'Indiranagar, Bengaluru',
-      providerName: isCentre ? itemName : 'Priya Sharma',
-      providerPhone: isCentre ? '+91 80 4120 5500' : '+91 98450 12345',
-      providerRating: 4.92,
-      providerQualifications: isCentre
-          ? 'Field Audited · 1:3 Nurse Ratio · Fire & NABH NOC'
-          : 'GNM · 4 yrs exp · HPR Verified',
-      roomType: isCentre ? 'Deluxe Room with Attached Bath' : null,
-      condition: 'Post-op knee recovery & IV antibiotics administration',
-      vitalsSummary: isCentre ? null : 'Vitals logging in progress by nurse...',
-      formalities: isCentre
-          ? const [
-              'Govt Photo ID (Aadhaar / Passport) of patient',
-              'Hospital Discharge Summary & Doctor Prescription',
-              'Digital Admission Pass & Check-In OTP (7391)',
-              'Signed Care Agreement & Emergency Contact Consent',
-            ]
-          : const [],
+      otp: newVisitOtp(),
+      liveStatus: BookingLiveStatus.assigned,
+      patientName: auth.userProfile['name'] ?? '',
+      address: address.fullAddress,
+      locality: address.shortAddress,
+      providerName: 'ALLCURO equipment desk',
+      providerPhone: ref.read(careDeskPhoneProvider),
+      formalities: const [],
     );
 
     await ref.read(bookingsViewModelProvider.notifier).createBooking(newBooking);
 
     if (mounted) {
       setState(() => _isProcessingPayment = false);
-      if (isCentre) {
-        context.push('/centre-pass/$bookingId');
-      } else {
-        context.push('/nurse-tracker/$bookingId');
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Booked $itemName · our team will call to schedule delivery.')),
+      );
+      context.go('/bookings');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final breakdownAsync = ref.watch(checkoutViewModelProvider);
+    final price = widget.price ?? 0;
+    if (price <= 0) {
+      return AppShell(
+        currentPath: '/checkout',
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            ScreenHeader(
+              title: 'Checkout & Payment',
+              subtitle: 'Nothing to check out',
+              onBack: () => context.canPop() ? context.pop() : context.go('/'),
+            ),
+            EmptyState(
+              icon: Icons.shopping_bag_outlined,
+              title: 'Nothing to check out yet',
+              message: 'Pick an item from the equipment catalogue to rent it.',
+              action: OutlinedButton(
+                onPressed: () => context.go('/equipment'),
+                child: const Text('Browse equipment'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    final breakdownAsync = ref.watch(checkoutViewModelProvider(price));
 
     return AppShell(
       currentPath: '/checkout',
@@ -137,7 +150,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
               ),
             ),
-            data: (breakdown) => _CheckoutBody(breakdown: breakdown),
+            data: (breakdown) => _CheckoutBody(breakdown: breakdown, unit: widget.unit),
           ),
         ],
       ),
@@ -220,8 +233,9 @@ class _BottomBar extends StatelessWidget {
 
 class _CheckoutBody extends StatelessWidget {
   final PricingBreakdown breakdown;
+  final String? unit;
 
-  const _CheckoutBody({required this.breakdown});
+  const _CheckoutBody({required this.breakdown, this.unit});
 
   @override
   Widget build(BuildContext context) {
@@ -269,10 +283,12 @@ class _CheckoutBody extends StatelessWidget {
               children: [
                 const Text('PRICE BREAKDOWN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: AppColors.mutedForeground)),
                 const SizedBox(height: 12),
-                _Row(label: 'Base cost', value: inr(breakdown.base)),
+                _Row(label: unit == 'day' ? 'Rent (1 day)' : 'Rent (1 month)', value: inr(breakdown.base)),
                 const SizedBox(height: 8),
-                _Row(label: 'First booking discount', value: '- ${inr(breakdown.discount)}'),
-                const SizedBox(height: 8),
+                if (breakdown.discount > 0) ...[
+                  _Row(label: 'Discount', value: '- ${inr(breakdown.discount)}'),
+                  const SizedBox(height: 8),
+                ],
                 _Row(label: 'Platform fee', value: inr(breakdown.fee)),
                 const SizedBox(height: 8),
                 _Row(label: 'GST (18%)', value: inr(breakdown.gst)),

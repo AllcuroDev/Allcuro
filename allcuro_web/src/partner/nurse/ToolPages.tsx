@@ -1,74 +1,40 @@
 import { useId, useState } from 'react'
+import { Link } from '../../components/Link'
 import { Modal } from '../../components/ui'
-import { inr } from '../../lib/format'
 import { toast } from '../../lib/toast'
 import { PR } from '../routes'
 import { usePartnerSession } from '../session'
-import { PBody, PCard, PIcon, PPageHead, PSectionTitle } from '../ui'
-import {
-  EARNINGS_INCENTIVES,
-  EARNINGS_THIS_MONTH,
-  REFERRAL_BONUS,
-  REFERRAL_CODE,
-  REFERRALS,
-  SEED_PAYOUTS,
-  SOS_PHONE,
-  STATEMENT,
-} from './data'
+import { EmptyState, PBody, PCard, PIcon, PPageHead, PSectionTitle } from '../ui'
+import { SOS_PHONE } from './data'
 import { ProgressBar } from './parts'
-import { continueCourse, coursesStore, creditedPayoutsStore, telUrl } from './state'
+import { continueCourse, coursesStore, telUrl } from './state'
 
 // The smaller tool screens from the home grid: earnings, training,
 // referral and support (features/nurse/presentation/{earnings,training,referral,support}).
+// There is no payouts or referrals backend yet, so those pages show empty
+// states instead of numbers.
 
 // ---------------------------------------------------------------- earnings
 
 export function NurseEarningsPage() {
-  const credited = creditedPayoutsStore.use()
-  const payouts = [...credited, ...SEED_PAYOUTS]
-  const thisMonth = EARNINGS_THIS_MONTH + credited.reduce((sum, p) => sum + p.amount, 0)
-
+  const session = usePartnerSession()
   return (
     <>
       <PPageHead title="Earnings" back={PR.nurseHome} />
       <PBody narrow>
-        <div className="pn-stat-row">
-          <div className="pn-stat is-primary">
-            <strong className="pn-stat-big">{inr(thisMonth)}</strong>
-            <span className="pn-stat-label">This month</span>
-          </div>
-          <div className="pn-stat is-ok">
-            <strong className="pn-stat-big">{inr(EARNINGS_INCENTIVES)}</strong>
-            <span className="pn-stat-label">Incentives</span>
-          </div>
-        </div>
-
-        <section className="pn-stack" aria-labelledby="pn-breakdown">
-          <PSectionTitle>
-            <span id="pn-breakdown">Per-shift breakdown</span>
-          </PSectionTitle>
-          <ul className="p-list">
-            {payouts.map((p, i) => (
-              <li key={`${p.date}-${i}`}>
-                <PCard className="pn-rowcard">
-                  <div className="p-row-grow">
-                    <strong className="pn-title">{p.description}</strong>
-                    <span className="p-muted pn-small">{p.date}</span>
-                  </div>
-                  <strong>{inr(p.amount)}</strong>
-                </PCard>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <PCard as="section" className="pn-stack pn-gap8">
-          <h2 className="pn-h2">Monthly statement</h2>
-          <span className="p-muted pn-small">{STATEMENT.month}</span>
-          <span className="p-muted pn-small">TDS deducted: {inr(STATEMENT.tds)}</span>
-          <button type="button" className="p-btn p-btn-primary p-btn-block pn-accent-btn" onClick={() => toast('Payslip downloaded (demo)')}>
-            <PIcon name="file" size={16} /> Download payslip
-          </button>
+        <PCard>
+          <EmptyState
+            icon="wallet"
+            title="No earnings yet"
+            text="Payouts appear here after your first completed visit, with a per-visit breakdown and monthly statements."
+            action={
+              !session.bank ? (
+                <Link to={PR.bankAccount} className="p-btn p-btn-primary p-btn-sm">
+                  Add bank account
+                </Link>
+              ) : undefined
+            }
+          />
         </PCard>
       </PBody>
     </>
@@ -132,16 +98,8 @@ export function NurseTrainingPage() {
 export function NurseReferralPage() {
   const session = usePartnerSession()
   const noun = session.role === 'clinician' ? 'clinician' : 'nurse'
-  const message = `Join ALLCURO as a home care partner and use my code ${REFERRAL_CODE} when you sign up.`
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(REFERRAL_CODE)
-      toast('Copied to clipboard')
-    } catch {
-      toast(`Your code is ${REFERRAL_CODE}`, 'info')
-    }
-  }
+  const link = `${window.location.origin}${PR.welcome}`
+  const message = `Join ALLCURO as a home care partner: ${link}`
 
   const share = async () => {
     if (navigator.share) {
@@ -157,34 +115,21 @@ export function NurseReferralPage() {
 
   return (
     <>
-      <PPageHead title={`Refer a ${noun}`} subtitle={`Earn ${inr(REFERRAL_BONUS)} when they complete their first 5 shifts`} back={PR.nurseHome} />
+      <PPageHead title={`Refer a ${noun}`} subtitle="Invite colleagues to join ALLCURO" back={PR.nurseHome} />
       <PBody narrow>
         <PCard as="section" className="pn-stack pn-center">
-          <span className="p-muted pn-small">Your referral code</span>
-          <strong className="pn-code">{REFERRAL_CODE}</strong>
-          <div className="pn-btn-pair">
-            <button type="button" className="p-btn p-btn-outline pn-btn-primary-text pn-border-primary" onClick={copy}>
-              <PIcon name="copy" size={16} /> Copy code
-            </button>
-            <button type="button" className="p-btn p-btn-primary pn-accent-btn" onClick={share}>
-              <PIcon name="gift" size={16} /> Share
-            </button>
-          </div>
+          <span className="p-muted pn-small">Know a {noun} who’d be a good fit? Send them the partner sign-up link.</span>
+          <button type="button" className="p-btn p-btn-primary pn-accent-btn" onClick={share}>
+            <PIcon name="gift" size={16} /> Share invite
+          </button>
         </PCard>
         <section className="pn-stack" aria-labelledby="pn-refs">
           <PSectionTitle>
             <span id="pn-refs">Your referrals</span>
           </PSectionTitle>
-          <ul className="p-list">
-            {REFERRALS.map((r) => (
-              <li key={r.name}>
-                <PCard className="pn-rowcard">
-                  <strong className="p-row-grow pn-title">{r.name}</strong>
-                  <span className={`p-pill is-${r.tone}`}>{r.status}</span>
-                </PCard>
-              </li>
-            ))}
-          </ul>
+          <PCard>
+            <EmptyState icon="users" title="No referrals yet" text="Colleagues who join through your invite will be listed here." />
+          </PCard>
         </section>
       </PBody>
     </>
@@ -208,7 +153,7 @@ export function NurseSupportPage() {
           <PSectionTitle>
             <span id="pn-general">General support</span>
           </PSectionTitle>
-          <button type="button" className="p-card pn-rowcard pn-tap" onClick={() => toast('Chat coming soon — demo', 'info')}>
+          <button type="button" className="p-card pn-rowcard pn-tap" onClick={() => toast('Chat with support is coming soon.', 'info')}>
             <span className="pn-primary-text">
               <PIcon name="help" size={22} />
             </span>
@@ -233,7 +178,7 @@ export function NurseSupportPage() {
                 className="p-btn p-btn-danger"
                 onClick={() => {
                   setConfirm(false)
-                  toast('Calling ALLCURO Ops… (demo)', 'danger')
+                  toast('Calling ALLCURO Ops…', 'danger')
                 }}
               >
                 <PIcon name="phone" size={16} /> Call

@@ -8,6 +8,7 @@ import '../../../../core/ui/surface.dart';
 import '../../../../core/ui/tappable.dart';
 import '../../../../core/ui/tool_tile.dart';
 import '../../../../core/verification_status.dart';
+import '../../../auth/data/auth_service.dart';
 import '../../../auth/presentation/auth_view_model.dart';
 import '../../../auth/presentation/onboarding_view_model.dart';
 import '../../../identity/data/verified_identity.dart';
@@ -56,14 +57,14 @@ class NurseHomeScreen extends ConsumerWidget {
     final onboardingState = ref.watch(partnerOnboardingProvider);
     final status = session?.practitionerVerificationStatus ?? NurseVerificationStatus.incomplete;
     final identity = session?.practitionerIdentity;
-    final name = identity?.fullName ?? 'Priya Sharma';
+    final name = session?.displayName ?? 'Partner';
 
     return ProviderShell(
       role: session?.role ?? ProviderRole.nurse,
       currentIndex: 0,
       onTabSelected: onTabSelected,
       onProfileTap: onProfileTap,
-      initials: name.split(' ').where((w) => w.isNotEmpty).take(2).map((w) => w[0].toUpperCase()).join(),
+      initials: session?.initials ?? 'P',
       child: summary.when(
         data: (data) => _NurseHomeContent(
           status: status,
@@ -174,7 +175,7 @@ class _NurseHomeContent extends ConsumerWidget {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Live GPS: 12.9716° N, 77.5946° E (Bengaluru)',
+                      'Your current location will be shared with the response team.',
                       style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -206,6 +207,35 @@ class _NurseHomeContent extends ConsumerWidget {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPoliceConsentDialog(BuildContext context, WidgetRef ref, bool current) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Police background check'),
+        content: const Text(
+          'I consent to ALLCURO running a police background verification using my verified identity '
+          'before my profile goes live.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              ref.read(partnerOnboardingProvider.notifier).setNursePoliceConsent(false);
+              Navigator.pop(ctx);
+            },
+            child: Text(current ? 'Withdraw' : 'Not now'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(partnerOnboardingProvider.notifier).setNursePoliceConsent(true);
+              Navigator.pop(ctx);
+            },
+            child: const Text('I consent'),
           ),
         ],
       ),
@@ -312,12 +342,13 @@ class _NurseHomeContent extends ConsumerWidget {
               onOpenDocuments: onOpenDocuments,
               onOpenBankAccount: onOpenBankAccount,
               onOpenAvailability: onOpenAvailability,
+              onPoliceConsent: () => _showPoliceConsentDialog(context, ref, onboardingState.nursePoliceDone),
               onSubmitForReview: () async {
                 await ref.read(partnerOnboardingProvider.notifier).submitNurseForReview();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Profile submitted for nursing council verification!'),
+                      content: Text('Profile submitted. ALLCURO will review it and let you know.'),
                       backgroundColor: AppColors.success,
                     ),
                   );
@@ -334,6 +365,7 @@ class _NurseHomeContent extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: _NurseUnderReviewCard(
+              onboarding: onboardingState,
               onAdvanceToVerified: () {
                 ref.read(authViewModelProvider.notifier).setPractitionerVerificationStatus(
                       NurseVerificationStatus.verified,
@@ -368,7 +400,7 @@ class _NurseHomeContent extends ConsumerWidget {
                     value: '${summary.pendingRequestCount}',
                     color: AppColors.coral,
                     bg: AppColors.coralSoft,
-                    badge: 'Action Required',
+                    badge: summary.pendingRequestCount > 0 ? 'Action Required' : 'None yet',
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -378,7 +410,7 @@ class _NurseHomeContent extends ConsumerWidget {
                     value: '${summary.shiftsThisWeek}',
                     color: AppColors.primary,
                     bg: AppColors.primarySoft,
-                    badge: 'Scheduled',
+                    badge: summary.shiftsThisWeek > 0 ? 'Scheduled' : 'None yet',
                   ),
                 ),
               ],
@@ -391,9 +423,13 @@ class _NurseHomeContent extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Upcoming Schedule',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink),
+                const Expanded(
+                  child: Text(
+                    'Upcoming Schedule',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink),
+                  ),
                 ),
                 Tappable(
                   onTap: onSeeSchedule,
@@ -415,7 +451,7 @@ class _NurseHomeContent extends ConsumerWidget {
                 ? const Surface(
                     padding: EdgeInsets.all(16),
                     child: Text(
-                      'No upcoming shifts right now',
+                      'No upcoming shifts yet. Accepted bookings will appear here.',
                       style: TextStyle(color: AppColors.mutedForeground),
                     ),
                   )
@@ -460,9 +496,13 @@ class _NurseHomeContent extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'New Patient Requests',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink),
+                const Expanded(
+                  child: Text(
+                    'New Patient Requests',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.ink),
+                  ),
                 ),
                 Tappable(
                   onTap: onSeeAllRequests,
@@ -483,7 +523,10 @@ class _NurseHomeContent extends ConsumerWidget {
             child: summary.previewRequests.isEmpty
                 ? const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('No pending requests right now', style: TextStyle(color: AppColors.mutedForeground)),
+                    child: Text(
+                      "No visit requests yet. You'll see them here once families start booking.",
+                      style: TextStyle(color: AppColors.mutedForeground),
+                    ),
                   )
                 : Column(
                     children: summary.previewRequests
@@ -916,7 +959,10 @@ class _NurseSetupHub extends StatelessWidget {
     required this.onOpenBankAccount,
     required this.onOpenAvailability,
     required this.onSubmitForReview,
+    required this.onPoliceConsent,
   });
+
+  final VoidCallback onPoliceConsent;
 
   @override
   Widget build(BuildContext context) {
@@ -973,8 +1019,10 @@ class _NurseSetupHub extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Your identity is verified. Add certificates, bank details and skills to activate patient matching.',
+          Text(
+            identity == null
+                ? 'Add certificates, bank details and skills, then submit your profile for ALLCURO review.'
+                : 'Your identity is verified. Add certificates, bank details and skills, then submit for ALLCURO review.',
             style: TextStyle(fontSize: 11.5, color: AppColors.mutedForeground, height: 1.35),
           ),
           const SizedBox(height: 14),
@@ -983,10 +1031,10 @@ class _NurseSetupHub extends StatelessWidget {
             stepNumber: 1,
             title: 'Identity & Basic Profile',
             subtitle: identity == null
-                ? 'Aadhaar & registration verified at sign-up'
+                ? 'Aadhaar & registration verification pending'
                 : 'Aadhaar & ${identity!.registrationLabel} ${identity!.registrationNumber} verified at sign-up',
-            isComplete: onboarding.nurseProfileDone,
-            statusLabel: 'Verified',
+            isComplete: onboarding.nurseProfileDone && identity != null,
+            statusLabel: identity == null ? 'Pending' : 'Verified',
             onTap: () {},
           ),
           const SizedBox(height: 8),
@@ -1020,7 +1068,10 @@ class _NurseSetupHub extends StatelessWidget {
           _NurseCheckTile(
             stepNumber: 5,
             title: 'Skills, Specialisations & Shift Rates',
-            subtitle: '${onboarding.nurseSkills.length} skills selected · ₹${onboarding.nurseDailyRate.toInt()}/day',
+            subtitle: onboarding.nurseSkills.isEmpty
+                ? 'Pick your skills and expected daily rate'
+                : '${onboarding.nurseSkills.length} skills selected'
+                    '${onboarding.nurseDailyRate > 0 ? ' · ₹${onboarding.nurseDailyRate.toInt()}/day' : ''}',
             isComplete: onboarding.nurseSkillsDone,
             statusLabel: onboarding.nurseSkillsDone ? 'Configured' : 'Configure',
             onTap: onOpenAvailability,
@@ -1031,8 +1082,8 @@ class _NurseSetupHub extends StatelessWidget {
             title: 'Police Background Clearance Consent',
             subtitle: 'Automated background check using your verified Aadhaar',
             isComplete: onboarding.nursePoliceDone,
-            statusLabel: 'Consented',
-            onTap: () {},
+            statusLabel: onboarding.nursePoliceDone ? 'Consented' : 'Give Consent',
+            onTap: onPoliceConsent,
           ),
           const SizedBox(height: 16),
 
@@ -1060,9 +1111,10 @@ class _NurseSetupHub extends StatelessWidget {
 }
 
 class _NurseUnderReviewCard extends StatelessWidget {
+  final PartnerOnboardingState onboarding;
   final VoidCallback onAdvanceToVerified;
 
-  const _NurseUnderReviewCard({required this.onAdvanceToVerified});
+  const _NurseUnderReviewCard({required this.onboarding, required this.onAdvanceToVerified});
 
   @override
   Widget build(BuildContext context) {
@@ -1098,14 +1150,24 @@ class _NurseUnderReviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Your certificates and police background clearance are being reviewed by ALLCURO ops. Verified nurses get instant access to shift requests.',
+            'Your profile has been submitted. ALLCURO will review your certificates and run the background check, '
+            "then let you know. You'll start receiving visit requests once you're approved.",
             style: TextStyle(fontSize: 11.5, color: AppColors.mutedForeground, height: 1.35),
           ),
           const SizedBox(height: 14),
-          _AuditStepRow(title: 'Aadhaar & Registration (verified at sign-up)', isDone: true, time: 'Verified'),
-          _AuditStepRow(title: 'Certificates & HPR Registry Review', isDone: true, time: 'Passed'),
-          _AuditStepRow(title: 'Police Background Verification Clearance', isDone: true, time: 'Clean Record'),
-          _AuditStepRow(title: 'ALLCURO Nurse Badge & Shift Matching', isDone: false, time: 'Final Review'),
+          const _AuditStepRow(title: 'Profile & documents submitted', isDone: true, time: 'Submitted'),
+          _AuditStepRow(
+            title: 'Certificates & HPR registry review',
+            isDone: false,
+            time: onboarding.nurseDocsDone ? 'Awaiting ALLCURO review' : 'Documents still to upload',
+          ),
+          _AuditStepRow(
+            title: 'Police background verification',
+            isDone: false,
+            time: onboarding.nursePoliceDone ? 'Consent given · awaiting check' : 'Consent not given yet',
+          ),
+          const _AuditStepRow(title: 'Approval & visit matching', isDone: false, time: 'Awaiting ALLCURO review'),
+          if (AuthService.isDemo) ...[
           const SizedBox(height: 14),
           Container(
             width: double.infinity,
@@ -1118,7 +1180,7 @@ class _NurseUnderReviewCard extends StatelessWidget {
               children: [
                 const Expanded(
                   child: Text(
-                    'Simulate admin approval to unlock live shifts.',
+                    'Demo build only: simulate admin approval.',
                     style: TextStyle(fontSize: 11, color: AppColors.mutedForeground),
                   ),
                 ),
@@ -1136,6 +1198,7 @@ class _NurseUnderReviewCard extends StatelessWidget {
               ],
             ),
           ),
+          ],
         ],
       ),
     );

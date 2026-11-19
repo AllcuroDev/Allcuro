@@ -131,8 +131,7 @@ class AppShell extends ConsumerWidget {
     final locationState = ref.watch(locationViewModelProvider);
     final effectiveAddress =
         (address != null &&
-            address!.isNotEmpty &&
-            address != 'Indiranagar, Bengaluru')
+            address!.isNotEmpty)
         ? address!
         : locationState.currentAddress.shortAddress;
     final effectiveArrivalTime =
@@ -430,7 +429,7 @@ class _CompactHeaderDelegate extends SliverPersistentHeaderDelegate {
                           ),
                           children: [
                             TextSpan(
-                              text: "In $arrivalTime",
+                              text: arrivalTime.isEmpty ? "ALLCURO" : "In $arrivalTime",
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
@@ -677,9 +676,10 @@ class _MinimalActiveNurseVisitPopup extends StatelessWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              booking.providerName.isNotEmpty
+                              booking.providerName.isNotEmpty &&
+                                      booking.providerName != kAssignedNurseLabel
                                   ? booking.providerName
-                                  : 'Sister Priya Sharma',
+                                  : 'ALLCURO nurse visit',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -711,7 +711,10 @@ class _MinimalActiveNurseVisitPopup extends StatelessWidget {
                           const SizedBox(width: 5),
                           Flexible(
                             child: Text(
-                              'Live Nurse Visit · In Progress',
+                              booking.providerName.isEmpty ||
+                                      booking.providerName == kAssignedNurseLabel
+                                  ? 'Booked · care desk assigning a nurse'
+                                  : 'Live Nurse Visit · ${booking.status}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

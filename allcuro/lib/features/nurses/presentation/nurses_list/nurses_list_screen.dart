@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_shell.dart';
+import '../../../../core/ui/empty_state.dart';
+import '../../../../core/ui/partner_avatar.dart';
 import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/surface.dart';
 import '../../../../core/utils/currency.dart';
@@ -131,7 +133,7 @@ class _NursesListScreenState extends ConsumerState<NursesListScreen> {
             title: isFiltered ? '$_selectedFilter Nurses' : 'Nurses & Attendants',
             subtitle: isFiltered
                 ? 'Certified nurses specialized in $_selectedFilter'
-                : '100% police-verified & background checked care professionals',
+                : 'Verified & background-checked care professionals',
             onBack: () {
               if (context.canPop()) {
                 context.pop();
@@ -212,7 +214,7 @@ class _NursesListScreenState extends ConsumerState<NursesListScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (isFiltered) ...[
+                    if (isFiltered && allNurses.isNotEmpty) ...[
                       Container(
                         margin: const EdgeInsets.only(bottom: 14),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -251,7 +253,18 @@ class _NursesListScreenState extends ConsumerState<NursesListScreen> {
                         ),
                       ),
                     ],
-                    if (nurses.isEmpty)
+                    if (allNurses.isEmpty)
+                      EmptyState(
+                        icon: Icons.medical_services_outlined,
+                        title: 'No nurses available yet',
+                        message: 'We are onboarding verified nurses and caregivers in your city. '
+                            'Book a visit and our care desk will assign one for you.',
+                        action: ElevatedButton(
+                          onPressed: () => context.push('/nurse-quick-booking'),
+                          child: const Text('Request a nurse visit'),
+                        ),
+                      )
+                    else if (nurses.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 40),
                         child: Center(
@@ -332,15 +345,7 @@ class _NurseCard extends ConsumerWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                  child: Image.asset(
-                    n.photo,
-                    width: 64,
-                    height: 64,
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                PartnerAvatar(name: n.name, photoUrl: n.photo),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -379,7 +384,11 @@ class _NurseCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${n.level} · ${n.experience} yrs experience · ${n.employment.label}',
+                        [
+                          if (n.level.isNotEmpty) n.level,
+                          if (n.experience > 0) '${n.experience} yrs experience',
+                          n.employment.label,
+                        ].join(' · '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -426,18 +435,27 @@ class _NurseCard extends ConsumerWidget {
                 Expanded(
                   child: Row(
                     children: [
+                      if (n.reviews > 0) ...[
                       const Icon(
                         Icons.star_rounded,
                         size: 16,
                         color: Color(0xFFFFB800),
                       ),
                       const SizedBox(width: 4),
+                      ],
                       // One paragraph so it can ellipsize as a unit on
                       // narrow phones / large font scales.
                       Flexible(
-                        child: Text.rich(
+                        child: n.reviews == 0
+                            ? const Text(
+                                'New on ALLCURO',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.mutedForeground),
+                              )
+                            : Text.rich(
                           TextSpan(
-                            text: '${n.rating}',
+                            text: n.rating.toStringAsFixed(1),
                             style: const TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w800,
@@ -465,6 +483,7 @@ class _NurseCard extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Row(
                   children: [
+                    if (n.shifts.isNotEmpty)
                     Text.rich(
                       TextSpan(
                         text: inr(n.shifts.first.price),
@@ -473,9 +492,9 @@ class _NurseCard extends ConsumerWidget {
                           fontWeight: FontWeight.w900,
                           color: AppColors.ink,
                         ),
-                        children: const [
+                        children: [
                           TextSpan(
-                            text: ' / shift',
+                            text: n.shifts.first.unit.isEmpty ? ' / visit' : ' ${n.shifts.first.unit}',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,

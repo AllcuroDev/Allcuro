@@ -39,6 +39,7 @@ dependencies:
   flutter_riverpod:
   shared_preferences:
   supabase_flutter: ^2.18.3
+  image_picker: ^1.2.4
 
 dev_dependencies:
   flutter_test:

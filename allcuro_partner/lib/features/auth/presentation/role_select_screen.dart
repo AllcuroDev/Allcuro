@@ -65,7 +65,7 @@ class RoleSelectScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Pick one — you can switch later from settings.',
+                  'Pick one to start your verification.',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.primaryForeground.withValues(alpha: 0.75),
@@ -76,25 +76,19 @@ class RoleSelectScreen extends StatelessWidget {
                   icon: Icons.medical_services_outlined,
                   title: "I'm a Nurse",
                   description:
-                      'Accept shift requests, manage your schedule, and see job details.',
+                      'Verify your NUID, then accept shift requests and manage your schedule.',
                   onTap: () => onSelect(ProviderRole.nurse),
                 ),
                 const SizedBox(height: 16),
                 _RoleCard(
                   icon: Icons.medical_information_outlined,
-                  title: "I'm a Doctor / Physiotherapist",
+                  title: "I'm a Doctor",
                   description:
-                      'Take home-visit consultations and therapy sessions on your schedule.',
+                      'Verify your NMC registration and take home-visit consultations on your schedule.',
                   onTap: () => onSelect(ProviderRole.clinician),
                 ),
-                const SizedBox(height: 16),
-                _RoleCard(
-                  icon: Icons.apartment_rounded,
-                  title: 'I run a Homecare Centre',
-                  description:
-                      'Manage bed availability and respond to placement requests.',
-                  onTap: () => onSelect(ProviderRole.centre),
-                ),
+                // Homecare centres, physiotherapists and caregivers will sign up
+                // here later — their onboarding isn't open yet.
               ],
             ),
           ),

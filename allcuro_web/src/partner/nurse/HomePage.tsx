@@ -252,9 +252,12 @@ function SetupHub() {
 
   const submit = async () => {
     setBusy(true)
-    await new Promise((r) => setTimeout(r, 400))
-    setPractitionerStatus('underReview')
-    toast(session.role === 'clinician' ? 'Profile submitted for council verification!' : 'Profile submitted for nursing council verification!')
+    try {
+      await setPractitionerStatus('underReview')
+      toast('Profile submitted. ALLCURO will review it and let you know.')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Could not submit your profile. Please try again.', 'danger')
+    }
     setBusy(false)
   }
 

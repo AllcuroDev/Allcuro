@@ -2,79 +2,45 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/ui/pick_photo.dart';
 import '../../../../core/ui/screen_header.dart';
 import '../../../../core/ui/upload_tile.dart';
 import '../../../auth/presentation/auth_view_model.dart';
 import '../../../auth/presentation/onboarding_view_model.dart';
 
-class DocumentVaultScreen extends ConsumerWidget {
+class DocumentVaultScreen extends ConsumerStatefulWidget {
   final VoidCallback onBack;
 
   const DocumentVaultScreen({super.key, required this.onBack});
 
-  void _simulateUpload(BuildContext context, WidgetRef ref, ComplianceDocItem doc) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Upload ${doc.title.split('(').first.trim()}',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.ink),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 20),
-                  onPressed: () => Navigator.pop(ctx),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Upload PDF, JPG or PNG (Max 15MB). ALLCURO reviews it before your profile goes live.',
-              style: TextStyle(fontSize: 12.5, color: AppColors.mutedForeground),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(color: AppColors.primarySoft, shape: BoxShape.circle),
-                child: const Icon(Icons.upload_file_rounded, color: AppColors.primary),
-              ),
-              title: const Text('Choose Document from Device', style: TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: const Text('Select certificate from storage', style: TextStyle(fontSize: 12)),
-              onTap: () {
-                ref.read(partnerOnboardingProvider.notifier).markDocUploaded(
-                      docId: doc.id,
-                      isCentre: false,
-                      fileName: '${doc.docType}.pdf',
-                    );
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Uploaded new file for ${doc.title}'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+  @override
+  ConsumerState<DocumentVaultScreen> createState() => _DocumentVaultScreenState();
+}
+
+class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
+  String? _uploadingId;
+
+  /// Photo of the certificate → private `kyc-documents` bucket → recorded on
+  /// the partner row for ALLCURO's review.
+  Future<void> _upload(ComplianceDocItem doc) async {
+    final file = await pickPhoto(context, title: 'Upload ${doc.title.split('(').first.trim()}');
+    if (file == null || !mounted) return;
+    setState(() => _uploadingId = doc.id);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(partnerOnboardingProvider.notifier).uploadPractitionerDoc(doc, file);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Uploaded ${doc.title}'), backgroundColor: AppColors.success),
+      );
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.destructive));
+    } finally {
+      if (mounted) setState(() => _uploadingId = null);
+    }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(partnerOnboardingProvider);
     final docs = state.nurseDocs;
     final identity = ref.watch(authViewModelProvider).valueOrNull?.practitionerIdentity;
@@ -87,7 +53,7 @@ class DocumentVaultScreen extends ConsumerWidget {
             ScreenHeader(
               title: 'Document Vault & KYC',
               subtitle: 'Upload your certificates for ALLCURO review',
-              onBack: onBack,
+              onBack: widget.onBack,
             ),
             Expanded(
               child: ListView(
@@ -112,9 +78,9 @@ class DocumentVaultScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             identity == null
-                                ? 'Aadhaar & registration verified at sign-up — no uploads needed'
-                                : 'Aadhaar ${identity.maskedAadhaar} & ${identity.registrationLabel} '
-                                    '${identity.registrationNumber} verified at sign-up — no uploads needed',
+                                ? 'Aadhaar & registration submitted at sign-up'
+                                : '${identity.registrationLabel} ${identity.registrationNumber} checked with the council '
+                                    'register · Aadhaar ${identity.maskedAadhaar} card photo submitted',
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -131,7 +97,8 @@ class DocumentVaultScreen extends ConsumerWidget {
                       child: UploadTile(
                         label: doc.title,
                         fileName: doc.isUploaded ? doc.fileName : null,
-                        onTap: () => _simulateUpload(context, ref, doc),
+                        uploading: _uploadingId == doc.id,
+                        onTap: _uploadingId == null ? () => _upload(doc) : null,
                       ),
                     ),
                 ],

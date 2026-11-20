@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { digitsOnly } from '../../lib/format'
 import { delay } from '../../lib/store'
+import { toast } from '../../lib/toast'
 import {
   partnerLogout,
+  patchIdentity,
   practitionerIdentity,
   saveSignup,
   setCentreStatus,
@@ -14,6 +16,7 @@ import { ChipGroup, PField, PIcon } from '../ui'
 import { AuthWizard, ChoiceChips, ConfirmDialog, ConsentBox, LockedField, SectionLabel, StepHeader, SummaryList } from './AuthUi'
 import {
   CENTRE_TYPE_OPTIONS,
+  GENDER_OPTIONS,
   OWNERSHIP_TYPE_OPTIONS,
   REGISTRATION_LABELS,
   SPECIALISATION_OPTIONS,
@@ -42,11 +45,16 @@ function useWizardSteps(count: number) {
     <ConfirmDialog title="Exit sign-up?" text={SIGNUP_EXIT_TEXT} onCancel={() => setConfirmExit(false)} onConfirm={partnerLogout} />
   ) : null
   /** Runs the submit with the app's 600 ms pause; the portal guard routes on once the status changes. */
-  const submit = async (save: () => void) => {
+  const submit = async (save: () => void | Promise<unknown>) => {
     if (busy) return
     setBusy(true)
     await delay(600)
-    save()
+    try {
+      await save()
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Could not save your profile. Please try again.', 'danger')
+      setBusy(false)
+    }
   }
   return { step, back, next, busy, submit, exitDialog, isLast: step === count - 1 }
 }
@@ -69,6 +77,43 @@ function InfoNote({ children }: { children: ReactNode }) {
   )
 }
 
+/**
+ * Date of birth, gender and address — locked when the council register
+ * supplied them (NMC gives DOB and address), otherwise entered here, as on
+ * the partner's Aadhaar card.
+ */
+function usePersonalDetails(identity: ReturnType<typeof practitionerIdentity>) {
+  const [dob, setDob] = useState(identity?.dob ?? '')
+  const [gender, setGender] = useState<string | null>(identity?.gender || null)
+  const [address, setAddress] = useState(identity?.address ?? '')
+  const today = new Date().toISOString().slice(0, 10)
+  const ready = dob !== '' && dob < today && gender != null && address.trim() !== ''
+  const save = () => patchIdentity({ dob, gender: gender ?? '', address: address.trim() })
+  const fields = (
+    <>
+      {identity?.dob ? (
+        <LockedField label="Date of birth" value={formatDob(identity.dob)} />
+      ) : (
+        <PField label="Date of birth (as on Aadhaar)">
+          <input type="date" value={dob} max={today} autoComplete="bday" onChange={(e) => setDob(e.target.value)} />
+        </PField>
+      )}
+      <div>
+        <SectionLabel id="pa-gender-label">Gender</SectionLabel>
+        <ChoiceChips labelledBy="pa-gender-label" options={GENDER_OPTIONS} value={gender} onChange={setGender} />
+      </div>
+      {identity?.address ? (
+        <LockedField label="Address" value={identity.address} />
+      ) : (
+        <PField label="Address (as on Aadhaar)">
+          <textarea rows={3} value={address} autoComplete="street-address" onChange={(e) => setAddress(e.target.value)} />
+        </PField>
+      )}
+    </>
+  )
+  return { dob, gender, address: address.trim(), ready, save, fields }
+}
+
 // ================================================================ nurse
 
 /** nurse/presentation/signup — Basic details → Qualification → Police verification. */
@@ -77,11 +122,9 @@ export function NurseSignupPage() {
   const identity = practitionerIdentity(s)
   const w = useWizardSteps(3)
 
-  // Everything here comes from the identity step — never a placeholder person.
+  // Name, registration and qualification come from the identity step — never a placeholder person.
   const fullName = identity?.fullName ?? ''
-  const dob = identity?.dob ?? ''
-  const gender = identity?.gender ?? ''
-  const address = identity?.address ?? ''
+  const personal = usePersonalDetails(identity)
   const qualification = identity?.qualification ?? ''
   const registrationNumber = identity?.registrationNumber ?? ''
   const council = identity?.council ?? ''
@@ -92,14 +135,17 @@ export function NurseSignupPage() {
   const [policeConsent, setPoliceConsent] = useState(false)
 
   const canContinue =
-    w.step === 0 ? fullName.trim() !== '' && city.trim() !== '' : w.step === 1 ? qualification !== '' && experienceYears.trim() !== '' : policeConsent
+    w.step === 0 ? fullName.trim() !== '' && personal.ready && city.trim() !== '' : w.step === 1 ? qualification !== '' && experienceYears.trim() !== '' : policeConsent
 
   const submit = () =>
     w.submit(() => {
       setPartnerName(fullName)
+      personal.save()
       saveSignup({
         city: city.trim(),
-        address,
+        address: personal.address,
+        dob: personal.dob,
+        gender: personal.gender,
         employmentType: 'Full-time',
         qualification,
         registrationNumber,
@@ -109,7 +155,7 @@ export function NurseSignupPage() {
         policeConsent,
         ...(Array.isArray(s.signup.skills) ? { skills: s.signup.skills } : {}),
       })
-      setPractitionerStatus('onboarding')
+      return setPractitionerStatus('onboarding')
     })
 
   return (
@@ -127,15 +173,9 @@ export function NurseSignupPage() {
       >
         {w.step === 0 && (
           <>
-            <StepHeader title="Tell us about yourself" subtitle="These details come from your identity step. ALLCURO checks them before approval." />
-            <SummaryList
-              rows={[
-                ['Full name', fullName],
-                ['Date of birth', dob ? formatDob(dob) : ''],
-                ['Gender', gender],
-                ['Address', address],
-              ]}
-            />
+            <StepHeader title="Tell us about yourself" subtitle="Enter these exactly as on your Aadhaar card. ALLCURO checks them before approval." />
+            <LockedField label="Full name" value={fullName} />
+            {personal.fields}
             <PField label="City you'll work in" hint="Requests near this city are shown to you first.">
               <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Bengaluru" autoComplete="address-level2" />
             </PField>
@@ -183,9 +223,12 @@ export function ClinicianSignupPage() {
   const identity = practitionerIdentity(s)
   const w = useWizardSteps(3)
 
+  // The partner app writes 'doctor' / 'physiotherapist'; the portal 'Doctor' / 'Physiotherapist'.
+  const professionKey = identity?.profession?.toLowerCase()
   const profession: ClinicianProfession | null =
-    identity?.profession === 'Doctor' || identity?.profession === 'Physiotherapist' ? identity.profession : null
+    professionKey === 'doctor' ? 'Doctor' : professionKey === 'physiotherapist' ? 'Physiotherapist' : null
   const fullName = identity?.fullName ?? ''
+  const personal = usePersonalDetails(identity)
   const council = identity?.council ?? ''
   const qualification = identity?.qualification ?? ''
   const registrationNumber = identity?.registrationNumber ?? ''
@@ -198,7 +241,7 @@ export function ClinicianSignupPage() {
 
   const canContinue =
     w.step === 0
-      ? profession != null && fullName.trim() !== '' && identity?.gender != null && city.trim() !== ''
+      ? profession != null && fullName.trim() !== '' && personal.ready && city.trim() !== ''
       : w.step === 1
         ? qualification !== '' && registrationNumber.trim() !== '' && experienceYears.trim() !== ''
         : consent
@@ -206,9 +249,12 @@ export function ClinicianSignupPage() {
   const submit = () =>
     w.submit(() => {
       setPartnerName(profession === 'Doctor' ? `Dr. ${fullName}` : fullName)
+      personal.save()
       saveSignup({
         city: city.trim(),
-        address: identity?.address ?? '',
+        address: personal.address,
+        dob: personal.dob,
+        gender: personal.gender,
         profession,
         qualification,
         registrationNumber,
@@ -217,7 +263,7 @@ export function ClinicianSignupPage() {
         experienceYears: experienceYears.trim(),
         backgroundConsent: consent,
       })
-      setPractitionerStatus('onboarding')
+      return setPractitionerStatus('onboarding')
     })
 
   const councilName = profession === 'Physiotherapist' ? 'physiotherapy council' : 'medical council'
@@ -225,7 +271,7 @@ export function ClinicianSignupPage() {
   return (
     <>
       <AuthWizard
-        label="Doctor / physiotherapist sign-up"
+        label="Doctor sign-up"
         stepIndex={w.step}
         stepCount={3}
         onBack={w.back}
@@ -237,16 +283,9 @@ export function ClinicianSignupPage() {
       >
         {w.step === 0 && (
           <>
-            <StepHeader title="Tell us about yourself" subtitle="These details come from your identity step. ALLCURO checks them before approval." />
-            <SummaryList
-              rows={[
-                ...(profession ? ([['I am a', profession]] as [string, string][]) : []),
-                ['Full name', fullName],
-                ...(identity?.dob ? ([['Date of birth', formatDob(identity.dob)]] as [string, string][]) : []),
-                ...(identity?.gender ? ([['Gender', identity.gender]] as [string, string][]) : []),
-                ['Address', identity?.address ?? ''],
-              ]}
-            />
+            <StepHeader title="Tell us about yourself" subtitle="Your name and registration come from the NMC register. ALLCURO checks everything before approval." />
+            <LockedField label="Full name" value={fullName} />
+            {personal.fields}
             <PField label="City you'll work in" hint="Home-visit requests near this city are shown to you first.">
               <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Bengaluru" autoComplete="address-level2" />
             </PField>

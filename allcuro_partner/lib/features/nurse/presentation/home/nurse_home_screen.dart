@@ -344,7 +344,16 @@ class _NurseHomeContent extends ConsumerWidget {
               onOpenAvailability: onOpenAvailability,
               onPoliceConsent: () => _showPoliceConsentDialog(context, ref, onboardingState.nursePoliceDone),
               onSubmitForReview: () async {
-                await ref.read(partnerOnboardingProvider.notifier).submitNurseForReview();
+                try {
+                  await ref.read(partnerOnboardingProvider.notifier).submitNurseForReview();
+                } on Object catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$e'), backgroundColor: AppColors.destructive),
+                    );
+                  }
+                  return;
+                }
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

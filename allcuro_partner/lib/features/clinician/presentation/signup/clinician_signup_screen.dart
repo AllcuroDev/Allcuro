@@ -66,6 +66,12 @@ class ClinicianSignupScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(clinicianSignupViewModelProvider);
+    ref.listen(clinicianSignupViewModelProvider.select((s) => s.error), (_, error) {
+      if (error == null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: AppColors.destructive),
+      );
+    });
     final notifier = ref.read(clinicianSignupViewModelProvider.notifier);
     final isLastStep = state.stepIndex == ClinicianSignupViewModel.stepCount - 1;
     final canContinue = _canContinue(state);

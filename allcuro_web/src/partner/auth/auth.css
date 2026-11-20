@@ -1321,3 +1321,17 @@
     order: -1;
   }
 }
+
+/* Aadhaar KYC photos (identity verification, step 2) */
+.pa-kyc-photos {
+  display: grid;
+  gap: 10px;
+}
+.pa-kyc-thumb {
+  width: 64px;
+  height: 42px;
+  flex: none;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border, #dfe6e1);
+}

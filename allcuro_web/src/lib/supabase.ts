@@ -5,6 +5,11 @@ import { createClient } from '@supabase/supabase-js'
 const url = import.meta.env.SUPABASE_URL as string
 const anonKey = import.meta.env.SUPABASE_ANON_KEY as string
 
+/** Base URL of the project's Edge Functions, or '' when built without keys. */
+export const functionsUrl = url ? `${url.replace(/\/$/, '')}/functions/v1` : ''
+/** The public anon key — Edge Functions require it as a bearer token. */
+export const supabaseAnonKey = anonKey ?? ''
+
 export const supabase = url && anonKey ? createClient(url, anonKey) : null
 
 if (!supabase) {

@@ -253,8 +253,14 @@ export function PublicProfilePage() {
     }
 
     if (submit) {
-      if (isCentre) await setCentreStatus('pendingReview')
-      else await setPractitionerStatus('underReview')
+      try {
+        if (isCentre) await setCentreStatus('pendingReview')
+        else await setPractitionerStatus('underReview')
+      } catch (e) {
+        setBusy(false)
+        toast(e instanceof Error ? e.message : 'Could not submit for approval.', 'danger')
+        return
+      }
     }
     await refreshPartner()
     setBusy(false)

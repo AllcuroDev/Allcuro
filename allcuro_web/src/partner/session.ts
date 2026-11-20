@@ -2,6 +2,7 @@ import { digitsOnly } from '../lib/format'
 import { confirmOtp, requestOtp, signOut, toE164 } from '../lib/phoneAuth'
 import { persistedStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
+import type { RegistryRecord } from './auth/data'
 
 // Partner (nurse / clinician / centre) session — the web twin of the partner
 // app's AuthSession + AuthViewModel (allcuro_partner/lib/features/auth).
@@ -28,10 +29,10 @@ export type CentreVerificationStatus =
   | 'rejected'
   | 'suspended'
 
-/** Registration + Aadhaar proved before the nurse / clinician sign-up wizard (identity/data/verified_identity.dart). */
+/** Registration (checked with the council register) + Aadhaar KYC done before the sign-up wizard (identity/data/verified_identity.dart). */
 export interface VerifiedIdentity {
   fullName: string
-  dob: string // ISO date
+  dob: string // ISO date, '' when not known yet
   gender: string
   address: string
   aadhaarLast4: string
@@ -41,6 +42,8 @@ export interface VerifiedIdentity {
   qualification: string
   /** Clinicians only: 'Doctor' | 'Physiotherapist'. */
   profession?: string
+  /** What the NRTS / NMC register returned — shown to the admin during review. */
+  registry?: RegistryRecord
 }
 
 export interface PartnerSession {
@@ -177,7 +180,7 @@ const kindFor = (role: ProviderRole, identity: VerifiedIdentity | null) =>
     ? 'centre'
     : role === 'nurse'
       ? 'nurse'
-      : identity?.profession === 'Physiotherapist'
+      : identity?.profession?.toLowerCase() === 'physiotherapist'
         ? 'physiotherapist'
         : 'doctor'
 
@@ -233,16 +236,8 @@ function rowFor(s: PartnerSession, role: ProviderRole) {
     employment_type: str(g.employmentType) || 'Full-time',
     specialisations: strs(g.specialisations),
     skills: strs(g.skills),
-    identity: identity
-      ? {
-          fullName: identity.fullName,
-          dob: identity.dob,
-          gender: identity.gender,
-          aadhaarLast4: identity.aadhaarLast4,
-          registrationLabel: identity.registrationLabel,
-          profession: identity.profession,
-        }
-      : {},
+    // Only the last 4 Aadhaar digits are stored; the card photo is in details.documents.
+    identity: identity ?? {},
   }
 }
 
@@ -250,15 +245,19 @@ let pushChain: Promise<unknown> = Promise.resolve()
 
 /**
  * Upserts the active role's row. Serialised so quick successive edits land in
- * order. Errors are logged, not thrown: the portal keeps working from the cache.
+ * order. By default errors are logged, not thrown, so the portal keeps working
+ * from the cache; `strict` rejects instead (for steps that must reach the DB).
  */
-function push(role: ProviderRole | null = partnerSession.get().role) {
+function push(role: ProviderRole | null = partnerSession.get().role, strict = false): Promise<unknown> {
   if (!role || !supabase) return pushChain
   const db = supabase
-  pushChain = pushChain.then(async () => {
+  const run = pushChain.then(async () => {
     const { data: auth } = await db.auth.getSession()
     const userId = auth.session?.user.id
-    if (!userId) return
+    if (!userId) {
+      if (strict) throw new PartnerAuthError('Your session has expired. Please log in again.')
+      return
+    }
     const s = partnerSession.get()
     const { data, error } = await db
       .from('partners')
@@ -267,11 +266,13 @@ function push(role: ProviderRole | null = partnerSession.get().role) {
       .single<PartnerRow>()
     if (error) {
       console.warn('Partner profile not saved:', error.message)
+      if (strict) throw new PartnerAuthError(`Could not save your profile: ${error.message}`)
       return
     }
     applyRow(data)
   })
-  return pushChain
+  pushChain = run.catch(() => undefined)
+  return strict ? run : pushChain
 }
 
 /** Writes a DB row's admin-controlled bits (status, note, id) back into the cache. */
@@ -376,19 +377,52 @@ export const selectRole = (role: ProviderRole) => {
 /** Switch role from the profile screen (the app sends you back to role select). */
 export const clearRole = () => partnerSession.set((s) => ({ ...s, role: null }))
 
-export function saveIdentity(identity: VerifiedIdentity) {
-  partnerSession.set((s) =>
-    s.role === 'clinician'
-      ? { ...s, clinicianIdentity: identity, name: s.name || identity.fullName }
-      : { ...s, nurseIdentity: identity, name: s.name || identity.fullName },
-  )
-  void push()
+/**
+ * Saves the verified identity (after registration check + Aadhaar KYC) to the
+ * partner row. Rejects if it couldn't be saved; the cache is rolled back so
+ * the portal stays on the verification page.
+ */
+export async function saveIdentity(identity: VerifiedIdentity, documents: Record<string, UploadedDoc> = {}) {
+  const prev = partnerSession.get()
+  partnerSession.set((s) => {
+    const signup = {
+      ...s.signup,
+      documents: { ...uploadedDocs(s), ...documents },
+      kyc: { aadhaarLast4: identity.aadhaarLast4, consentAt: new Date().toISOString(), registryAutoVerified: identity.registry?.autoVerified ?? false },
+      ...(identity.address ? { address: identity.address } : {}),
+    }
+    return s.role === 'clinician'
+      ? { ...s, signup, clinicianIdentity: identity, name: s.name || identity.fullName }
+      : { ...s, signup, nurseIdentity: identity, name: s.name || identity.fullName }
+  })
+  try {
+    await push(partnerSession.get().role, true)
+  } catch (e) {
+    partnerSession.set((s) => ({ ...s, nurseIdentity: prev.nurseIdentity, clinicianIdentity: prev.clinicianIdentity, signup: prev.signup }))
+    throw e
+  }
+}
+
+/** Fills in date of birth / gender / address the register didn't provide (sign-up step 1). Saved with the next push. */
+export function patchIdentity(patch: Partial<Pick<VerifiedIdentity, 'dob' | 'gender' | 'address'>>) {
+  partnerSession.set((s) => {
+    const key = s.role === 'clinician' ? 'clinicianIdentity' : 'nurseIdentity'
+    const current = s[key]
+    return current ? { ...s, [key]: { ...current, ...patch } } : s
+  })
 }
 
 /** Partners can move themselves only up to "submitted for review"; the DB ignores anything further. */
-export function setPractitionerStatus(status: NurseVerificationStatus) {
+export async function setPractitionerStatus(status: NurseVerificationStatus) {
+  const prev = partnerSession.get()
   partnerSession.set((s) => (s.role === 'clinician' ? { ...s, clinicianStatus: status } : { ...s, nurseStatus: status }))
-  return push()
+  try {
+    await push(prev.role, true)
+  } catch (e) {
+    // Not saved: stay where we were so the partner can retry.
+    partnerSession.set((s) => ({ ...s, nurseStatus: prev.nurseStatus, clinicianStatus: prev.clinicianStatus }))
+    throw e
+  }
 }
 
 export const setCentreStatus = (status: CentreVerificationStatus) => {
@@ -428,6 +462,12 @@ export function uploadedDocs(s: PartnerSession): Record<string, UploadedDoc> {
  * the admin can review it. Throws when the upload fails.
  */
 export async function uploadPartnerDocument(docId: string, file: File) {
+  const doc = await uploadKycFile(docId, file)
+  saveSignup({ documents: { ...uploadedDocs(partnerSession.get()), [docId]: doc } })
+}
+
+/** Uploads a file to the private kyc-documents bucket without recording it on the row. */
+export async function uploadKycFile(docId: string, file: File): Promise<UploadedDoc> {
   let path: string | null = null
   if (supabase) {
     const { data: auth } = await supabase.auth.getSession()
@@ -439,8 +479,7 @@ export async function uploadPartnerDocument(docId: string, file: File) {
     const { error } = await supabase.storage.from('kyc-documents').upload(path, file, { upsert: true, contentType: file.type || undefined })
     if (error) throw new Error(`Upload failed: ${error.message}`)
   }
-  const doc: UploadedDoc = { fileName: file.name, path, uploadedAt: new Date().toISOString() }
-  saveSignup({ documents: { ...uploadedDocs(partnerSession.get()), [docId]: doc } })
+  return { fileName: file.name, path, uploadedAt: new Date().toISOString() }
 }
 
 export const saveBank = (bank: PartnerSession['bank']) => {

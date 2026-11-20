@@ -186,6 +186,15 @@ export const PartnerEditor: React.FC<Props> = ({ initial, onClose, onSaved, onDe
   };
 
   const approve = () => {
+    const registry = (p.identity?.registry ?? null) as { autoVerified?: boolean } | null;
+    if (
+      !isCentre &&
+      (!registry || registry.autoVerified === false) &&
+      !window.confirm(
+        "This partner's registration was not confirmed automatically with the council register. Approve only after checking it yourself. Continue?",
+      )
+    )
+      return;
     const unpriced = isCentre
       ? p.price_per_day == null
       : offerings.length === 0 || offerings.some((o) => o.price == null && (!o.service_id || serviceById[o.service_id]?.price_from == null));
@@ -356,21 +365,8 @@ export const PartnerEditor: React.FC<Props> = ({ initial, onClose, onSaved, onDe
                   )}
                 </dl>
               </section>
-              {!isCentre && (
-                <section>
-                  <h3>Identity (Aadhaar)</h3>
-                  <dl className="partner-dl">
-                    <dt>Name</dt>
-                    <dd>{String(identity.fullName ?? '—')}</dd>
-                    <dt>DOB</dt>
-                    <dd>{String(identity.dob ?? '—')}</dd>
-                    <dt>Gender</dt>
-                    <dd>{String(identity.gender ?? '—')}</dd>
-                    <dt>Aadhaar</dt>
-                    <dd>{identity.aadhaarLast4 ? `XXXX XXXX ${String(identity.aadhaarLast4)}` : '—'}</dd>
-                  </dl>
-                </section>
-              )}
+              {!isCentre && <RegistryCheck identity={identity} />}
+              {!isCentre && <AadhaarKyc identity={identity} details={p.details} />}
               <section>
                 <h3>Payout account</h3>
                 <dl className="partner-dl">
@@ -699,7 +695,114 @@ interface UploadedDoc {
   uploadedAt?: string;
 }
 
-const docLabel = (id: string) => id.replace(/[-_]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+const DOC_LABELS: Record<string, string> = {
+  aadhaar_front: 'Aadhaar (front)',
+  aadhaar_back: 'Aadhaar (back)',
+  'nd-hpr': 'HPR / ABHA ID',
+  'nd-3': 'Degree / diploma',
+  'nd-med': 'Medical fitness',
+};
+
+const docLabel = (id: string) => DOC_LABELS[id] ?? id.replace(/[-_]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+
+const asDocs = (details: Record<string, unknown> | null): Record<string, UploadedDoc> => {
+  const raw = details?.documents;
+  return raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, UploadedDoc>) : {};
+};
+
+interface RegistryInfo {
+  source?: string;
+  autoVerified?: boolean;
+  checkedAt?: string;
+  fields?: { label?: string; value?: string }[];
+  verifyUrl?: string | null;
+}
+
+/** What the INC NRTS / NMC register returned when the partner verified (partners.identity.registry). */
+const RegistryCheck: React.FC<{ identity: Record<string, unknown> }> = ({ identity }) => {
+  const r = (identity.registry ?? null) as RegistryInfo | null;
+  return (
+    <section>
+      <h3>Council register check</h3>
+      {!r ? (
+        <dl className="partner-dl">
+          <dd>No register check on file — verify the registration by hand.</dd>
+        </dl>
+      ) : (
+        <>
+          <p className={`registry-badge ${r.autoVerified ? 'is-ok' : 'is-warn'}`}>
+            {r.autoVerified ? `Verified with ${r.source ?? 'register'}` : `Not auto-verified — ${r.source ?? 'register'} was unavailable`}
+            {r.checkedAt && <span className="date-sub"> · {fmtDate(r.checkedAt)}</span>}
+          </p>
+          <dl className="partner-dl">
+            {(r.fields ?? []).map((f, i) => (
+              <React.Fragment key={i}>
+                <dt>{f.label}</dt>
+                <dd>{f.value}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
+          {r.verifyUrl && (
+            <a className="link-like" href={r.verifyUrl} target="_blank" rel="noopener noreferrer">
+              Open the official NRTS record
+            </a>
+          )}
+        </>
+      )}
+    </section>
+  );
+};
+
+/** Aadhaar last 4 + card photos (private kyc-documents bucket, shown via short-lived signed URLs). */
+const AadhaarKyc: React.FC<{ identity: Record<string, unknown>; details: Record<string, unknown> | null }> = ({ identity, details }) => {
+  const docs = asDocs(details);
+  const photos = (['aadhaar_front', 'aadhaar_back'] as const).flatMap((id) => (docs[id]?.path ? [[id, docs[id].path!] as const] : []));
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const key = photos.map(([, path]) => path).join('|');
+
+  useEffect(() => {
+    let live = true;
+    void Promise.all(
+      photos.map(async ([id, path]) => {
+        const { data } = await supabase.storage.from('kyc-documents').createSignedUrl(path, 600);
+        return [id, data?.signedUrl ?? ''] as const;
+      }),
+    ).then((pairs) => live && setUrls(Object.fromEntries(pairs.filter(([, u]) => u))));
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return (
+    <section>
+      <h3>Aadhaar KYC</h3>
+      <dl className="partner-dl">
+        <dt>Name</dt>
+        <dd>{String(identity.fullName ?? '—')}</dd>
+        <dt>DOB</dt>
+        <dd>{String(identity.dob || '—')}</dd>
+        <dt>Gender</dt>
+        <dd>{String(identity.gender || '—')}</dd>
+        <dt>Aadhaar</dt>
+        <dd>{identity.aadhaarLast4 ? `XXXX XXXX ${String(identity.aadhaarLast4)}` : '—'}</dd>
+      </dl>
+      {photos.length === 0 ? (
+        <p className="date-sub">No Aadhaar card photo uploaded.</p>
+      ) : (
+        <div className="kyc-photos">
+          {photos.map(([id]) => (
+            <a key={id} href={urls[id]} target="_blank" rel="noopener noreferrer" className="kyc-photo" title={`Open ${docLabel(id)}`}>
+              {urls[id] ? <img src={urls[id]} alt={docLabel(id)} /> : <span className="date-sub">Loading…</span>}
+              <span>{docLabel(id)}</span>
+            </a>
+          ))}
+        </div>
+      )}
+      <p className="date-sub">Check the photo matches the name above and ends in the same 4 digits.</p>
+    </section>
+  );
+};
 
 /** Files the partner uploaded (partners.details.documents → private kyc-documents bucket). */
 const PartnerDocuments: React.FC<{ details: Record<string, unknown> | null }> = ({ details }) => {

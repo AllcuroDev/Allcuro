@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from '../../components/Link'
 import { digitsOnly, formatPhone, initials, useNow } from '../../lib/format'
 import { toast } from '../../lib/toast'
@@ -22,6 +22,8 @@ import {
   type CentreVerificationStatus,
   type NurseVerificationStatus,
   type ProviderRole,
+  type UploadedDoc,
+  uploadKycFile,
 } from '../session'
 import { PBadge, PBody, PCard, PField, PIcon, PPageHead, type PIconName } from '../ui'
 import {
@@ -30,7 +32,6 @@ import {
   BrandMark,
   BrandScreen,
   ButtonSpinner,
-  ChoiceChips,
   ConfirmDialog,
   ConsentBox,
   ErrorBanner,
@@ -39,20 +40,16 @@ import {
   SummaryList,
 } from './AuthUi'
 import {
-  AADHAAR_DEMO_OTP,
   ACCOUNT_TYPES,
-  CLINICIAN_QUALIFICATION_OPTIONS,
-  COUNCIL_OPTIONS,
-  GENDER_OPTIONS,
-  NURSE_QUALIFICATION_OPTIONS,
-  PROFESSIONS,
+  VerificationError,
+  doctorCouncils,
+  doctorYears,
   groupAadhaar,
-  sendAadhaarOtp,
-  verifyAadhaarOtp,
-  verifyCouncilRegistration,
+  isValidAadhaar,
+  manualRecord,
+  verifyDoctor,
   verifyNuid,
-  type AadhaarProfile,
-  type ClinicianProfession,
+  type MedicalCouncil,
   type RegistryRecord,
 } from './data'
 import { useCompliance, useEquipment, useRooms, useStaff } from '../centre/state'
@@ -296,15 +293,16 @@ export function PartnerPhoneAuthPage() {
 
 // ================================================================ role select
 
+// Homecare centres, physiotherapists and caregivers sign up here later —
+// their onboarding isn't open yet.
 const ROLES: { role: ProviderRole; icon: PIconName; title: string; description: string }[] = [
-  { role: 'nurse', icon: 'heart', title: "I'm a Nurse", description: 'Accept shift requests, manage your schedule, and see job details.' },
+  { role: 'nurse', icon: 'heart', title: "I'm a Nurse", description: 'Verify your NUID, then accept shift requests and manage your schedule.' },
   {
     role: 'clinician',
     icon: 'clipboard',
-    title: "I'm a Doctor / Physiotherapist",
-    description: 'Take home-visit consultations and therapy sessions on your schedule.',
+    title: "I'm a Doctor",
+    description: 'Verify your NMC registration and take home-visit consultations on your schedule.',
   },
-  { role: 'centre', icon: 'store', title: 'I run a Homecare Centre', description: 'Manage bed availability and respond to placement requests.' },
 ]
 
 /** role_select_screen.dart. Picking a role updates the session; the guard routes onward. */
@@ -319,7 +317,7 @@ export function RoleSelectPage() {
         <br />
         work with us?
       </h1>
-      <p className="pa-lead">Pick one — you can switch later from your profile.</p>
+      <p className="pa-lead">Pick one to start your verification.</p>
       <ul className="pa-role-list">
         {ROLES.map((r) => (
           <li key={r.role}>
@@ -348,33 +346,47 @@ export function RoleSelectPage() {
 
 // ================================================================ identity verification
 
-/** features/identity — 1) professional registration, 2) Aadhaar e-KYC via OTP. */
+/**
+ * features/identity — 1) registration checked with the council register
+ * (nurse: NUID → INC NRTS; doctor: name + reg. no. → NMC Indian Medical
+ * Register), 2) Aadhaar KYC: number + card photo, reviewed by ALLCURO.
+ */
 export function IdentityVerificationPage() {
   const s = usePartnerSession()
-  const isClinician = s.role === 'clinician'
+  const isDoctor = s.role === 'clinician'
 
   const [stepIndex, setStepIndex] = useState(0)
-  const [profession, setProfession] = useState<ClinicianProfession | null>(null)
-  const [council, setCouncil] = useState<string | null>(null)
-  const [regNo, setRegNo] = useState('')
   const [registeredName, setRegisteredName] = useState('')
-  const [qualification, setQualification] = useState<string | null>(null)
-  const [dob, setDob] = useState('')
-  const [gender, setGender] = useState<string | null>(null)
-  const [address, setAddress] = useState('')
+  const [regNo, setRegNo] = useState('')
+  const [council, setCouncil] = useState<MedicalCouncil | null>(null)
+  const [year, setYear] = useState<number | null>(null)
+  const [councils, setCouncils] = useState<MedicalCouncil[]>([])
+  const [years, setYears] = useState<number[]>([])
   const [registry, setRegistry] = useState<RegistryRecord | null>(null)
+  const [portalDown, setPortalDown] = useState(false)
   const [aadhaar, setAadhaar] = useState('')
+  const [front, setFront] = useState<File | null>(null)
+  const [back, setBack] = useState<File | null>(null)
   const [consent, setConsent] = useState(false)
-  const [otpSent, setOtpSent] = useState(false)
-  const [otp, setOtp] = useState('')
-  const [profile, setProfile] = useState<AadhaarProfile | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmExit, setConfirmExit] = useState(false)
 
-  const isPhysio = profession === 'Physiotherapist'
-  const registrationLabel = !isClinician ? 'NUID' : isPhysio ? 'Physio Reg. No.' : 'Medical Reg. No.'
-  const last4 = aadhaar.length === 12 ? aadhaar.slice(8) : ''
+  // Doctors: State Medical Councils and years for the optional filters.
+  useEffect(() => {
+    if (!isDoctor) return
+    let live = true
+    Promise.all([doctorCouncils(), doctorYears()])
+      .then(([c, y]) => {
+        if (!live) return
+        setCouncils(c)
+        setYears(y)
+      })
+      .catch(() => undefined) // Optional — the check works without them.
+    return () => {
+      live = false
+    }
+  }, [isDoctor])
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true)
@@ -382,6 +394,7 @@ export function IdentityVerificationPage() {
     try {
       await action()
     } catch (e) {
+      setPortalDown(e instanceof VerificationError && e.portalDown)
       setError(errorText(e))
     } finally {
       setBusy(false)
@@ -395,73 +408,62 @@ export function IdentityVerificationPage() {
     setError(null)
   }
 
-  // Editing the Aadhaar number after an OTP went out starts that part over.
-  const editAadhaar = (digits: string) => {
-    setAadhaar(digits)
-    setOtpSent(false)
-    setOtp('')
-    setProfile(null)
-    setError(null)
-  }
-
   const verifyRegistration = () =>
     run(async () => {
-      setRegistry(
-        isClinician
-          ? await verifyCouncilRegistration({ registrationNumber: regNo, council: council!, registeredName, qualification: qualification ?? '' })
-          : await verifyNuid({ nuid: regNo, registeredName, qualification: qualification ?? '' }),
+      setPortalDown(false)
+      setRegistry(isDoctor ? await verifyDoctor({ name: registeredName, regNo, council, year }) : await verifyNuid(regNo))
+    })
+
+  const continueWithoutCheck = () => {
+    if (!isDoctor && registeredName.trim().length < 2) {
+      setError('Enter your full name as registered with the nursing council to continue.')
+      return
+    }
+    setRegistry(manualRecord({ isDoctor, name: registeredName, regNo, council, year }))
+    setPortalDown(false)
+    setError(null)
+    setStepIndex(1)
+  }
+
+  const aadhaarInvalid = aadhaar.length === 12 && !isValidAadhaar(aadhaar)
+
+  const completeKyc = () =>
+    run(async () => {
+      if (!registry) return
+      if (!isValidAadhaar(aadhaar)) throw new Error('That is not a valid Aadhaar number. Check the 12 digits on your card.')
+      const documents: Record<string, UploadedDoc> = {}
+      if (front) documents.aadhaar_front = await uploadKycFile('aadhaar_front', front)
+      if (back) documents.aadhaar_back = await uploadKycFile('aadhaar_back', back)
+      // The portal guard moves on to the sign-up wizard once this is saved.
+      await saveIdentity(
+        {
+          fullName: registry.registeredName || registeredName.trim(),
+          dob: registry.dob ?? '',
+          gender: '',
+          address: registry.address ?? '',
+          aadhaarLast4: aadhaar.slice(-4),
+          registrationLabel: isDoctor ? 'Medical Reg. No.' : 'NUID',
+          registrationNumber: regNo.trim().toUpperCase(),
+          council: registry.council,
+          qualification: registry.qualification,
+          profession: isDoctor ? 'Doctor' : undefined,
+          registry,
+        },
+        documents,
       )
     })
 
-  const sendOtp = () =>
-    run(async () => {
-      await sendAadhaarOtp(aadhaar)
-      setOtpSent(true)
-      setOtp('')
-    })
+  const registrationReady = isDoctor ? registeredName.trim().length >= 2 && regNo.trim() !== '' : regNo.trim().length >= 3
+  const kycReady = aadhaar.length === 12 && !aadhaarInvalid && front != null && consent
 
-  const verifyOtp = () =>
-    run(async () => {
-      setProfile(await verifyAadhaarOtp({ otp, registeredName: registry?.registeredName ?? '' }))
-    })
-
-  const today = new Date().toISOString().slice(0, 10)
-  const personalReady = dob !== '' && dob < today && gender != null && address.trim() !== ''
-
-  const finish = () => {
-    if (!registry || !profile || !personalReady) return
-    // The portal guard moves on to the sign-up wizard once this is saved.
-    saveIdentity({
-      fullName: profile.name,
-      dob,
-      gender: gender!,
-      address: address.trim(),
-      aadhaarLast4: aadhaar.slice(-4),
-      registrationLabel,
-      registrationNumber: regNo.trim().toUpperCase(),
-      council: registry.council,
-      qualification: registry.qualification,
-      profession: profession ?? undefined,
-    })
-  }
-
-  const next = () => {
-    setStepIndex(1)
-    setError(null)
-  }
-
-  // The bottom button's label and action for the current step (null = disabled).
   let primary: [string, (() => void) | null]
   if (stepIndex === 0) {
-    if (registry) primary = ['Continue', next]
-    else {
-      const ready =
-        regNo.trim() !== '' && registeredName.trim() !== '' && qualification != null && (!isClinician || (profession != null && council != null))
-      primary = ['Save registration', ready ? verifyRegistration : null]
-    }
-  } else if (!otpSent) primary = ['Send OTP', aadhaar.length === 12 && consent ? sendOtp : null]
-  else if (!profile) primary = ['Verify OTP', otp.length === 6 ? verifyOtp : null]
-  else primary = ['Continue to profile', personalReady ? finish : null]
+    primary = registry
+      ? ['Continue to Aadhaar KYC', () => (setStepIndex(1), setError(null))]
+      : [isDoctor ? 'Verify with NMC' : 'Verify NUID', registrationReady ? verifyRegistration : null]
+  } else primary = ['Complete KYC', kycReady ? completeKyc : null]
+
+  const showName = isDoctor || portalDown || (registry != null && !registry.autoVerified)
 
   return (
     <>
@@ -482,164 +484,148 @@ export function IdentityVerificationPage() {
         {stepIndex === 0 ? (
           <>
             <StepHeader
-              title={isClinician ? 'Your registration' : 'Your NUID'}
+              title={isDoctor ? 'Verify your NMC registration' : 'Verify your NUID'}
               subtitle={
-                isClinician
-                  ? 'ALLCURO checks your registration against the council register before your profile goes live.'
-                  : "Enter your Nurse Unique ID (NUID) from the Indian Nursing Council's NRTS. ALLCURO checks it against the council's records before your profile goes live."
+                isDoctor
+                  ? "We check your name and registration number against the National Medical Commission's Indian Medical Register."
+                  : "Enter your Nurse Unique ID (NUID). We fetch your registration from the Indian Nursing Council's NRTS register."
               }
             />
-            {isClinician && (
-              <>
-                <div>
-                  <SectionLabel id="pa-prof-label">I am a</SectionLabel>
-                  <ChoiceChips
-                    labelledBy="pa-prof-label"
-                    options={PROFESSIONS}
-                    value={profession}
-                    onChange={(p) =>
-                      editRegistration(() => {
-                        if (p !== profession) {
-                          setCouncil(null)
-                          setQualification(null)
-                        }
-                        setProfession(p as ClinicianProfession)
-                      })
-                    }
-                  />
-                </div>
-                {profession && (
-                  <div>
-                    <SectionLabel id="pa-council-label">{isPhysio ? 'Registered with' : 'Medical council'}</SectionLabel>
-                    <ChoiceChips
-                      labelledBy="pa-council-label"
-                      options={COUNCIL_OPTIONS[profession]}
-                      value={council}
-                      onChange={(c) => editRegistration(() => setCouncil(c))}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-            {(!isClinician || profession) && (
-              <div>
-                <SectionLabel id="pa-qual-label">Highest qualification</SectionLabel>
-                <ChoiceChips
-                  labelledBy="pa-qual-label"
-                  options={isClinician ? CLINICIAN_QUALIFICATION_OPTIONS[profession!] : NURSE_QUALIFICATION_OPTIONS}
-                  value={qualification}
-                  onChange={(q) => editRegistration(() => setQualification(q))}
+            {showName && (
+              <PField label="Full name (as registered)" hint={isDoctor ? 'As on your NMC / council registration' : 'As on your nursing council registration'}>
+                <input
+                  value={registeredName}
+                  autoComplete="name"
+                  maxLength={80}
+                  readOnly={registry != null}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    editRegistration(() => setRegisteredName(v))
+                  }}
                 />
-              </div>
+              </PField>
             )}
-            <PField label="Full name (as registered)" hint="Exactly as it appears on your council registration">
-              <input
-                value={registeredName}
-                autoComplete="name"
-                maxLength={80}
-                onChange={(e) => {
-                  const v = e.target.value
-                  editRegistration(() => setRegisteredName(v))
-                }}
-              />
-            </PField>
             <PField
-              label={isClinician ? (isPhysio ? 'Physiotherapy registration number' : 'Doctor registration number') : 'NUID (Nurse Unique ID)'}
-              hint={isClinician ? 'Letters, digits, / or -' : 'Letters and digits only'}
+              label={isDoctor ? 'Medical registration number' : 'NUID (Nurse Unique ID)'}
+              hint={isDoctor ? 'Exactly as on your registration certificate' : '3–12 letters and digits'}
             >
               <input
                 value={regNo}
-                placeholder={isClinician ? 'e.g. KMC-123456' : 'As shown on your NRTS registration'}
-                maxLength={20}
+                placeholder={isDoctor ? 'e.g. 112345' : 'e.g. ABC123456'}
+                maxLength={isDoctor ? 20 : 12}
                 autoCapitalize="characters"
                 autoComplete="off"
+                readOnly={registry != null}
                 onChange={(e) => {
-                  const v = e.target.value.replace(isClinician ? /[^A-Za-z0-9/-]/g : /[^A-Za-z0-9]/g, '').slice(0, 20)
+                  const v = e.target.value.replace(isDoctor ? /[^A-Za-z0-9/-]/g : /[^A-Za-z0-9]/g, '').slice(0, isDoctor ? 20 : 12)
                   editRegistration(() => setRegNo(v))
                 }}
               />
             </PField>
+            {isDoctor && (
+              <>
+                <PField label="State Medical Council (optional)">
+                  <select
+                    value={council?.code ?? ''}
+                    disabled={registry != null || councils.length === 0}
+                    onChange={(e) => {
+                      const c = councils.find((x) => x.code === e.target.value) ?? null
+                      editRegistration(() => setCouncil(c))
+                    }}
+                  >
+                    <option value="">{councils.length === 0 ? 'Loading councils…' : 'Any council'}</option>
+                    {councils.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </PField>
+                <PField label="Year of registration (optional)">
+                  <select
+                    value={year ?? ''}
+                    disabled={registry != null || years.length === 0}
+                    onChange={(e) => {
+                      const y = Number(e.target.value) || null
+                      editRegistration(() => setYear(y))
+                    }}
+                  >
+                    <option value="">{years.length === 0 ? 'Loading years…' : 'Any year'}</option>
+                    {years.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </PField>
+              </>
+            )}
             {error && <ErrorBanner message={error} />}
+            {portalDown && !registry && (
+              <button type="button" className="p-btn p-btn-outline" disabled={busy} onClick={continueWithoutCheck}>
+                Continue — ALLCURO will verify manually
+              </button>
+            )}
             {registry && (
               <>
-                <SummaryList
-                  rows={[
-                    ['Name', registry.registeredName],
-                    ['Council', registry.council],
-                    ['Qualification', registry.qualification],
-                    [registrationLabel, regNo.trim().toUpperCase()],
-                  ]}
-                />
-                <p className="p-muted">Saved. ALLCURO verifies these details with the council before approving your profile.</p>
+                <p className="pa-match">
+                  <PIcon name="check" size={16} />{' '}
+                  {registry.autoVerified
+                    ? isDoctor
+                      ? 'Found in the Indian Medical Register'
+                      : 'NUID verified with the Indian Nursing Council'
+                    : 'Saved — ALLCURO will verify your registration'}
+                </p>
+                <dl className="pa-summary">
+                  {registry.fields.map((f, i) => (
+                    <div key={i}>
+                      <dt>{f.label}</dt>
+                      <dd>{f.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <button type="button" className="pa-inline-link" onClick={() => editRegistration(() => undefined)}>
+                  Not you? Edit details
+                </button>
               </>
             )}
           </>
         ) : (
           <>
             <StepHeader
-              title="Aadhaar verification"
-              subtitle="Confirm your Aadhaar with an OTP, then add your date of birth, gender and address exactly as printed on your Aadhaar card."
+              title="Aadhaar KYC"
+              subtitle="Enter your Aadhaar number and upload a clear photo of your Aadhaar card. ALLCURO matches it with your registration before your profile goes live."
             />
-            <PField label="Aadhaar number" hint={profile ? undefined : '12 digits, as printed on your Aadhaar card'}>
+            {registry && (
+              <p className="pa-match">
+                <PIcon name="shield" size={16} /> KYC for {registry.registeredName || registeredName}
+              </p>
+            )}
+            <PField label="Aadhaar number" hint={aadhaarInvalid ? "This doesn't look like a valid Aadhaar number. Check the digits." : '12 digits, as printed on your Aadhaar card'}>
               <input
                 value={groupAadhaar(aadhaar)}
                 placeholder="XXXX XXXX XXXX"
                 inputMode="numeric"
                 autoComplete="off"
-                readOnly={profile != null}
                 maxLength={14}
-                onChange={(e) => editAadhaar(digitsOnly(e.target.value).slice(0, 12))}
+                aria-invalid={aadhaarInvalid}
+                onChange={(e) => {
+                  setAadhaar(digitsOnly(e.target.value).slice(0, 12))
+                  setError(null)
+                }}
               />
             </PField>
-            {!profile && (
-              <ConsentBox checked={consent} onChange={setConsent}>
-                I consent to ALLCURO using my Aadhaar number to fetch my e-KYC details from UIDAI for identity verification.
-              </ConsentBox>
-            )}
-            {otpSent && !profile && (
-              <div className="pa-otp-field">
-                <PField label="OTP sent to your Aadhaar-linked mobile">
-                  <input
-                    value={otp}
-                    placeholder="6-digit OTP"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    autoFocus
-                    maxLength={6}
-                    onChange={(e) => {
-                      setOtp(digitsOnly(e.target.value).slice(0, 6))
-                      setError(null)
-                    }}
-                  />
-                </PField>
-                <div className="pa-otp-meta">
-                  <span>
-                    Sent for Aadhaar XXXX XXXX {last4} · Demo OTP: <strong>{AADHAAR_DEMO_OTP}</strong>
-                  </span>
-                  <button type="button" className="p-btn p-btn-ghost p-btn-sm" disabled={busy} onClick={sendOtp}>
-                    Resend
-                  </button>
-                </div>
+            <div>
+              <SectionLabel id="pa-aadhaar-photo">Aadhaar card photo</SectionLabel>
+              <div className="pa-kyc-photos" aria-labelledby="pa-aadhaar-photo">
+                <KycPhotoPicker label="Front side (required)" file={front} disabled={busy} onPick={setFront} />
+                <KycPhotoPicker label="Back side (optional — has your address)" file={back} disabled={busy} onPick={setBack} />
               </div>
-            )}
+            </div>
+            <ConsentBox checked={consent} onChange={setConsent}>
+              I consent to ALLCURO storing my Aadhaar card photo and the last 4 digits of my Aadhaar number to verify my identity.
+            </ConsentBox>
             {error && <ErrorBanner message={error} />}
-            {profile && (
-              <>
-                <p className="pa-match">
-                  <PIcon name="check" size={16} /> Aadhaar XXXX XXXX {last4} confirmed for {profile.name}
-                </p>
-                <PField label="Date of birth">
-                  <input type="date" value={dob} max={today} autoComplete="bday" onChange={(e) => setDob(e.target.value)} />
-                </PField>
-                <div>
-                  <SectionLabel id="pa-gender-label">Gender</SectionLabel>
-                  <ChoiceChips labelledBy="pa-gender-label" options={GENDER_OPTIONS} value={gender} onChange={setGender} />
-                </div>
-                <PField label="Address (as on Aadhaar)">
-                  <textarea rows={3} value={address} autoComplete="street-address" onChange={(e) => setAddress(e.target.value)} />
-                </PField>
-              </>
-            )}
           </>
         )}
       </AuthWizard>
@@ -652,6 +638,46 @@ export function IdentityVerificationPage() {
         />
       )}
     </>
+  )
+}
+
+/** One Aadhaar card photo: an upload row with a thumbnail once picked. */
+function KycPhotoPicker({ label, file, disabled, onPick }: { label: string; file: File | null; disabled: boolean; onPick: (f: File) => void }) {
+  const ref = useRef<HTMLInputElement>(null)
+  const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
+  useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
+  return (
+    <div className={`p-upload ${file ? 'is-done' : ''}`}>
+      {preview ? (
+        <img className="pa-kyc-thumb" src={preview} alt="" />
+      ) : (
+        <span className="p-upload-icon">
+          <PIcon name="upload" size={20} />
+        </span>
+      )}
+      <span className="p-upload-text">
+        <strong>{label}</strong>
+        <span>{file ? file.name : 'JPG or PNG, up to 10MB'}</span>
+      </span>
+      <button type="button" className="p-btn p-btn-outline p-btn-sm" disabled={disabled} onClick={() => ref.current?.click()}>
+        {file ? 'Replace' : 'Upload'}
+      </button>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          e.target.value = ''
+          if (!f) return
+          if (f.size > 10 * 1024 * 1024) return toast('Photo is larger than 10MB.', 'danger')
+          onPick(f)
+        }}
+      />
+    </div>
   )
 }
 
@@ -874,7 +900,13 @@ export function PartnerProfilePage() {
   // Submit for the admin's review. Approval itself happens in the admin panel.
   const st = isCentre ? s.centreStatus : practitionerStatus(s)
   const canSubmit = st === 'onboarding' || st === 'rejected'
-  const submitForReview = () => (isCentre ? setCentreStatus('pendingReview') : setPractitionerStatus('underReview'))
+  const submitForReview = async () => {
+    try {
+      await (isCentre ? setCentreStatus('pendingReview') : setPractitionerStatus('underReview'))
+    } catch (e) {
+      toast(errorText(e), 'danger')
+    }
+  }
 
   return (
     <>

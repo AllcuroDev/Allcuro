@@ -87,7 +87,7 @@ class AuthService {
     try {
       rows = await client
           .from('partners')
-          .select('role, status, display_name, site_visit_at')
+          .select('role, status, display_name, site_visit_at, identity')
           .eq('user_id', userId);
     } catch (_) {
       return; // Offline — keep the cached statuses.
@@ -102,8 +102,16 @@ class AuthService {
           await _setCentreSiteVisitAt(DateTime.tryParse(row['site_visit_at'] as String? ?? ''));
         case 'clinician':
           await setClinicianVerificationStatus(_nurseStatusFromDb(status));
+          if (await getClinicianIdentity() == null) {
+            final restored = _identityFromRow(row);
+            if (restored != null) await setClinicianIdentity(restored);
+          }
         case 'nurse':
           await setNurseVerificationStatus(_nurseStatusFromDb(status));
+          if (await getNurseIdentity() == null) {
+            final restored = _identityFromRow(row);
+            if (restored != null) await setNurseIdentity(restored);
+          }
       }
     }
     if (await getPersistedRole() == null && rows.length == 1) {
@@ -111,6 +119,18 @@ class AuthService {
       for (final role in ProviderRole.values) {
         if (role.name == only) await saveRole(role);
       }
+    }
+  }
+
+  /// The identity saved with the row at KYC time (signing in on a new
+  /// device), or null if the row predates it / is unreadable.
+  static VerifiedIdentity? _identityFromRow(Map<String, dynamic> row) {
+    final json = row['identity'];
+    if (json is! Map<String, dynamic> || json['fullName'] == null || json['aadhaarLast4'] == null) return null;
+    try {
+      return VerifiedIdentity.fromJson({'registrationLabel': 'NUID', ...json});
+    } on Object {
+      return null;
     }
   }
 

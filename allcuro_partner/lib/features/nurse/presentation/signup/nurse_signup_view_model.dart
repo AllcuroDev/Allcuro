@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/partner_remote.dart';
+import '../../../../core/provider_role.dart';
 import '../../../../core/verification_status.dart';
 import '../../../auth/presentation/auth_view_model.dart';
 import '../../../identity/data/verified_identity.dart';
@@ -153,9 +155,49 @@ class NurseSignupViewModel extends AutoDisposeNotifier<NurseSignupState> {
     state = state.copyWith(uploadingIds: remaining);
   }
 
+  /// Saves the wizard to `public.partners` (status → onboarding) and moves
+  /// on to the setup hub. "Skip for now" lands here too, with whatever was filled.
   Future<void> submit() async {
     state = state.copyWith(isSubmitting: true, clearError: true);
-    await Future.delayed(const Duration(milliseconds: 600));
+    final d = state.data;
+    final identity = ref.read(authViewModelProvider).valueOrNull?.practitionerIdentity;
+    try {
+      await PartnerRemote.save(
+        ProviderRole.nurse,
+        fields: {
+          'status': 'onboarding',
+          if (d.fullName.trim().isNotEmpty) 'display_name': d.fullName.trim(),
+          'city': d.city.trim(),
+          if (d.address.trim().isNotEmpty) 'address': d.address.trim(),
+          if (d.qualification != null) ...{'qualification': d.qualification, 'headline': d.qualification},
+          'experience_years': int.tryParse(d.experienceYears.trim()) ?? 0,
+          'previous_employer': d.previousEmployer.trim(),
+          'employment_type': d.employmentType ?? 'Full-time',
+          if (identity != null)
+            'identity': {
+              ...identity.toJson(),
+              'dob': d.dob?.toIso8601String().substring(0, 10),
+              'gender': d.gender,
+            },
+        },
+        details: {
+          'city': d.city.trim(),
+          'experienceYears': d.experienceYears.trim(),
+          'employmentType': d.employmentType,
+          'previousEmployer': d.previousEmployer.trim(),
+          'dob': d.dob?.toIso8601String().substring(0, 10),
+          'gender': d.gender,
+          'policeConsent': d.policeConsent,
+          'references': [
+            for (final r in d.references.where((r) => r.isComplete))
+              {'name': r.name.trim(), 'relation': r.relation.trim(), 'phone': r.phone.trim()},
+          ],
+        },
+      );
+    } on PartnerSaveException catch (e) {
+      state = state.copyWith(isSubmitting: false, error: e.message);
+      return;
+    }
     await ref
         .read(authViewModelProvider.notifier)
         .setNurseVerificationStatus(NurseVerificationStatus.onboarding);

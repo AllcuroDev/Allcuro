@@ -65,6 +65,12 @@ class NurseSignupScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(nurseSignupViewModelProvider);
+    ref.listen(nurseSignupViewModelProvider.select((s) => s.error), (_, error) {
+      if (error == null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: AppColors.destructive),
+      );
+    });
     final notifier = ref.read(nurseSignupViewModelProvider.notifier);
     final isLastStep = state.stepIndex == NurseSignupViewModel.stepCount - 1;
     final canContinue = _canContinue(state);

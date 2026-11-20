@@ -1,6 +1,5 @@
-/// What a practitioner's professional register (INC NRTS for nurses, NMC /
-/// state council for doctors & physiotherapists) returned for the number
-/// they entered.
+/// What a practitioner's professional register (INC NRTS for nurses, the NMC
+/// Indian Medical Register for doctors) returned for the number they entered.
 class RegistryRecord {
   final String registeredName;
   final String council;
@@ -9,36 +8,61 @@ class RegistryRecord {
   /// Year of first registration, when the register reports it.
   final int? registeredSince;
 
+  /// Doctors only: the NMC record's date of birth and permanent address.
+  final DateTime? dob;
+  final String address;
+
+  /// "INC NRTS" or "NMC IMR".
+  final String source;
+
+  /// False when the register was down and the partner continued anyway —
+  /// ALLCURO then checks the registration by hand before approving.
+  final bool autoVerified;
+
+  /// Everything the register returned worth showing, in display order —
+  /// shown to the partner after the check and to the admin during review.
+  final List<(String, String)> fields;
+
+  /// Official verification link (NRTS), when the register gives one.
+  final String? verifyUrl;
+
   const RegistryRecord({
     required this.registeredName,
     required this.council,
     required this.qualification,
     this.registeredSince,
+    this.dob,
+    this.address = '',
+    required this.source,
+    this.autoVerified = true,
+    this.fields = const [],
+    this.verifyUrl,
   });
+
+  /// Stored in `partners.identity.registry` for the admin's review panel.
+  Map<String, dynamic> toJson() => {
+    'source': source,
+    'autoVerified': autoVerified,
+    'checkedAt': DateTime.now().toUtc().toIso8601String(),
+    'registeredName': registeredName,
+    'council': council,
+    'qualification': qualification,
+    'registeredSince': registeredSince,
+    'fields': [for (final (label, value) in fields) {'label': label, 'value': value}],
+    'verifyUrl': verifyUrl,
+  };
 }
 
-/// Demographic details returned by Aadhaar e-KYC after a successful OTP.
-/// [dob], [gender] and [address] are null / empty when the e-KYC source
-/// didn't provide them (e.g. the local mock) — the sign-up wizard then asks
-/// the partner for them instead of locking them.
-class AadhaarProfile {
-  final String name;
-  final DateTime? dob;
-  final String? gender;
-  final String address;
-
-  const AadhaarProfile({required this.name, this.dob, this.gender, this.address = ''});
-}
-
-/// The identity a nurse / doctor / physiotherapist proved at sign-up —
-/// registration (NUID or council reg. no.) plus Aadhaar e-KYC. Everything in
-/// here is read-only for the rest of onboarding: the sign-up wizards prefill
-/// from it and lock these fields.
+/// The identity a nurse / doctor proved at sign-up — registration (NUID or
+/// NMC reg. no.) checked against the council register, plus Aadhaar KYC
+/// (number + card photo, reviewed by ALLCURO). Everything in here is
+/// read-only for the rest of onboarding: the sign-up wizards prefill from it
+/// and lock these fields.
 class VerifiedIdentity {
   final String fullName;
 
-  /// Null / empty when e-KYC didn't return them — then they're entered (and
-  /// editable) in the sign-up wizard rather than locked.
+  /// Null / empty when the register didn't return them — then they're
+  /// entered (and editable) in the sign-up wizard rather than locked.
   final DateTime? dob;
   final String? gender;
   final String address;
@@ -50,8 +74,11 @@ class VerifiedIdentity {
   final String council;
   final String qualification;
 
-  /// `ClinicianProfession.name` for doctors / physiotherapists; null for nurses.
+  /// `ClinicianProfession.name` for doctors; null for nurses.
   final String? profession;
+
+  /// The register's answer ([RegistryRecord.toJson]), kept for the admin.
+  final Map<String, dynamic>? registry;
 
   const VerifiedIdentity({
     required this.fullName,
@@ -64,6 +91,7 @@ class VerifiedIdentity {
     required this.council,
     required this.qualification,
     this.profession,
+    this.registry,
   });
 
   String get maskedAadhaar => 'XXXX XXXX $aadhaarLast4';
@@ -79,6 +107,7 @@ class VerifiedIdentity {
     'council': council,
     'qualification': qualification,
     'profession': profession,
+    'registry': registry,
   };
 
   factory VerifiedIdentity.fromJson(Map<String, dynamic> json) => VerifiedIdentity(
@@ -88,9 +117,10 @@ class VerifiedIdentity {
     address: json['address'] as String? ?? '',
     aadhaarLast4: json['aadhaarLast4'] as String,
     registrationLabel: json['registrationLabel'] as String,
-    registrationNumber: json['registrationNumber'] as String,
-    council: json['council'] as String,
-    qualification: json['qualification'] as String,
+    registrationNumber: json['registrationNumber'] as String? ?? '',
+    council: json['council'] as String? ?? '',
+    qualification: json['qualification'] as String? ?? '',
     profession: json['profession'] as String?,
+    registry: json['registry'] is Map<String, dynamic> ? json['registry'] as Map<String, dynamic> : null,
   );
 }

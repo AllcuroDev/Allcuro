@@ -1,5 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/partner_remote.dart';
+import '../../../core/provider_role.dart';
+import '../../../core/ui/pick_photo.dart';
 import '../../../core/verification_status.dart';
 import '../../centre/data/models/bed_slot.dart';
 import '../../centre/data/models/equipment_item.dart';
@@ -64,10 +69,12 @@ class ComplianceDocItem {
   });
 }
 
-/// Nurse document ids — [PartnerOnboardingState] derives setup progress from them.
+/// Nurse document ids — [PartnerOnboardingState] derives setup progress from
+/// them. Same ids as the web portal (`src/partner/nurse/data.ts`), since both
+/// write `partners.details.documents`.
 const nurseHprDocId = 'nd-hpr';
-const nurseDegreeDocId = 'nd-degree';
-const nurseMedicalDocId = 'nd-medical';
+const nurseDegreeDocId = 'nd-3';
+const nurseMedicalDocId = 'nd-med';
 
 /// Required document types (reference content) — all start not uploaded.
 const _centreRequiredDocs = [
@@ -206,32 +213,143 @@ class PartnerOnboardingState {
 }
 
 final partnerOnboardingProvider =
-    StateNotifierProvider<PartnerOnboardingNotifier, PartnerOnboardingState>(
-  (ref) => PartnerOnboardingNotifier(ref),
-);
+    StateNotifierProvider<PartnerOnboardingNotifier, PartnerOnboardingState>((ref) {
+  // A new sign-in or role starts fresh and re-loads from that role's row.
+  ref.watch(authViewModelProvider.select((s) => (s.valueOrNull?.isLoggedIn, s.valueOrNull?.role)));
+  return PartnerOnboardingNotifier(ref);
+});
 
 class PartnerOnboardingNotifier extends StateNotifier<PartnerOnboardingState> {
   final Ref ref;
 
   /// Everything partner-entered (rooms, staff, equipment, documents, bank,
-  /// skills) starts empty / not uploaded — the partner adds it.
-  PartnerOnboardingNotifier(this.ref) : super(PartnerOnboardingState.initial);
+  /// skills) starts empty / not uploaded — the partner adds it. For nurses and
+  /// doctors it's then filled from their `public.partners` row, and every
+  /// change is written back to it.
+  PartnerOnboardingNotifier(this.ref) : super(PartnerOnboardingState.initial) {
+    unawaited(_hydrate());
+  }
+
+  Timer? _rateDebounce;
+
+  /// The active visit-based role (nurse / doctor), or null for a centre.
+  ProviderRole? get _practitionerRole {
+    final role = ref.read(authViewModelProvider).valueOrNull?.role;
+    return role != null && role.usesNurseShell ? role : null;
+  }
+
+  /// Loads skills, rate, consent, bank and uploaded documents from the row.
+  Future<void> _hydrate() async {
+    final role = _practitionerRole;
+    if (role == null) return;
+    final row = await PartnerRemote.fetch(role);
+    if (row == null || !mounted) return;
+    final details = (row['details'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final docs = (details['documents'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final bank = (row['bank'] as Map?)?.cast<String, dynamic>();
+    final skills = (row['skills'] as List?)?.whereType<String>().toList() ?? const <String>[];
+
+    state = state.copyWith(
+      nurseSkills: skills.isEmpty ? null : List.unmodifiable(skills),
+      nurseDailyRate: (details['dailyRate'] as num?)?.toDouble(),
+      nursePoliceConsentDone: details['policeConsent'] == true || details['backgroundConsent'] == true,
+      bankAccount: bank == null
+          ? null
+          : BankAccountInfo(
+              bankName: '${bank['bankName'] ?? ''}',
+              accountNumber: '${bank['account'] ?? ''}',
+              ifscCode: '${bank['ifsc'] ?? ''}',
+              accountHolderName: '${bank['holder'] ?? ''}',
+              accountType: '${bank['accountType'] ?? 'Savings Account'}',
+              panNumber: '${bank['pan'] ?? ''}',
+            ),
+      nurseDocs: [
+        for (final d in state.nurseDocs)
+          if (UploadedDoc.fromJson(docs[d.id]) case final up?)
+            ComplianceDocItem(
+              id: d.id,
+              title: d.title,
+              docType: d.docType,
+              fileName: up.fileName,
+              expiry: 'Uploaded',
+              isUploaded: true,
+            )
+          else
+            d,
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _rateDebounce?.cancel();
+    super.dispose();
+  }
 
   void setNurseSkills(List<String> skills) {
     state = state.copyWith(nurseSkills: List.unmodifiable(skills));
+    final role = _practitionerRole;
+    if (role != null) {
+      unawaited(PartnerRemote.saveQuietly(role, fields: {'skills': skills}, details: {'skills': skills}));
+    }
   }
 
+  /// The partner's expected daily rate — a hint for the admin, who sets the
+  /// actual customer price. Saved after typing pauses.
   void setNurseDailyRate(double rate) {
     state = state.copyWith(nurseDailyRate: rate);
+    final role = _practitionerRole;
+    if (role == null) return;
+    _rateDebounce?.cancel();
+    _rateDebounce = Timer(const Duration(milliseconds: 800), () {
+      unawaited(PartnerRemote.saveQuietly(role, details: {'dailyRate': rate}));
+    });
   }
 
   void setNursePoliceConsent(bool consented) {
     state = state.copyWith(nursePoliceConsentDone: consented);
+    final role = _practitionerRole;
+    if (role != null) unawaited(PartnerRemote.saveQuietly(role, details: {'policeConsent': consented}));
   }
 
   // Bank update
   void updateBankAccount(BankAccountInfo bank) {
     state = state.copyWith(bankAccount: bank);
+    final role = _practitionerRole;
+    if (role == null) return;
+    unawaited(
+      PartnerRemote.saveQuietly(
+        role,
+        fields: {
+          'bank': {
+            'holder': bank.accountHolderName,
+            'account': bank.accountNumber,
+            'ifsc': bank.ifscCode,
+            'bankName': bank.bankName,
+            'accountType': bank.accountType,
+            'pan': bank.panNumber,
+          },
+        },
+      ),
+    );
+  }
+
+  /// Uploads a nurse / doctor document to the private `kyc-documents` bucket
+  /// and records it on the partner row for the admin. Throws
+  /// [PartnerSaveException] if the upload or save fails.
+  Future<void> uploadPractitionerDoc(ComplianceDocItem doc, PickedPhoto file) async {
+    final role = _practitionerRole;
+    if (role == null) return;
+    final uploaded = await PartnerRemote.uploadDocument(
+      role: role,
+      docId: doc.id,
+      bytes: file.bytes,
+      fileName: file.fileName,
+    );
+    await PartnerRemote.save(role, details: {
+      'documents': {doc.id: uploaded.toJson()},
+    });
+    markDocUploaded(docId: doc.id, isCentre: false, fileName: file.fileName);
   }
 
   // Room additions & edits
@@ -325,8 +443,12 @@ class PartnerOnboardingNotifier extends StateNotifier<PartnerOnboardingState> {
         .setCentreVerificationStatus(CentreVerificationStatus.pendingReview);
   }
 
-  // Submit Nurse for review
+  /// Submit a nurse / doctor for admin review: the row moves to
+  /// `under_review` and shows up in the admin's approval queue. Throws
+  /// [PartnerSaveException] if it couldn't be saved.
   Future<void> submitNurseForReview() async {
+    final role = _practitionerRole;
+    if (role != null) await PartnerRemote.save(role, fields: {'status': 'under_review'});
     await ref
         .read(authViewModelProvider.notifier)
         .setPractitionerVerificationStatus(NurseVerificationStatus.underReview);

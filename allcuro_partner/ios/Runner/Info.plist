@@ -6,6 +6,10 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ALLCURO uses the camera to photograph your Aadhaar card and documents for verification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ALLCURO lets you pick a photo of your Aadhaar card and documents for verification.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Allcuro Partner</string>
 	<key>CFBundleExecutable</key>

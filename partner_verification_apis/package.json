@@ -1,0 +1,11 @@
+{
+  "name": "nurse-nuid-verification",
+  "version": "1.0.0",
+  "description": "API wrapper around the public nurse (INC NRTS) and doctor (NMC Indian Medical Register) verification lookups",
+  "main": "server.js",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

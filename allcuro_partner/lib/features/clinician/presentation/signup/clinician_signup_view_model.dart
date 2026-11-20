@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/partner_remote.dart';
+import '../../../../core/provider_role.dart';
 import '../../../../core/verification_status.dart';
 import '../../../auth/presentation/auth_view_model.dart';
 import '../../../identity/data/verified_identity.dart';
@@ -34,7 +36,7 @@ class ClinicianSignupData {
   /// the wizard shows these locked.
   void applyIdentity(VerifiedIdentity identity) {
     for (final p in ClinicianProfession.values) {
-      if (p.name == identity.profession) profession = p;
+      if (p.name == identity.profession?.toLowerCase()) profession = p;
     }
     fullName = identity.fullName;
     dob = identity.dob;
@@ -53,18 +55,21 @@ class ClinicianSignupState {
   final int stepIndex;
   final ClinicianSignupData data;
   final bool isSubmitting;
+  final String? error;
 
   const ClinicianSignupState({
     required this.stepIndex,
     required this.data,
     this.isSubmitting = false,
+    this.error,
   });
 
-  ClinicianSignupState copyWith({int? stepIndex, bool? isSubmitting}) {
+  ClinicianSignupState copyWith({int? stepIndex, bool? isSubmitting, String? error}) {
     return ClinicianSignupState(
       stepIndex: stepIndex ?? this.stepIndex,
       data: data,
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      error: error,
     );
   }
 }
@@ -106,9 +111,43 @@ class ClinicianSignupViewModel extends AutoDisposeNotifier<ClinicianSignupState>
   /// rebuild with the fresh values.
   void touch() => state = state.copyWith();
 
+  /// Saves the wizard to `public.partners` (status → onboarding) and moves
+  /// on to the setup hub. "Skip for now" lands here too, with whatever was filled.
   Future<void> submit() async {
     state = state.copyWith(isSubmitting: true);
-    await Future.delayed(const Duration(milliseconds: 600));
+    final d = state.data;
+    final identity = ref.read(authViewModelProvider).valueOrNull?.practitionerIdentity;
+    try {
+      await PartnerRemote.save(
+        ProviderRole.clinician,
+        fields: {
+          'status': 'onboarding',
+          if (d.fullName.trim().isNotEmpty) 'display_name': d.fullName.trim(),
+          'city': d.city.trim(),
+          if (d.address.trim().isNotEmpty) 'address': d.address.trim(),
+          if (d.qualification != null) ...{'qualification': d.qualification, 'headline': d.qualification},
+          'specialisations': d.specialisations.toList(),
+          'experience_years': int.tryParse(d.experienceYears.trim()) ?? 0,
+          if (identity != null)
+            'identity': {
+              ...identity.toJson(),
+              'dob': d.dob?.toIso8601String().substring(0, 10),
+              'gender': d.gender,
+            },
+        },
+        details: {
+          'city': d.city.trim(),
+          'experienceYears': d.experienceYears.trim(),
+          'specialisations': d.specialisations.toList(),
+          'dob': d.dob?.toIso8601String().substring(0, 10),
+          'gender': d.gender,
+          'backgroundConsent': d.backgroundConsent,
+        },
+      );
+    } on PartnerSaveException catch (e) {
+      state = state.copyWith(isSubmitting: false, error: e.message);
+      return;
+    }
     await ref
         .read(authViewModelProvider.notifier)
         .setClinicianVerificationStatus(NurseVerificationStatus.onboarding);

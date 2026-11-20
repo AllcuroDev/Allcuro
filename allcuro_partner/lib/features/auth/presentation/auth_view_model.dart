@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/provider_role.dart';
@@ -22,7 +23,17 @@ class AuthViewModel extends AsyncNotifier<AuthSession> {
   AuthRepository get _repository => ref.read(authRepositoryProvider);
 
   @override
-  Future<AuthSession> build() => _repository.loadSession(syncFromServer: true);
+  Future<AuthSession> build() {
+    // Pick up the admin's decision (approved / changes requested) whenever
+    // the partner comes back to the app.
+    final lifecycle = AppLifecycleListener(
+      onResume: () {
+        if (state.valueOrNull?.isLoggedIn ?? false) refreshFromServer();
+      },
+    );
+    ref.onDispose(lifecycle.dispose);
+    return _repository.loadSession(syncFromServer: true);
+  }
 
   /// Called by `PhoneAuthViewModel` once OTP verification succeeds — the
   /// session was already persisted by the repository, this just makes the

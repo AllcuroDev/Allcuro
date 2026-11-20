@@ -7,34 +7,23 @@ import '../../auth/presentation/auth_view_model.dart';
 import 'identity_verification_steps.dart';
 import 'identity_verification_view_model.dart';
 
-/// First thing a new nurse / doctor / physiotherapist does after picking
-/// their role: verify their professional registration, then their Aadhaar.
-/// Only once both pass does the router let them into the sign-up wizard,
-/// which prefills (and locks) the verified details.
+/// First thing a new nurse / doctor does after picking their role: verify
+/// their registration with the council register (NUID → INC NRTS, doctor →
+/// NMC), then complete Aadhaar KYC (number + card photo). Only once both are
+/// done does the router let them into the sign-up wizard, which prefills
+/// (and locks) the verified details.
 class IdentityVerificationScreen extends ConsumerWidget {
   const IdentityVerificationScreen({super.key});
 
-  /// The bottom button's label and action for the current step and how far
-  /// through it the user is. A null action renders the button disabled.
+  /// The bottom button's label and action for the current step. A null
+  /// action renders the button disabled.
   (String, VoidCallback?) _primaryAction(IdentityVerificationState s, IdentityVerificationViewModel vm) {
-    final d = s.data;
     if (s.stepIndex == 0) {
-      if (d.registry != null) return ('Continue', vm.next);
-      final ready =
-          d.registeredName.trim().length >= 2 &&
-          d.registrationNumber.trim().isNotEmpty &&
-          (!vm.isClinician || (d.profession != null && d.council != null));
-      final label = vm.isClinician ? 'Verify registration' : 'Verify NUID';
-      return (label, ready ? vm.verifyRegistration : null);
+      if (s.data.registry != null) return ('Continue to Aadhaar KYC', vm.next);
+      final label = vm.isDoctor ? 'Verify with NMC' : 'Verify NUID';
+      return (label, vm.registrationReady ? vm.verifyRegistration : null);
     }
-    if (!d.otpSent) {
-      final ready = d.aadhaar.length == 12 && d.aadhaarConsent;
-      return ('Send OTP', ready ? vm.sendOtp : null);
-    }
-    if (d.aadhaarProfile == null) {
-      return ('Verify OTP', d.otp.length == 6 ? vm.verifyOtp : null);
-    }
-    return ('Continue to profile', vm.finish);
+    return ('Complete KYC', vm.kycReady ? vm.completeKyc : null);
   }
 
   Future<void> _confirmExit(BuildContext context, WidgetRef ref) async {

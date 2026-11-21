@@ -6,7 +6,12 @@ import { useEffect } from 'react'
 
 export const motionOn = () => document.documentElement.classList.contains('motion')
 
-/** Fades `.reveal` elements in as they scroll into view. Re-scans when `key` (the path) changes. */
+/**
+ * Fades `.reveal` elements in as they scroll into view. Re-scans when `key`
+ * (the path) changes, and also picks up elements rendered later — e.g. FAQs
+ * and partner cards that arrive from Supabase after the page has mounted,
+ * which would otherwise stay invisible.
+ */
 export function useReveal(key: string) {
   useEffect(() => {
     if (!motionOn()) return
@@ -20,8 +25,22 @@ export function useReveal(key: string) {
       },
       { rootMargin: '0px 0px -8% 0px', threshold: 0.12 },
     )
-    document.querySelectorAll('.reveal:not(.is-in)').forEach((el) => io.observe(el))
-    return () => io.disconnect()
+    const scan = () => document.querySelectorAll('.reveal:not(.is-in)').forEach((el) => io.observe(el))
+    scan()
+    let queued = 0
+    const mo = new MutationObserver(() => {
+      if (queued) return
+      queued = requestAnimationFrame(() => {
+        queued = 0
+        scan()
+      })
+    })
+    mo.observe(document.body, { childList: true, subtree: true })
+    return () => {
+      mo.disconnect()
+      cancelAnimationFrame(queued)
+      io.disconnect()
+    }
   }, [key])
 }
 

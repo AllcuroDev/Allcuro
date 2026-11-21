@@ -513,6 +513,23 @@ alter table public.faqs enable row level security;
 drop policy if exists "Anyone can view active faqs" on public.faqs;
 create policy "Anyone can view active faqs"
   on public.faqs for select to anon, authenticated using (is_active or is_admin());
+
+-- Starter FAQs (only when the table is empty — see seed_faqs.sql).
+insert into public.faqs (question, answer, sort_order)
+select q, a, n
+from (values
+  (1, 'Can I book a nurse for just 30 minutes?',
+      'Yes. For procedures like injections, wound dressing or catheter care, you can book a 30 or 45-minute visit without paying for a full shift.'),
+  (2, 'How quickly can someone reach my home?',
+      'Our verified clinicians are spread across the city. For urgent needs, an available clinician can usually reach your door within 45 to 60 minutes.'),
+  (3, 'Are caregivers different from registered nurses?',
+      'Yes. Registered nurses hold B.Sc or GNM qualifications and handle clinical care such as injections and post-operative care. Caregivers help with daily living — bathing, feeding, moving around and companionship.'),
+  (4, 'Are the prices final?',
+      'The price shown is the starting visit charge. Medicines, dressing materials and lab charges are extra where mentioned, and you see the full breakdown before you pay.'),
+  (5, 'Can I reschedule or ask for a different person?',
+      'Yes. You can reschedule or request a replacement through our 24/7 care desk with no penalty.')
+) as v(n, q, a)
+where not exists (select 1 from public.faqs);
 drop policy if exists "Admins manage faqs" on public.faqs;
 create policy "Admins manage faqs"
   on public.faqs for all to authenticated using (is_admin()) with check (is_admin());

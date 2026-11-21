@@ -48,6 +48,9 @@ export function HowItWorks() {
 export function Faq() {
   const [open, setOpen] = useState<number | null>(0)
 
+  // Filled from public.faqs once content loads; nothing to show until then.
+  if (faqs.length === 0) return null
+
   return (
     <section className="section" id="faq" aria-labelledby="faq-title">
       <div className="container faq-wrap">

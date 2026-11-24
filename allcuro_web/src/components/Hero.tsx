@@ -3,12 +3,11 @@ import { ALL_SLUG, categories, categoryHref } from '../data/categories'
 import { site } from '../data/site'
 import { Link } from './Link'
 import { Artwork } from './CareIcon'
-import { MedicinesBanner } from './HomeSections'
 import { SearchBar } from './SearchBar'
 import { useCategoryImages } from '../state/catalog'
 import { ClockIcon, HeadsetIcon, RupeeIcon, ShieldIcon } from './Icons'
 
-// Every care type, then medicine delivery, then the full list. One row on wide
+// Every care type, then the full list. One row on wide
 // screens, wrapping onto more rows as the screen narrows (index.css `.tiles`).
 const heroTiles = (): { id: string; slug: string; href?: string; label: string; icon: string }[] => {
   const list: { id: string; slug: string; href?: string; label: string; icon: string }[] = categories.map((c) => ({
@@ -18,13 +17,6 @@ const heroTiles = (): { id: string; slug: string; href?: string; label: string; 
     label: c.label,
     icon: c.icon,
   }))
-  // Only append Order Medicines if it isn't already coming dynamically from service_categories
-  const hasMedicines = list.some(
-    (c) => c.slug === 'medicines' || c.id === 'medicines' || (c.id as string).toLowerCase().includes('medicine'),
-  )
-  if (!hasMedicines) {
-    list.push({ id: 'medicines', slug: 'medicines', href: '/medicines', label: 'Order Medicines', icon: 'order_medicine' })
-  }
   list.push({ id: ALL_SLUG, slug: ALL_SLUG, label: 'All Services', icon: 'see_all' })
   return list
 }
@@ -40,9 +32,8 @@ export function Hero() {
             {site.heroHeadline} {site.heroHighlight && <span className="hl">{site.heroHighlight}</span>}
           </h1>
 
-          {/* Same order as the app: search, then Order medicines, then the care tiles. */}
+          {/* Search, then the care tiles. Order medicines sits beside "Talk to Our Team" below. */}
           <SearchBar className="hero-search" />
-          <MedicinesBanner />
 
           <nav className="tile-box" aria-labelledby="tiles-title">
             <h2 id="tiles-title" className="tile-box-title">
@@ -61,7 +52,7 @@ export function Hero() {
                   <li key={t.slug}>
                     <Link to={categoryHref(t)} className="tile">
                       <span className="tile-art">
-                        <Artwork image={tileImage} icon={t.icon} size={60} />
+                        <Artwork image={tileImage} icon={t.icon} size="var(--tile-icon)" />
                       </span>
                       <span className="tile-label">{t.label}</span>
                     </Link>

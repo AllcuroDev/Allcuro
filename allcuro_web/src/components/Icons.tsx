@@ -239,3 +239,16 @@ export const ChevronDownIcon = ({ size = 16 }: P) => (
     <path d="M6 9l6 6 6-6" />
   </svg>
 )
+
+export const MailIcon = ({ size = 18 }: P) => (
+  <svg {...base(size)}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m3 7 9 6 9-6" />
+  </svg>
+)
+
+export const ArrowUpIcon = ({ size = 18 }: P) => (
+  <svg {...base(size)}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </svg>
+)

@@ -567,7 +567,7 @@ grant select on public.site_settings to anon, authenticated;
 grant insert, update, delete on public.site_settings to authenticated;
 
 insert into public.site_settings (key, value) values
-  ('contact', '{"phoneDisplay": "+91 80 4120 5500", "phone": "+918041205500", "whatsapp": "918041205500", "email": "care@allcuro.care"}'),
+  ('contact', '{"phoneDisplay": "+91 80 4120 5500", "phone": "+918041205500", "whatsapp": "918041205500", "email": "care@allcuro.com"}'),
   ('home', '{"headline": "Healthcare", "highlight": "at your doorstep", "tilesTitle": "What are you looking for?"}')
 on conflict (key) do nothing;
 

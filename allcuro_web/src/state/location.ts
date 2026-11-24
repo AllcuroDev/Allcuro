@@ -1,3 +1,4 @@
+import { site } from '../data/site'
 import { persistedStore } from '../lib/store'
 
 // Saved care addresses, mirroring allcuro/lib/features/location
@@ -74,27 +75,81 @@ export function addAddress({
   return address
 }
 
+/** Locality + city for a GPS fix, from a key-less client-side reverse geocoder. */
+async function reverseGeocode(lat: number, lng: number): Promise<{ area: string; city: string } | null> {
+  try {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+    )
+    if (!res.ok) return null
+    const d = (await res.json()) as { locality?: string; city?: string; principalSubdivision?: string; postcode?: string }
+    const city = d.city || d.principalSubdivision || ''
+    // Neighbourhood when the geocoder knows it, else the PIN code.
+    const area = d.locality && d.locality !== city ? d.locality : d.postcode || ''
+    return city || area ? { area, city } : null
+  } catch {
+    return null
+  }
+}
+
+/** Served city ("Delhi-NCR") matching a geocoded city name ("Gurugram"), if any. */
+const CITY_ALIASES: Record<string, string[]> = {
+  bengaluru: ['bengaluru', 'bangalore'],
+  'delhi-ncr': ['delhi', 'gurugram', 'gurgaon', 'noida', 'ghaziabad', 'faridabad'],
+  mumbai: ['mumbai', 'bombay', 'thane', 'navi mumbai'],
+  hyderabad: ['hyderabad', 'secunderabad'],
+}
+function servedCity(name: string, served: string[]) {
+  const n = name.toLowerCase()
+  return served.find((c) => {
+    const aliases = CITY_ALIASES[c.toLowerCase()] ?? [c.toLowerCase()]
+    return aliases.some((a) => n.includes(a))
+  })
+}
+
 /**
- * The browser's real location. There is no reverse-geocoding service yet, so
- * the address shows the coordinates; the visitor can still add a full address.
+ * The browser's real location, named by reverse geocoding when it can be
+ * (falls back to coordinates). Becomes the current address, and the city
+ * shown to signed-out visitors when it is one we serve.
  * Throws with a readable message when location is unavailable or denied.
  */
 export async function detectGpsLocation() {
   if (!('geolocation' in navigator)) throw new Error('Your browser can’t share its location. Please add the address instead.')
   const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 }),
+    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }),
   ).catch(() => {
     throw new Error('We couldn’t get your location. Allow location access, or add the address instead.')
   })
+  const { latitude, longitude } = pos.coords
+  const place = await reverseGeocode(latitude, longitude)
   const gps: UserAddress = {
     id: 'gps',
     title: 'Current Location',
     addressLine: 'Current location',
-    locality: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`,
+    locality: place
+      ? [place.area, place.city].filter(Boolean).join(', ')
+      : `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
     arrivalTime: '',
     tag: 'other',
   }
   store.set((s) => ({ currentId: gps.id, saved: [gps, ...s.saved.filter((a) => a.id !== gps.id)] }))
+  const city = place?.city && servedCity(place.city, site.cities)
+  if (city) cityStore.set(city)
+  detectedStore.set(gps.locality)
+}
+
+let autoStarted = false
+/**
+ * Runs once when the site opens: finds the visitor's location unless they
+ * already chose an address themselves. Fails quietly (they can still pick one).
+ */
+export function autoDetectLocation() {
+  if (autoStarted) return
+  autoStarted = true
+  const { currentId, saved } = store.get()
+  const chosen = saved.find((a) => a.id === currentId)
+  if (chosen && chosen.id !== 'gps') return
+  detectGpsLocation().catch(() => {})
 }
 
 // ---- City for signed-out visitors ----
@@ -103,9 +158,17 @@ export async function detectGpsLocation() {
 
 const cityStore = persistedStore<string>('city', '')
 
+/** Area name from the last auto-detected location ("Indiranagar, Bengaluru"). */
+const detectedStore = persistedStore<string>('detected', '')
+export const useDetectedPlace = () => detectedStore.use()
+
 /** The visitor's chosen city, or the first city served. */
 export function useCity(fallback: string) {
   return cityStore.use() || fallback
 }
 
-export const selectCity = (city: string) => cityStore.set(city)
+export const selectCity = (city: string) => {
+  cityStore.set(city)
+  // A city picked by hand wins over the detected area.
+  detectedStore.set('')
+}

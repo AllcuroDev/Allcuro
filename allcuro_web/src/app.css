@@ -2148,7 +2148,7 @@ a.place-card:hover {
   }
 }
 
-@media (max-width: 880px) {
+@media (max-width: 1000px) {
   .header-nav-phone {
     display: inline-flex;
     align-items: center;
@@ -2158,6 +2158,9 @@ a.place-card:hover {
     color: var(--primary);
     text-decoration: none;
   }
+}
+
+@media (max-width: 880px) {
   .login-page {
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;

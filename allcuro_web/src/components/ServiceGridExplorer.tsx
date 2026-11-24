@@ -106,7 +106,7 @@ export function ServiceGridExplorer({
                   aria-pressed={isActive}
                 >
                   <span className="dock-art">
-                    <ArtTile image={categoryImages[c.id]} icon={c.icon} size={34} />
+                    <ArtTile image={categoryImages[c.id]} icon={c.icon} size="var(--dock-icon)" />
                   </span>
                   <span className="dock-label">{c.label}</span>
                 </button>
@@ -205,7 +205,7 @@ function ServiceCard({ service: s, index, onSelect }: { service: Service; index:
       onClick={onSelect}
       aria-label={`${s.name}, ${s.price}. View details`}
     >
-      <IconTile name={s.icon} image={s.imageUrl} ink={cat.ink} wash={cat.wash} size={44} />
+      <IconTile name={s.icon} image={s.imageUrl} ink={cat.ink} wash={cat.wash} size="var(--card-icon)" />
       <span className="card-body">
         <span className="card-title">{s.name}</span>
         <span className="card-meta">

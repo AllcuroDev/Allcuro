@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { Link } from '../components/Link'
-import { CallBand } from '../components/Sections'
 import { ServiceGridExplorer } from '../components/ServiceGridExplorer'
 import { ALL_SLUG, categories, categoryPath } from '../data/categories'
 import { navigate } from '../router'
@@ -35,7 +34,6 @@ export function CategoryPage({ slug }: { slug: string }) {
         }}
       />
 
-      <CallBand />
     </>
   )
 }

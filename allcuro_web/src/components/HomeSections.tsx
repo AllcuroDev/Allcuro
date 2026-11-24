@@ -19,7 +19,9 @@ export function MedicinesBanner() {
         <PillIcon size={22} />
       </span>
       <span className="med-banner-text">
-        <strong>Order medicines</strong>
+        <strong>
+          Order medicines <span className="med-soon">COMING SOON</span>
+        </strong>
         <span>Search or upload a prescription</span>
       </span>
       <span className="med-banner-arrow" aria-hidden="true">
@@ -82,6 +84,7 @@ export function CentresAndAdvice() {
         </span>
       </Link>
 
+      <div className="home-side">
       <button type="button" className="advice-card" onClick={() => setAdvice(true)}>
         <span className="advice-icon">
           <HeadsetIcon size={24} />
@@ -94,6 +97,8 @@ export function CentresAndAdvice() {
         </span>
         <ArrowIcon size={16} />
       </button>
+      <MedicinesBanner />
+      </div>
 
       {advice && (
         <Modal onClose={() => setAdvice(false)} labelledBy="advice-title">

@@ -14,10 +14,13 @@ import 'tappable.dart';
 /// floating card above the bottom nav (and pads its list so the card never
 /// hides the last item).
 final activeNurseVisitProvider = Provider<Booking?>((ref) {
-  final bookings = ref.watch(bookingsViewModelProvider).valueOrNull ?? const <Booking>[];
+  final bookings =
+      ref.watch(bookingsViewModelProvider).valueOrNull ?? const <Booking>[];
   for (final b in bookings) {
     if (b.type == BookingType.nurse &&
-        (b.status == 'In Progress' || b.status == 'Active' || b.status == 'Confirmed')) {
+        (b.status == 'In Progress' ||
+            b.status == 'Active' ||
+            b.status == 'Confirmed')) {
       return b;
     }
   }
@@ -129,9 +132,7 @@ class AppShell extends ConsumerWidget {
     final topPadding = MediaQuery.paddingOf(context).top;
 
     final locationState = ref.watch(locationViewModelProvider);
-    final effectiveAddress =
-        (address != null &&
-            address!.isNotEmpty)
+    final effectiveAddress = (address != null && address!.isNotEmpty)
         ? address!
         : locationState.currentAddress.shortAddress;
     final effectiveArrivalTime =
@@ -154,7 +155,11 @@ class AppShell extends ConsumerWidget {
         children: [
           Positioned.fill(
             child: isTabRoot
-                ? _buildHeaderBody(topPadding, effectiveAddress, effectiveArrivalTime)
+                ? _buildHeaderBody(
+                    topPadding,
+                    effectiveAddress,
+                    effectiveArrivalTime,
+                  )
                 : _buildPlainBody(),
           ),
           if (showVisitPopup)
@@ -379,7 +384,13 @@ class _CompactHeaderDelegate extends SliverPersistentHeaderDelegate {
   /// ~1.3 line height, plus the 10pt of vertical padding and a little slack.
   /// A fixed extent overflowed on phones with a larger system font.
   double get _contentExtent =>
-      textScaler.scale(16) * 1.35 + 2 + textScaler.scale(13) * 1.4 + 10 + 6;
+      textScaler.scale(16) * 1.35 +
+      2 +
+      textScaler.scale(13) * 1.4 +
+      2 +
+      textScaler.scale(11) * 1.35 +
+      10 +
+      6;
 
   @override
   double get minExtent =>
@@ -398,187 +409,202 @@ class _CompactHeaderDelegate extends SliverPersistentHeaderDelegate {
     // layout extent is an invalid sliver geometry.
     return SizedBox.expand(
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(gradient: AppColors.gradientPrimary),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(18, topPadding + 4, 18, 6),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // 1. LEFT: Quick-Commerce Location & Arrival Time Header
-              Expanded(
-                child: Tappable(
-                  onTap: onAddressTap ?? () => LocationSheet.show(context),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // First Line: "Allcuro in 44 mins"
-                      // "Allcuro in" in small font, "44 mins" in bigger font
-                      Text.rich(
-                        TextSpan(
-                          text: '',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.1,
-                            color: Colors.white.withValues(alpha: 0.90),
-                          ),
-                          children: [
-                            TextSpan(
-                              text: arrivalTime.isEmpty ? "ALLCURO" : "In $arrivalTime",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.3,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      // Second Line: Address with medium size (slightly larger than "Allcuro" word)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              address,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: -0.1,
-                                color: Colors.white.withValues(alpha: 0.95),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // 2. RIGHT: Notification Bell & Profile Avatar
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Notifications Icon
-                  Tappable(
-                    onTap:
-                        onNotificationsTap ??
-                        () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                '🔔 No new clinical alerts. All bookings normal.',
-                              ),
-                              backgroundColor: AppColors.primary,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Stack(
-                      clipBehavior: Clip.none,
+        value: SystemUiOverlayStyle.light,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(gradient: AppColors.gradientPrimary),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(18, topPadding + 4, 18, 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // 1. LEFT: Quick-Commerce Location & Arrival Time Header
+                Expanded(
+                  child: Tappable(
+                    onTap: onAddressTap ?? () => LocationSheet.show(context),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 34,
-                          height: 34,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryForeground.withValues(
-                              alpha: 0.15,
+                        // First Line: "Allcuro in 44 mins"
+                        // "Allcuro in" in small font, "44 mins" in bigger font
+                        Text.rich(
+                          TextSpan(
+                            text: '',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.1,
+                              color: Colors.white.withValues(alpha: 0.90),
                             ),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.primaryForeground.withValues(
-                                alpha: 0.2,
-                              ),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.notifications_outlined,
-                            size: 18,
-                            color: AppColors.primaryForeground,
-                          ),
-                        ),
-                        if (notificationCount > 0)
-                          Positioned(
-                            right: -1,
-                            top: -1,
-                            child: Container(
-                              width: 15,
-                              height: 15,
-                              alignment: Alignment.center,
-                              decoration: const BoxDecoration(
-                                color: AppColors.destructive,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '$notificationCount',
+                            children: [
+                              TextSpan(
+                                text: arrivalTime.isEmpty
+                                    ? "ALLCURO"
+                                    : "In $arrivalTime",
                                 style: const TextStyle(
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.destructiveForeground,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.3,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        // Second Line: Address with medium size (slightly larger than "Allcuro" word)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                address,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: -0.1,
+                                  color: Colors.white.withValues(alpha: 0.95),
                                 ),
                               ),
                             ),
+                            const SizedBox(width: 2),
+                            const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        // Third line: brand tagline.
+                        Text(
+                          'Healthcare, Made Simple.',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.1,
+                            color: Colors.white.withValues(alpha: 0.78),
                           ),
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                ),
 
-                  // Profile / Avatar Icon
-                  Tappable(
-                    onTap: onProfileTap ?? () => context.go('/profile'),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryForeground.withValues(
-                          alpha: 0.18,
-                        ),
-                        shape: BoxShape.circle,
-                        border: Border.all(
+                // 2. RIGHT: Notification Bell & Profile Avatar
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Notifications Icon
+                    Tappable(
+                      onTap:
+                          onNotificationsTap ??
+                          () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  '🔔 No new clinical alerts. All bookings normal.',
+                                ),
+                                backgroundColor: AppColors.primary,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 34,
+                            height: 34,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryForeground.withValues(
+                                alpha: 0.15,
+                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primaryForeground.withValues(
+                                  alpha: 0.2,
+                                ),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_outlined,
+                              size: 18,
+                              color: AppColors.primaryForeground,
+                            ),
+                          ),
+                          if (notificationCount > 0)
+                            Positioned(
+                              right: -1,
+                              top: -1,
+                              child: Container(
+                                width: 15,
+                                height: 15,
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.destructive,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  '$notificationCount',
+                                  style: const TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.destructiveForeground,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Profile / Avatar Icon
+                    Tappable(
+                      onTap: onProfileTap ?? () => context.go('/profile'),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
                           color: AppColors.primaryForeground.withValues(
-                            alpha: 0.25,
+                            alpha: 0.18,
+                          ),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.primaryForeground.withValues(
+                              alpha: 0.25,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          initials,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryForeground,
                           ),
                         ),
                       ),
-                      child: Text(
-                        initials,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primaryForeground,
-                        ),
-                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -677,7 +703,8 @@ class _MinimalActiveNurseVisitPopup extends StatelessWidget {
                           Flexible(
                             child: Text(
                               booking.providerName.isNotEmpty &&
-                                      booking.providerName != kAssignedNurseLabel
+                                      booking.providerName !=
+                                          kAssignedNurseLabel
                                   ? booking.providerName
                                   : 'ALLCURO nurse visit',
                               maxLines: 1,
@@ -712,7 +739,8 @@ class _MinimalActiveNurseVisitPopup extends StatelessWidget {
                           Flexible(
                             child: Text(
                               booking.providerName.isEmpty ||
-                                      booking.providerName == kAssignedNurseLabel
+                                      booking.providerName ==
+                                          kAssignedNurseLabel
                                   ? 'Booked · care desk assigning a nurse'
                                   : 'Live Nurse Visit · ${booking.status}',
                               maxLines: 1,

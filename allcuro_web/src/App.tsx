@@ -4,19 +4,20 @@ import { Header } from './components/Header'
 import { Hero, TrustBand } from './components/Hero'
 import { CentresAndAdvice, ExpressBanner } from './components/HomeSections'
 import { LoginDialog } from './components/LoginDialog'
-import { CallBand, Faq, Footer, HowItWorks } from './components/Sections'
+import { Faq, Footer, HowItWorks } from './components/Sections'
 import { Toaster } from './components/ui'
 import { ALL_SLUG, categories } from './data/categories'
 import { centreById, equipmentById, nurseById } from './data/providers'
 import { getServices } from './state/catalog'
 import { useContentStatus } from './state/content'
+import { autoDetectLocation } from './state/location'
 import { PageLoading } from './components/ui'
 import { LoginPage, ProfilePage } from './pages/AccountPages'
 import { BookingDetailPage, BookingsPage } from './pages/BookingsPages'
 import { CategoryPage, NotFound } from './pages/CategoryPage'
 import { CentreBookingPage, CentrePage, CentresPage } from './pages/CentresPages'
 import { EquipmentCheckoutPage, EquipmentPage } from './pages/EquipmentPages'
-import { MedicineCartPage, MedicinesPage } from './pages/MedicinesPages'
+import { MedicinesComingSoonPage } from './pages/ComingSoonPage'
 import { NurseBookingPage } from './pages/NurseBookingPage'
 import { NursePage, NursesPage } from './pages/NursesPages'
 import { ServicePage } from './pages/ServicePage'
@@ -38,7 +39,6 @@ function Home() {
       <TrustBand />
       <HowItWorks />
       <Faq />
-      <CallBand />
       <ActiveVisitBar />
     </>
   )
@@ -75,8 +75,8 @@ const routes: { pattern: RegExp; page: (id: string) => ReactNode; title: (id: st
     page: (id) => <EquipmentCheckoutPage key={id} id={id} />,
     title: (id) => equipmentById(id) && `Rent ${equipmentById(id)!.name}`,
   },
-  { pattern: /^\/medicines$/, page: () => <MedicinesPage />, title: () => 'Order Medicines' },
-  { pattern: /^\/medicines\/cart$/, page: () => <MedicineCartPage />, title: () => 'Medicine Cart' },
+  // Medicine ordering isn't live yet: both pages show "Coming soon".
+  { pattern: /^\/medicines(\/cart)?$/, page: () => <MedicinesComingSoonPage />, title: () => 'Order Medicines — Coming Soon' },
   { pattern: /^\/bookings$/, page: () => <BookingsPage />, title: () => 'My Bookings' },
   { pattern: /^\/bookings\/([\w-]+)$/, page: (id) => <BookingDetailPage key={id} id={id} />, title: (id) => `Booking ${id}` },
   { pattern: /^\/login$/, page: () => <LoginPage />, title: () => 'Sign in' },
@@ -99,6 +99,8 @@ function CustomerSite({ path }: { path: string }) {
   useSpotlight()
   // Every page reads data loaded from Supabase; re-render them all once it arrives.
   const status = useContentStatus()
+  // Find the visitor's location as soon as the site opens.
+  useEffect(() => autoDetectLocation(), [])
 
   const route = routes.find((r) => r.pattern.test(path))
   const param = route ? (path.match(route.pattern)?.[1] ?? '') : ''

@@ -7,7 +7,7 @@ export const site = {
   phoneDisplay: '+91 80 4120 5500',
   phoneHref: 'tel:+918041205500',
   whatsappHref: 'https://wa.me/918041205500',
-  email: 'care@allcuro.care',
+  email: 'care@allcuro.com',
   cities: ['Bengaluru', 'Delhi-NCR', 'Mumbai', 'Hyderabad'],
   heroHeadline: 'Healthcare',
   heroHighlight: 'at your doorstep',

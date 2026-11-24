@@ -64,7 +64,7 @@ export function ServiceDialog({ service: s, onClose }: { service: Service; onClo
         </button>
 
         <div className="dlg-head">
-          <IconTile name={s.icon} image={s.imageUrl} ink={cat.ink} wash={cat.wash} size={64} />
+          <IconTile name={s.icon} image={s.imageUrl} ink={cat.ink} wash={cat.wash} size="var(--detail-icon)" />
           <div>
             <div className="dlg-category-bar">
               <span className="svc-cat" style={{ color: cat.ink }}>

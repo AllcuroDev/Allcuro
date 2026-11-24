@@ -29,7 +29,9 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
   // Add new address form controllers
   final _houseNoController = TextEditingController();
   final _landmarkController = TextEditingController();
-  final _localityController = TextEditingController(text: 'Indiranagar, Bengaluru');
+  final _localityController = TextEditingController(
+    text: 'Indiranagar, Bengaluru',
+  );
   AddressTag _selectedTag = AddressTag.home;
 
   @override
@@ -135,7 +137,11 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppColors.mutedForeground, size: 22),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.mutedForeground,
+                    size: 22,
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -156,14 +162,26 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
               child: TextField(
                 controller: _searchController,
                 onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+                onTapOutside: (_) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
                 decoration: InputDecoration(
                   hintText: 'Search area, street name, apartment...',
-                  hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
-                  prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
+                  hintStyle: const TextStyle(
+                    fontSize: 12.5,
+                    color: Color(0xFF94A3B8),
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: Color(0xFF64748B),
+                    size: 20,
+                  ),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 18, color: Color(0xFF94A3B8)),
+                          icon: const Icon(
+                            Icons.clear_rounded,
+                            size: 18,
+                            color: Color(0xFF94A3B8),
+                          ),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _searchQuery = '');
@@ -191,12 +209,30 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                   onTap: locationState.isGpsDetecting
                       ? null
                       : () async {
-                          await locationNotifier.useCurrentGpsLocation();
+                          try {
+                            await locationNotifier.useCurrentGpsLocation();
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    e is String
+                                        ? e
+                                        : 'Could not get your location. Please add the address instead.',
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                            return;
+                          }
                           if (context.mounted) {
                             Navigator.of(context).pop();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('📍 Location updated to current GPS position'),
+                                content: Text(
+                                  '📍 Location updated to current GPS position',
+                                ),
                                 backgroundColor: Color(0xFF0F766E),
                                 behavior: SnackBarBehavior.floating,
                                 duration: Duration(seconds: 2),
@@ -224,9 +260,16 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                           child: locationState.isGpsDetecting
                               ? const Padding(
                                   padding: EdgeInsets.all(10),
-                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF16A34A)),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Color(0xFF16A34A),
+                                  ),
                                 )
-                              : const Icon(Icons.my_location_rounded, color: Color(0xFF16A34A), size: 20),
+                              : const Icon(
+                                  Icons.my_location_rounded,
+                                  color: Color(0xFF16A34A),
+                                  size: 20,
+                                ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -234,7 +277,9 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                locationState.isGpsDetecting ? 'Detecting current GPS location...' : 'Use Current Location',
+                                locationState.isGpsDetecting
+                                    ? 'Detecting current GPS location...'
+                                    : 'Use Current Location',
                                 style: const TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w800,
@@ -252,7 +297,11 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                             ],
                           ),
                         ),
-                        const Icon(Icons.chevron_right_rounded, color: Color(0xFF16A34A), size: 20),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Color(0xFF16A34A),
+                          size: 20,
+                        ),
                       ],
                     ),
                   ),
@@ -268,10 +317,14 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: _isAddingNew ? const Color(0xFFF8FAFC) : Colors.white,
+                      color: _isAddingNew
+                          ? const Color(0xFFF8FAFC)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: _isAddingNew ? AppColors.primary : const Color(0xFFE2E8F0),
+                        color: _isAddingNew
+                            ? AppColors.primary
+                            : const Color(0xFFE2E8F0),
                         width: _isAddingNew ? 1.5 : 1,
                       ),
                     ),
@@ -285,7 +338,9 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
-                            _isAddingNew ? Icons.keyboard_arrow_up_rounded : Icons.add_location_alt_rounded,
+                            _isAddingNew
+                                ? Icons.keyboard_arrow_up_rounded
+                                : Icons.add_location_alt_rounded,
                             color: AppColors.primary,
                             size: 20,
                           ),
@@ -315,7 +370,9 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                           ),
                         ),
                         Icon(
-                          _isAddingNew ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                          _isAddingNew
+                              ? Icons.expand_less_rounded
+                              : Icons.expand_more_rounded,
                           color: AppColors.mutedForeground,
                           size: 20,
                         ),
@@ -339,7 +396,11 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                       children: [
                         const Text(
                           'Address Details',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.ink),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink,
+                          ),
                         ),
                         const SizedBox(height: 10),
                         TextField(
@@ -349,8 +410,16 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                             hintText: 'e.g. Flat 301, Rosewood Apts',
                             filled: true,
                             fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFCBD5E1),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -361,8 +430,16 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                             hintText: 'e.g. Near Indiranagar Metro Station',
                             filled: true,
                             fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFCBD5E1),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -373,25 +450,53 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                             hintText: 'Indiranagar, Bengaluru',
                             filled: true,
                             fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFCBD5E1),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
                         const Text(
                           'Save As',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.mutedForeground),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.mutedForeground,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            _buildTagChip('Home', AddressTag.home, Icons.home_rounded),
+                            _buildTagChip(
+                              'Home',
+                              AddressTag.home,
+                              Icons.home_rounded,
+                            ),
                             const SizedBox(width: 8),
-                            _buildTagChip('Parents', AddressTag.parents, Icons.favorite_rounded),
+                            _buildTagChip(
+                              'Parents',
+                              AddressTag.parents,
+                              Icons.favorite_rounded,
+                            ),
                             const SizedBox(width: 8),
-                            _buildTagChip('Work', AddressTag.work, Icons.work_rounded),
+                            _buildTagChip(
+                              'Work',
+                              AddressTag.work,
+                              Icons.work_rounded,
+                            ),
                             const SizedBox(width: 8),
-                            _buildTagChip('Other', AddressTag.other, Icons.location_on_rounded),
+                            _buildTagChip(
+                              'Other',
+                              AddressTag.other,
+                              Icons.location_on_rounded,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 14),
@@ -401,7 +506,11 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                             onPressed: () {
                               if (_houseNoController.text.trim().isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Please enter flat/house number')),
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please enter flat/house number',
+                                    ),
+                                  ),
                                 );
                                 return;
                               }
@@ -414,7 +523,9 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                               Navigator.of(context).pop();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('📍 Address saved and selected'),
+                                  content: Text(
+                                    '📍 Address saved and selected',
+                                  ),
                                   backgroundColor: Color(0xFF0F766E),
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -424,10 +535,18 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               elevation: 0,
                             ),
-                            child: const Text('Save & Select Address', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                            child: const Text(
+                              'Save & Select Address',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -461,10 +580,14 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFF0FDF4) : Colors.white,
+                      color: isSelected
+                          ? const Color(0xFFF0FDF4)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                        color: isSelected
+                            ? const Color(0xFF16A34A)
+                            : const Color(0xFFE2E8F0),
                         width: isSelected ? 1.5 : 1,
                       ),
                       boxShadow: [
@@ -481,7 +604,9 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                         Navigator.of(context).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('📍 Location changed to ${addr.title} (${addr.shortAddress})'),
+                            content: Text(
+                              '📍 Location changed to ${addr.title} (${addr.shortAddress})',
+                            ),
                             backgroundColor: const Color(0xFF0F766E),
                             behavior: SnackBarBehavior.floating,
                             duration: const Duration(seconds: 2),
@@ -528,10 +653,15 @@ class _LocationSheetState extends ConsumerState<LocationSheet> {
                                       ),
                                       const SizedBox(width: 8),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 1.5,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFFEF3C7),
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Text(
                                           '⚡ ${addr.arrivalTime}',

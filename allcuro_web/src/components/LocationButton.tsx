@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { site } from '../data/site'
 import { useAuth } from '../state/auth'
-import { selectCity, useCity, useLocation } from '../state/location'
+import { selectCity, useCity, useDetectedPlace, useLocation } from '../state/location'
 import { toast } from '../lib/toast'
 import { AddressPicker } from './AddressPicker'
 import { CheckIcon, ChevronDownIcon, PinIcon } from './Icons'
@@ -14,9 +14,12 @@ export function LocationButton() {
   const { isLoggedIn } = useAuth()
   const { current } = useLocation()
   const city = useCity(site.cities[0] ?? 'Bengaluru')
+  const detected = useDetectedPlace()
   const [open, setOpen] = useState(false)
 
-  const label = isLoggedIn ? `${current.title}, ${current.locality}` : city
+  // Signed out: the auto-detected area when we have one, else the chosen city.
+  const place = detected || city
+  const label = isLoggedIn ? `${current.title}, ${current.locality}` : place
   return (
     <>
       <button type="button" className="loc-btn" onClick={() => setOpen(true)} aria-label={`Care location: ${label}. Change`}>
@@ -27,13 +30,14 @@ export function LocationButton() {
           {isLoggedIn ? (
             <>
               <strong>{current.title}</strong>
-              <span className="loc-line">
-                {' · '}
-                {current.locality}
-              </span>
+              {current.locality && <span className="loc-line"> · {current.locality}</span>}
             </>
           ) : (
-            <strong>{city}</strong>
+            <strong>
+              {/* "560038, Bengaluru": the PIN part hides on narrow phones so the city stays readable. */}
+              {place.includes(', ') && <span className="loc-pre">{place.slice(0, place.lastIndexOf(', ') + 2)}</span>}
+              {place.includes(', ') ? place.slice(place.lastIndexOf(', ') + 2) : place}
+            </strong>
           )}
         </span>
         <ChevronDownIcon size={16} />

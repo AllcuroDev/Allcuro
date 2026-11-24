@@ -38,11 +38,15 @@ export function Header() {
     <header className={`header ${scrolled ? 'is-scrolled' : ''}`}>
       <div className="container header-inner">
         {/* Brand with the care location under it, like the app header. */}
+        {/* ALLCURO with the care location beside it, and the tagline underneath both. */}
         <div className="header-brand-wrap">
-          <Link to="/" className="header-brand">
-            <span className="brand-wordmark">ALLCURO</span>
-          </Link>
-          <LocationButton />
+          <div className="header-brand-row">
+            <Link to="/" className="header-brand" aria-label={`${site.brand} home`}>
+              <span className="brand-wordmark">ALLCURO</span>
+            </Link>
+            <LocationButton />
+          </div>
+          <span className="header-tagline">{site.tagline || 'Healthcare, Made Simple.'}</span>
         </div>
 
         <nav className={`header-nav ${open ? 'is-open' : ''}`} aria-label="Main">

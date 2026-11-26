@@ -15,6 +15,10 @@ export interface UserAddress {
   tag: AddressTag
 }
 
+/** One short line for a detected location: street (when known), area, city. */
+export const shortAddress = (a: UserAddress) =>
+  [a.addressLine === 'Current location' ? '' : a.addressLine.split(', ').pop(), a.locality].filter(Boolean).join(', ')
+
 export const fullAddress = (a: UserAddress) => [a.addressLine, a.locality].filter(Boolean).join(', ')
 
 /** Shown until the visitor adds an address or uses their location. */
@@ -75,21 +79,53 @@ export function addAddress({
   return address
 }
 
-/** Locality + city for a GPS fix, from a key-less client-side reverse geocoder. */
-async function reverseGeocode(lat: number, lng: number): Promise<{ area: string; city: string } | null> {
-  try {
-    const res = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
-    )
-    if (!res.ok) return null
-    const d = (await res.json()) as { locality?: string; city?: string; principalSubdivision?: string; postcode?: string }
-    const city = d.city || d.principalSubdivision || ''
-    // Neighbourhood when the geocoder knows it, else the PIN code.
-    const area = d.locality && d.locality !== city ? d.locality : d.postcode || ''
-    return city || area ? { area, city } : null
-  } catch {
-    return null
+interface GeoPlace {
+  /** House / building + street, e.g. "42, 12th Main Road" ('' when unknown). */
+  street: string
+  /** Neighbourhood or PIN code, e.g. "Indiranagar". */
+  area: string
+  city: string
+}
+
+/** Street-level place from OpenStreetMap's Nominatim (no key; fine for one lookup per visit). */
+async function nominatim(lat: number, lng: number): Promise<GeoPlace | null> {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`,
+  )
+  if (!res.ok) return null
+  const d = (await res.json()) as { name?: string; address?: Record<string, string> }
+  const a = d.address ?? {}
+  const city = a.city || a.town || a.city_district || a.village || a.county || a.state_district || a.state || ''
+  const building = a.house_number || a.building || a.amenity || (d.name && d.name !== a.road ? d.name : '')
+  const road = a.road || a.pedestrian || a.residential || ''
+  const street = [building, road].filter(Boolean).join(', ')
+  const area = [a.neighbourhood, a.suburb, a.quarter, a.city_district, a.postcode].find((x) => x && x !== city && x !== road) ?? ''
+  return city || area || street ? { street, area, city } : null
+}
+
+/** Locality + city only, from a second key-less geocoder, when Nominatim is unavailable. */
+async function bigDataCloud(lat: number, lng: number): Promise<GeoPlace | null> {
+  const res = await fetch(
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+  )
+  if (!res.ok) return null
+  const d = (await res.json()) as { locality?: string; city?: string; principalSubdivision?: string; postcode?: string }
+  const city = d.city || d.principalSubdivision || ''
+  // Neighbourhood when the geocoder knows it, else the PIN code.
+  const area = d.locality && d.locality !== city ? d.locality : d.postcode || ''
+  return city || area ? { street: '', area, city } : null
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<GeoPlace | null> {
+  for (const lookup of [nominatim, bigDataCloud]) {
+    try {
+      const place = await lookup(lat, lng)
+      if (place) return place
+    } catch {
+      // try the next geocoder
+    }
   }
+  return null
 }
 
 /** Served city ("Delhi-NCR") matching a geocoded city name ("Gurugram"), if any. */
@@ -125,7 +161,7 @@ export async function detectGpsLocation() {
   const gps: UserAddress = {
     id: 'gps',
     title: 'Current Location',
-    addressLine: 'Current location',
+    addressLine: place?.street || 'Current location',
     locality: place
       ? [place.area, place.city].filter(Boolean).join(', ')
       : `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
@@ -135,7 +171,8 @@ export async function detectGpsLocation() {
   store.set((s) => ({ currentId: gps.id, saved: [gps, ...s.saved.filter((a) => a.id !== gps.id)] }))
   const city = place?.city && servedCity(place.city, site.cities)
   if (city) cityStore.set(city)
-  detectedStore.set(gps.locality)
+  // Short exact address for the header: "12th Main Road, Indiranagar, Bengaluru".
+  detectedStore.set(shortAddress(gps))
 }
 
 let autoStarted = false

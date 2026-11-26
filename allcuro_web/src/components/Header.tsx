@@ -11,7 +11,7 @@ import { CloseIcon, MenuIcon, PhoneIcon, UserIcon } from './Icons'
 // Main sections, matching the app's bottom tabs (Home, Care Centres, 45 Mins, Equipments, Bookings).
 const NAV = [
   { to: categoryPath(ALL_SLUG), label: 'Services', match: '/service' },
-  { to: '/nurses', label: 'Nurses', match: '/nurses' },
+  { to: '/book-nurse', label: 'Nurses', match: '/book-nurse' },
   { to: '/centres', label: 'Care Centres', match: '/centres' },
   { to: '/equipment', label: 'Equipment', match: '/equipment' },
   { to: '/medicines', label: 'Medicines', match: '/medicines' },

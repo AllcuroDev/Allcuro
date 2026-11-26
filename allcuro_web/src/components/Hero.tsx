@@ -7,8 +7,8 @@ import { SearchBar } from './SearchBar'
 import { useCategoryImages } from '../state/catalog'
 import { ClockIcon, HeadsetIcon, RupeeIcon, ShieldIcon } from './Icons'
 
-// Every care type, then the full list. One row on wide
-// screens, wrapping onto more rows as the screen narrows (index.css `.tiles`).
+// Every care type, then the full list. At least two rows on wide screens so the
+// artwork can be large; three rows on tablets and four on phones (index.css `.tiles`).
 const heroTiles = (): { id: string; slug: string; href?: string; label: string; icon: string }[] => {
   const list: { id: string; slug: string; href?: string; label: string; icon: string }[] = categories.map((c) => ({
     id: c.id,
@@ -39,7 +39,16 @@ export function Hero() {
             <h2 id="tiles-title" className="tile-box-title">
               {site.tilesTitle}
             </h2>
-            <ul className="tiles">
+            <ul
+              className="tiles"
+              style={
+                {
+                  '--cols-lg': Math.ceil(tiles.length / 2),
+                  '--cols-md': Math.ceil(tiles.length / 3),
+                  '--cols-sm': Math.max(2, Math.ceil(tiles.length / 4)),
+                } as CSSProperties
+              }
+            >
               {tiles.map((t) => {
                 // Look up image by id, or common medicine keys if it's the medicines tile
                 const tileImage =

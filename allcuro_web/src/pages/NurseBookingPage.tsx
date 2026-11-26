@@ -1,14 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import { AddressPicker } from '../components/AddressPicker'
-import { CareIcon } from '../components/CareIcon'
-import { PinIcon, ShieldIcon } from '../components/Icons'
+import { IconTile } from '../components/CareIcon'
+import { CheckIcon, ClockIcon, PinIcon, SearchIcon, ShieldIcon } from '../components/Icons'
 import { PaymentDialog } from '../components/PaymentDialog'
 import { ActionBar, Bill, Field, OptionCard, PageHead, Select, StepTitle, TextArea, Spinner } from '../components/ui'
-import { toast } from '../lib/toast'
-import { billTotal, coupons, INSTANT_SLOT, servicePrice, timeSlots, visitBill, type QuickService } from '../data/booking'
+import { useCheckoutDiscount } from '../lib/coupons'
+import { CouponBox } from '../components/CouponBox'
+import { billTotal, INSTANT_SLOT, servicePrice, timeSlots, visitBill, type QuickService } from '../data/booking'
 import { nurseById } from '../data/providers'
 import { site } from '../data/site'
-import { isCompanionService } from '../data/categories'
+import { categories, categoryById, isCompanionService } from '../data/categories'
+import type { Service } from '../data/types'
 import { useServices } from '../state/catalog'
 import { inr } from '../lib/format'
 import { navigate, useQuery } from '../router'
@@ -32,29 +34,20 @@ export function NurseBookingPage() {
 
   // Every nursing service with a price (plus the one picked on the site, e.g. a
   // companion service). A chosen nurse's own rate wins over the catalog price.
-  const options = useMemo<QuickService[]>(() => {
+  const options = useMemo<(QuickService & { service: Service })[]>(() => {
     const isNursing = (x: (typeof services)[number]) =>
       x.category === 'Nursing Care' || (x.alsoIn ?? []).includes('Nursing Care') || x.id === serviceId
-    const out: QuickService[] = []
+    const out: (QuickService & { service: Service })[] = []
     for (const x of services) {
       if (!isNursing(x)) continue
       const price = nurse?.shifts.find((sh) => sh.serviceId === x.id)?.price ?? servicePrice(x)
       if (price == null) continue
-      out.push({ id: x.id, title: x.name, duration: x.duration, price, icon: x.icon, description: x.description })
+      out.push({ id: x.id, title: x.name, duration: x.duration, price, icon: x.icon, description: x.description, service: x })
     }
-    return out
+    // The admin's "Quick Book Nurse" picks lead, then the rest in catalog order.
+    const rank = (o: (typeof out)[number]) => o.service.quickBookRank ?? Number.MAX_SAFE_INTEGER
+    return out.sort((a, b) => rank(a) - rank(b))
   }, [services, serviceId, nurse])
-
-  // The admin's top five (Services catalog → "Quick Book Nurse"), topped up in
-  // catalog order if fewer than five are set.
-  const quick = useMemo(() => {
-    const rank = new Map(services.map((x) => [x.id, x.quickBookRank]))
-    const ranked = options
-      .filter((o) => rank.get(o.id) != null)
-      .sort((x, y) => (rank.get(x.id) ?? 0) - (rank.get(y.id) ?? 0))
-    const rest = options.filter((o) => rank.get(o.id) == null)
-    return [...ranked, ...rest].slice(0, 5)
-  }, [options, services])
 
   const slots = useMemo(() => {
     if (!slotParam || slotParam.startsWith('⚡')) return timeSlots
@@ -64,19 +57,18 @@ export function NurseBookingPage() {
   // Hospital Companion services are non-clinical: the desk assigns a companion, not a nurse.
   const pickedService = services.find((x) => x.id === serviceId)
 
-  const [optionId, setOptionId] = useState(optionParam ?? serviceId ?? quick[0]?.id ?? '')
+  const [optionId, setOptionId] = useState(optionParam ?? serviceId ?? options[0]?.id ?? '')
   const [slot, setSlot] = useState(slotParam && !slotParam.startsWith('⚡') ? slotParam : INSTANT_SLOT)
   const [patient, setPatient] = useState({ name: profile?.name ?? '', age: '', gender: GENDERS[0], notes: '' })
-  const [couponInput, setCouponInput] = useState('')
-  const [coupon, setCoupon] = useState<string | null>(null)
   const [pickingAddress, setPickingAddress] = useState(false)
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
 
-  const option = options.find((o) => o.id === optionId) ?? quick[0]
-  const inQuick = quick.some((o) => o.id === option?.id)
-  const [showAll, setShowAll] = useState(false)
+  const option = options.find((o) => o.id === optionId) ?? options[0]
+  // The full list shows until a service is chosen; a service picked on the site starts chosen.
+  const [choosing, setChoosing] = useState(!optionParam && !serviceId)
   const companion = !!pickedService && !!option && isCompanionService(pickedService) && option.id === pickedService.id
+  const discounts = useCheckoutDiscount(option?.price ?? 0, 'nurse')
   if (!option)
     return (
       <div className="container page page-narrow">
@@ -90,19 +82,9 @@ export function NurseBookingPage() {
       </div>
     )
 
-  const discount = coupon ? coupons[coupon].off(option.price) : 0
+  const discount = discounts.applied?.amount ?? 0
   const lines = visitBill(option.title, option.price, discount)
   const total = billTotal(lines)
-
-  const applyCoupon = () => {
-    const code = couponInput.trim().toUpperCase()
-    if (!coupons[code]) {
-      toast('That coupon code isn’t valid. Try FIRSTCARE.', 'danger')
-      return
-    }
-    setCoupon(code)
-    toast(`Coupon applied: ${coupons[code].label}`)
-  }
 
   const submit = () => {
     if (!patient.name.trim()) return setError('Please enter the patient’s name.')
@@ -116,6 +98,8 @@ export function NurseBookingPage() {
   }
 
   const onPaid = async (payment: Payment) => {
+    // Records the coupon use (and re-checks its limits) before the booking exists.
+    await discounts.redeem()
     const instant = slot === INSTANT_SLOT
     const booking = await createBooking({
       type: 'nurse',
@@ -182,65 +166,24 @@ export function NurseBookingPage() {
 
         <section className="form-section">
           <StepTitle n={1}>{companion ? 'Select service' : 'What do you need?'}</StepTitle>
-          <div className="quick-nurse" role="radiogroup" aria-label="Nursing service">
-            {quick.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                role="radio"
-                aria-checked={o.id === option.id}
-                className={`quick-nurse-tile ${o.id === option.id ? 'is-on' : ''}`}
-                onClick={() => {
-                  setOptionId(o.id)
-                  setShowAll(false)
-                }}
-              >
-                <span className="quick-nurse-icon">
-                  <CareIcon name={o.icon} size={24} />
-                </span>
-                <span className="quick-nurse-name">{o.title}</span>
-                <small>{inr(o.price)}</small>
+          {companion ? (
+            <ServiceOption option={option} checked onSelect={() => {}} />
+          ) : choosing ? (
+            <ServicePicker
+              options={options}
+              selectedId={option.id}
+              onSelect={(id) => {
+                setOptionId(id)
+                setChoosing(false)
+              }}
+            />
+          ) : (
+            <div className="svc-picked">
+              <ServiceOption option={option} checked onSelect={() => setChoosing(true)} />
+              <button type="button" className="link-btn" onClick={() => setChoosing(true)}>
+                Change service
               </button>
-            ))}
-            {options.length > quick.length && (
-              <button
-                type="button"
-                role="radio"
-                aria-checked={!inQuick}
-                aria-expanded={showAll || !inQuick}
-                className={`quick-nurse-tile ${!inQuick ? 'is-on' : ''}`}
-                onClick={() => setShowAll((v) => !v)}
-              >
-                <span className="quick-nurse-icon">
-                  <CareIcon name="see_all" size={24} />
-                </span>
-                <span className="quick-nurse-name">{inQuick ? 'Other' : option.title}</span>
-                <small>{inQuick ? `${options.length - quick.length} more` : inr(option.price)}</small>
-              </button>
-            )}
-          </div>
-          {(showAll || !inQuick) && (
-            <label className="quick-nurse-all">
-              <span className="sr-only">All nursing services</span>
-              <select
-                className="input"
-                value={inQuick ? '' : option.id}
-                onChange={(e) => {
-                  if (e.target.value) setOptionId(e.target.value)
-                }}
-              >
-                <option value="" disabled>
-                  Choose from all nursing services
-                </option>
-                {options
-                  .filter((o) => !quick.some((q) => q.id === o.id))
-                  .map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.title} · {inr(o.price)}
-                    </option>
-                  ))}
-              </select>
-            </label>
+            </div>
           )}
         </section>
 
@@ -306,18 +249,7 @@ export function NurseBookingPage() {
         <section className="form-section">
           <StepTitle n={4}>Bill summary</StepTitle>
           <div className="panel">
-            <div className="coupon-row">
-              <input
-                className="input"
-                placeholder="Have a coupon? e.g. FIRSTCARE"
-                value={couponInput}
-                onChange={(e) => setCouponInput(e.target.value)}
-                aria-label="Coupon code"
-              />
-              <button type="button" className="btn btn-dark" onClick={applyCoupon} disabled={!couponInput.trim()}>
-                Apply
-              </button>
-            </div>
+            <CouponBox {...discounts} />
             <Bill lines={lines} />
           </div>
         </section>
@@ -345,5 +277,132 @@ export function NurseBookingPage() {
         />
       )}
     </>
+  )
+}
+
+type BookOption = QuickService & { service: Service }
+
+/** Every nursing service with its icon, like /services/nursing: sub-type pills, search, then cards. */
+function ServicePicker({
+  options,
+  selectedId,
+  onSelect,
+}: {
+  options: BookOption[]
+  selectedId: string
+  onSelect: (id: string) => void
+}) {
+  const [sub, setSub] = useState('all')
+  const [query, setQuery] = useState('')
+  const subs = useMemo(
+    () => ['all', ...new Set(options.map((o) => o.service.subcategory).filter(Boolean))],
+    [options],
+  )
+  const q = query.trim().toLowerCase()
+  const shown = options.filter(
+    (o) =>
+      (sub === 'all' || o.service.subcategory === sub) &&
+      (!q ||
+        o.title.toLowerCase().includes(q) ||
+        o.description.toLowerCase().includes(q) ||
+        o.service.subcategory.toLowerCase().includes(q)),
+  )
+
+  return (
+    <div className="svc-picker">
+      <label className="search-input-wrap">
+        <SearchIcon size={18} />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search nursing services"
+          className="explorer-search-input"
+          aria-label="Search nursing services"
+        />
+        {query && (
+          <button type="button" className="search-clear-btn" onClick={() => setQuery('')} aria-label="Clear search">
+            ×
+          </button>
+        )}
+      </label>
+      {subs.length > 2 && (
+        <div className="subcat-pills" role="group" aria-label="Filter by type">
+          {subs.map((x) => (
+            <button
+              key={x}
+              type="button"
+              className={`subcat-pill ${sub === x ? 'is-active' : ''}`}
+              onClick={() => setSub(x)}
+              aria-pressed={sub === x}
+            >
+              {x === 'all' ? 'All' : x}
+            </button>
+          ))}
+        </div>
+      )}
+      {shown.length > 0 ? (
+        <div className="services-grid" role="radiogroup" aria-label="Nursing service">
+          {shown.map((o, i) => (
+            <ServiceOption key={o.id} option={o} index={i} checked={o.id === selectedId} onSelect={() => onSelect(o.id)} />
+          ))}
+        </div>
+      ) : (
+        <p className="svc-picker-empty">
+          No services match &ldquo;{query}&rdquo;.{' '}
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => {
+              setQuery('')
+              setSub('all')
+            }}
+          >
+            Show all
+          </button>
+        </p>
+      )}
+    </div>
+  )
+}
+
+function ServiceOption({
+  option: o,
+  checked,
+  index = 0,
+  onSelect,
+}: {
+  option: BookOption
+  checked: boolean
+  index?: number
+  onSelect: () => void
+}) {
+  const cat = categoryById[o.service.category] ?? categories[0]
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={checked}
+      className={`service-card svc-option ${checked ? 'is-on' : ''}`}
+      style={{ '--i': index % 12 } as CSSProperties}
+      onClick={onSelect}
+    >
+      <IconTile name={o.icon} image={o.service.imageUrl} ink={cat.ink} wash={cat.wash} size="var(--card-icon)" />
+      <span className="card-body">
+        <span className="card-title">{o.title}</span>
+        <span className="card-meta">
+          {o.service.badge && <span className="card-badge">{o.service.badge}</span>}
+          <ClockIcon size={13} />
+          <span className="card-meta-text">
+            {o.duration}
+            {o.service.professional && ` · ${o.service.professional}`}
+          </span>
+        </span>
+      </span>
+      <span className="card-price">
+        {inr(o.price)}
+        {checked && <CheckIcon size={18} />}
+      </span>
+    </button>
   )
 }

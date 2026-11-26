@@ -464,77 +464,42 @@ textarea.input {
   outline-offset: 2px;
 }
 
-/* Quick Book Nurse: the admin's top five + "Other" */
-.quick-nurse {
+/* Book a Nurse, step 1: every nursing service as cards (same look as /services/nursing). */
+.svc-picker {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
-.quick-nurse-tile {
-  display: grid;
-  justify-items: center;
-  align-content: start;
-  gap: 6px;
-  padding: 12px 6px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--r-lg);
-  background: var(--card);
-  color: var(--ink);
-  font: inherit;
+.svc-picker .search-input-wrap {
+  width: 100%;
+  max-width: none;
+}
+
+.svc-picker-empty {
+  padding: 24px 16px;
   text-align: center;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  color: var(--muted-fg);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--r-lg);
 }
 
-.quick-nurse-tile:hover {
-  border-color: var(--accent);
-}
-
-.quick-nurse-tile.is-on {
+.svc-option.is-on {
   border-color: var(--primary);
   background: rgb(221 244 228 / 0.45);
 }
 
-.quick-nurse-tile:focus-visible {
-  outline: 3px solid var(--warm);
-  outline-offset: 2px;
-}
-
-.quick-nurse-icon {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--primary-soft);
+.svc-option.is-on .card-price svg {
   color: var(--primary);
 }
 
-.quick-nurse-name {
-  font-size: 0.8rem;
-  font-weight: 500;
-  line-height: 1.25;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.svc-picked {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
 }
 
-.quick-nurse-tile small {
-  font-size: 0.75rem;
-  color: var(--muted-fg);
-}
-
-.quick-nurse-all {
-  display: block;
-  margin-top: 10px;
-}
-
-@media (max-width: 640px) {
-  .quick-nurse {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+.svc-picked .svc-option {
+  animation: none;
 }
 
 .option-card.is-compact {
@@ -683,6 +648,58 @@ textarea.input {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
+}
+
+.coupon-box {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.coupon-box .coupon-row {
+  margin-bottom: 0;
+}
+
+.coupon-guest {
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--r-md);
+  color: var(--muted-fg);
+  font-size: 0.9rem;
+}
+
+.coupon-applied {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--accent);
+  border-radius: var(--r-md);
+  background: rgb(221 244 228 / 0.5);
+  color: var(--primary);
+}
+
+.coupon-applied > span {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+}
+
+.coupon-applied strong {
+  letter-spacing: 0.04em;
+}
+
+.coupon-applied small {
+  color: var(--muted-fg);
+}
+
+.coupon-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.86rem;
 }
 
 /* ---------- Bill ---------- */

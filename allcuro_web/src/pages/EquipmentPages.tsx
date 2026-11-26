@@ -4,8 +4,9 @@ import { BoxIcon, PinIcon, ShieldIcon } from '../components/Icons'
 import { Link } from '../components/Link'
 import { PaymentDialog } from '../components/PaymentDialog'
 import { ActionBar, Bill, OptionCard, PageHead, StepList, StepTitle } from '../components/ui'
-import { toast } from '../lib/toast'
-import { billTotal, coupons, deliverySlots, GST_RATE, PLATFORM_FEE, type BillLine } from '../data/booking'
+import { CouponBox } from '../components/CouponBox'
+import { useCheckoutDiscount } from '../lib/coupons'
+import { billTotal, deliverySlots, GST_RATE, PLATFORM_FEE, type BillLine } from '../data/booking'
 import { equipment, equipmentById, equipmentCategories, type Equipment } from '../data/providers'
 import { inr } from '../lib/format'
 import { navigate } from '../router'
@@ -103,16 +104,15 @@ export function EquipmentCheckoutPage({ id }: { id: string }) {
   const { profile } = useAuth()
   const [plan, setPlan] = useState(PLANS[1].id)
   const [slot, setSlot] = useState(deliverySlots[0])
-  const [couponInput, setCouponInput] = useState('')
-  const [coupon, setCoupon] = useState<string | null>(null)
   const [pickingAddress, setPickingAddress] = useState(false)
   const [paying, setPaying] = useState(false)
-  if (!item) return <NotFound />
-
   const p = PLANS.find((x) => x.id === plan)!
   // Monthly rate beats the daily one beyond a few weeks.
-  const rent = p.days >= 30 ? item.perMonth * Math.round(p.days / 30) : Math.min(item.perDay * p.days, item.perMonth)
-  const discount = coupon ? coupons[coupon].off(rent) : 0
+  const rent = !item ? 0 : p.days >= 30 ? item.perMonth * Math.round(p.days / 30) : Math.min(item.perDay * p.days, item.perMonth)
+  const discounts = useCheckoutDiscount(rent, 'equipment')
+  if (!item) return <NotFound />
+
+  const discount = discounts.applied?.amount ?? 0
   const gst = Math.round((rent - discount + PLATFORM_FEE) * GST_RATE)
   const lines: BillLine[] = [
     { label: `${item.name} · ${p.label} rent`, amount: rent },
@@ -122,14 +122,9 @@ export function EquipmentCheckoutPage({ id }: { id: string }) {
     { label: 'Refundable security deposit', amount: item.deposit },
   ]
 
-  const applyCoupon = () => {
-    const code = couponInput.trim().toUpperCase()
-    if (!coupons[code]) return toast('That coupon code isn’t valid. Try FIRSTCARE.', 'danger')
-    setCoupon(code)
-    toast(`Coupon applied: ${coupons[code].label}`)
-  }
-
   const onPaid = async (payment: Payment) => {
+    // Records the coupon use (and re-checks its limits) before the booking exists.
+    await discounts.redeem()
     const booking = await createBooking({
       type: 'equipment',
       title: item.name,
@@ -222,18 +217,7 @@ export function EquipmentCheckoutPage({ id }: { id: string }) {
         <section className="form-section">
           <StepTitle n={4}>Review price</StepTitle>
           <div className="panel">
-            <div className="coupon-row">
-              <input
-                className="input"
-                placeholder="Have a coupon? e.g. FIRSTCARE"
-                value={couponInput}
-                onChange={(e) => setCouponInput(e.target.value)}
-                aria-label="Coupon code"
-              />
-              <button type="button" className="btn btn-dark" onClick={applyCoupon} disabled={!couponInput.trim()}>
-                Apply
-              </button>
-            </div>
+            <CouponBox {...discounts} />
             <Bill lines={lines} />
           </div>
         </section>

@@ -9,5 +9,6 @@ export type NavSection =
   | 'services'
   | 'equipment'
   | 'medicines'
+  | 'coupons'
   | 'content'
   | 'support';

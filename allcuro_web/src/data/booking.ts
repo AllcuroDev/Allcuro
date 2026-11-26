@@ -62,14 +62,7 @@ export function visitBill(serviceLabel: string, base: number, discount = 0): Bil
 
 export const billTotal = (lines: BillLine[]) => lines.reduce((sum, l) => sum + l.amount, 0)
 
-/**
- * Coupons. The app shows a success message for any code; the website only
- * accepts known ones so the discount on the bill is believable.
- */
-export const coupons: Record<string, { label: string; off: (base: number) => number }> = {
-  FIRSTCARE: { label: '20% off your first booking (up to ₹480)', off: (b) => Math.min(480, Math.round(b * 0.2)) },
-  CARE100: { label: '₹100 off', off: (b) => Math.min(100, b) },
-}
+// Coupons and automatic discounts come from the admin panel: see lib/coupons.ts.
 
 /** Link to the booking form, carrying whatever has been chosen so far. */
 export function bookingPath(params: { service?: string; nurse?: string; option?: string; slot?: string }) {

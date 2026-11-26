@@ -16,6 +16,7 @@ import {
   Package,
   Pill,
   FileText,
+  TicketPercent,
 } from 'lucide-react';
 import type { NavSection } from '../types/admin';
 
@@ -147,6 +148,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <Pill size={18} className="item-icon" />
             {!isCollapsed && <span className="item-label">Medicines</span>}
+          </button>
+
+          <button
+            className={`nav-menu-item ${currentSection === 'coupons' ? 'active' : ''}`}
+            onClick={() => onSelectSection('coupons')}
+            title={isCollapsed ? 'Coupons & Discounts' : undefined}
+          >
+            <TicketPercent size={18} className="item-icon" />
+            {!isCollapsed && <span className="item-label">Coupons &amp; Discounts</span>}
           </button>
 
           <button

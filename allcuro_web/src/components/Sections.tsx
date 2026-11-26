@@ -61,11 +61,10 @@ export function Faq() {
           {faqs.map((f, i) => {
             const isOpen = open === i
             return (
-              <div
-                key={f.q}
-                className={`faq-item reveal ${isOpen ? 'is-open' : ''}`}
-                style={{ '--d': i } as CSSProperties}
-              >
+              // The reveal sits on a wrapper: React rewrites the item's className on
+              // every toggle, which would drop the observer's `is-in` and fade it again.
+              <div key={f.q} className="reveal" style={{ '--d': i } as CSSProperties}>
+              <div className={`faq-item ${isOpen ? 'is-open' : ''}`}>
                 <h3>
                   <button
                     type="button"
@@ -83,6 +82,7 @@ export function Faq() {
                     <p>{f.a}</p>
                   </div>
                 </div>
+              </div>
               </div>
             )
           })}

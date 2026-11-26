@@ -187,3 +187,28 @@ export interface FaqRecord {
   sort_order: number;
   is_active: boolean;
 }
+
+/** A row of public.coupons — see supabase/coupons.sql. */
+export interface CouponRecord {
+  id: string;
+  /** 'coupon' needs a code at checkout; 'discount' applies automatically. */
+  kind: 'coupon' | 'discount';
+  code: string | null;
+  title: string;
+  description: string;
+  discount_type: 'percent' | 'flat';
+  discount_value: number;
+  max_discount: number | null;
+  min_order: number;
+  /** Empty = every booking type. */
+  applies_to: CouponScope[];
+  starts_at: string | null;
+  expires_at: string | null;
+  usage_limit: number | null;
+  per_user_limit: number | null;
+  first_booking_only: boolean;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export type CouponScope = 'nurse' | 'centre' | 'equipment' | 'medicine';

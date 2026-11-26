@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { billTotal, type BillLine } from '../data/booking'
+import { CouponError } from '../lib/coupons'
 import { digitsOnly, inr } from '../lib/format'
 import { delay } from '../lib/store'
 import type { Payment } from '../state/bookings'
@@ -67,9 +68,13 @@ export function PaymentDialog({ title, lines, allowPayLater = false, onClose, on
       setPhase('done')
       await delay(900)
       await onPaid({ ...result, paidAt: Date.now(), lines })
-    } catch {
+    } catch (e) {
       setPhase('choose')
-      setError('Payment could not be completed. No money was taken — please try again.')
+      setError(
+        e instanceof CouponError
+          ? `${e.message} Remove the coupon and try again — no money was taken.`
+          : 'Payment could not be completed. No money was taken — please try again.',
+      )
     }
   }
 

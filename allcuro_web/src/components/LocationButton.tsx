@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { site } from '../data/site'
 import { useAuth } from '../state/auth'
-import { selectCity, useCity, useDetectedPlace, useLocation } from '../state/location'
+import { fullAddress, selectCity, useCity, useDetectedPlace, useLocation } from '../state/location'
 import { toast } from '../lib/toast'
 import { AddressPicker } from './AddressPicker'
 import { CheckIcon, ChevronDownIcon, PinIcon } from './Icons'
@@ -19,7 +19,7 @@ export function LocationButton() {
 
   // Signed out: the auto-detected area when we have one, else the chosen city.
   const place = detected || city
-  const label = isLoggedIn ? `${current.title}, ${current.locality}` : place
+  const label = isLoggedIn ? (current.id === 'gps' ? fullAddress(current) : `${current.title}, ${current.locality}`) : place
   return (
     <>
       <button type="button" className="loc-btn" onClick={() => setOpen(true)} aria-label={`Care location: ${label}. Change`}>
@@ -29,7 +29,8 @@ export function LocationButton() {
         <span className="loc-text">
           {isLoggedIn ? (
             <>
-              <strong>{current.title}</strong>
+              {/* A detected location shows its street rather than "Current Location". */}
+              <strong>{current.id === 'gps' && current.addressLine !== 'Current location' ? current.addressLine : current.title}</strong>
               {current.locality && <span className="loc-line"> · {current.locality}</span>}
             </>
           ) : (

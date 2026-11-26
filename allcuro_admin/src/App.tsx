@@ -5,6 +5,7 @@ import { OverviewView } from './components/OverviewView';
 import { PartnersView } from './components/PartnersView';
 import { EquipmentView } from './components/EquipmentView';
 import { MedicinesView } from './components/MedicinesView';
+import { CouponsView } from './components/CouponsView';
 import { SiteContentView } from './components/SiteContentView';
 import { countPendingPartners } from './lib/partners';
 import { LiveOperationsView } from './components/LiveOperationsView';
@@ -41,6 +42,8 @@ export function App() {
         return <EquipmentView />;
       case 'medicines':
         return <MedicinesView />;
+      case 'coupons':
+        return <CouponsView />;
       case 'content':
         return <SiteContentView />;
       case 'live_ops':
